@@ -48,4 +48,13 @@ namespace :import do
     PublicContracts::ImportService.new(ds).call_all
     puts "Finished. Contracts in DB: #{Contract.where(data_source: ds).count}"
   end
+
+  desc "Import Portal BASE contracts from dados.gov.pt XLSX (current year by default)"
+  task portal_base: :environment do
+    ds = DataSource.find_by!(adapter_class: "PublicContracts::PT::PortalBaseClient")
+    puts "Starting Portal BASE import (year(s): #{ds.adapter.instance_variable_get(:@years).join(', ')})..."
+    puts "Querying dados.gov.pt for XLSX resources..."
+    PublicContracts::ImportService.new(ds).call_all
+    puts "Finished. Contracts in DB: #{Contract.where(data_source: ds).count}"
+  end
 end

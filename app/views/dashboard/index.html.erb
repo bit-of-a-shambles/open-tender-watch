@@ -41,6 +41,10 @@
             class="font-mono text-xs tracking-widest uppercase bg-none border-none px-5 py-3 cursor-pointer transition-all font-semibold text-white/30 border-b-2 border-transparent">
       <%= t("dashboard.tabs.sources") %>
     </button>
+    <button data-dashboard-target="tab" data-tab="metodologia" data-action="click->dashboard#switchTab"
+            class="font-mono text-xs tracking-widest uppercase bg-none border-none px-5 py-3 cursor-pointer transition-all font-semibold text-white/30 border-b-2 border-transparent">
+      <%= t("dashboard.tabs.methodology") %>
+    </button>
     <%= link_to contracts_path, class: "font-mono text-xs tracking-widest uppercase px-5 py-3 font-semibold text-white/30 border-b-2 border-transparent hover:text-white/60 transition-all ml-auto" do %>
       <%= t("nav.contracts") %> →
     <% end %>
@@ -208,6 +212,142 @@
           <% end %>
         </div>
       <% end %>
+    </div>
+  </div>
+
+  <%# Methodology Pane %>
+  <div data-dashboard-target="pane" data-pane="metodologia" class="hidden">
+    <div class="max-w-3xl">
+      <h2 class="font-['Space_Grotesk'] text-xl font-semibold mb-1 text-[#e8e0d4]"><%= t("dashboard.methodology.heading") %></h2>
+      <p class="text-white/40 text-sm mb-8"><%= t("dashboard.methodology.subheading") %></p>
+
+      <%# Approach %>
+      <div class="mb-8 border border-white/8 rounded-lg p-6">
+        <div class="font-mono text-[10px] tracking-[3px] text-[#c8a84e] mb-3">APPROACH</div>
+        <p class="text-white/65 text-sm leading-relaxed mb-3">
+          <%= t("dashboard.methodology.approach_p1") %>
+        </p>
+        <p class="text-white/65 text-sm leading-relaxed">
+          <%= t("dashboard.methodology.approach_p2") %>
+        </p>
+      </div>
+
+      <%# Track A %>
+      <div class="mb-6">
+        <div class="font-mono text-[10px] tracking-[3px] text-[#ff4444] mb-3">TRACK A — RULE-BASED FLAGS</div>
+        <div class="space-y-2">
+          <% [
+            ["A1", t("dashboard.methodology.flags.a1_title"), t("dashboard.methodology.flags.a1_desc")],
+            ["A2", t("dashboard.methodology.flags.a2_title"), t("dashboard.methodology.flags.a2_desc")],
+            ["A3", t("dashboard.methodology.flags.a3_title"), t("dashboard.methodology.flags.a3_desc")],
+            ["A4", t("dashboard.methodology.flags.a4_title"), t("dashboard.methodology.flags.a4_desc")],
+            ["A5", t("dashboard.methodology.flags.a5_title"), t("dashboard.methodology.flags.a5_desc")],
+            ["A6", t("dashboard.methodology.flags.a6_title"), t("dashboard.methodology.flags.a6_desc")],
+            ["A7", t("dashboard.methodology.flags.a7_title"), t("dashboard.methodology.flags.a7_desc")],
+            ["A8", t("dashboard.methodology.flags.a8_title"), t("dashboard.methodology.flags.a8_desc")],
+            ["A9", t("dashboard.methodology.flags.a9_title"), t("dashboard.methodology.flags.a9_desc")]
+          ].each do |code, title, desc| %>
+            <div class="flex gap-3 bg-white/[0.02] border border-white/[0.06] rounded-lg p-3.5">
+              <span class="font-mono text-[10px] font-bold text-[#ff4444] w-6 shrink-0 pt-0.5"><%= code %></span>
+              <div>
+                <span class="font-mono text-xs font-semibold text-[#e8e0d4]"><%= title %></span>
+                <span class="font-mono text-xs text-white/40 ml-2"><%= desc %></span>
+              </div>
+            </div>
+          <% end %>
+        </div>
+      </div>
+
+      <%# Track B %>
+      <div class="mb-6">
+        <div class="font-mono text-[10px] tracking-[3px] text-[#c8a84e] mb-3">TRACK B — STATISTICAL FLAGS</div>
+        <div class="space-y-2">
+          <% [
+            ["B1", t("dashboard.methodology.flags.b1_title"), t("dashboard.methodology.flags.b1_desc")],
+            ["B2", t("dashboard.methodology.flags.b2_title"), t("dashboard.methodology.flags.b2_desc")],
+            ["B3", t("dashboard.methodology.flags.b3_title"), t("dashboard.methodology.flags.b3_desc")],
+            ["B4", t("dashboard.methodology.flags.b4_title"), t("dashboard.methodology.flags.b4_desc")]
+          ].each do |code, title, desc| %>
+            <div class="flex gap-3 bg-white/[0.02] border border-white/[0.06] rounded-lg p-3.5 opacity-60">
+              <span class="font-mono text-[10px] font-bold text-[#c8a84e] w-6 shrink-0 pt-0.5"><%= code %></span>
+              <div>
+                <span class="font-mono text-xs font-semibold text-[#e8e0d4]"><%= title %></span>
+                <span class="font-mono text-xs text-white/40 ml-2"><%= desc %></span>
+              </div>
+            </div>
+          <% end %>
+        </div>
+        <p class="font-mono text-[10px] text-white/25 mt-2 ml-1"><%= t("dashboard.methodology.track_b_note") %></p>
+      </div>
+
+      <%# Track C %>
+      <div class="mb-8">
+        <div class="font-mono text-[10px] tracking-[3px] text-[#e8e0d4] mb-3">TRACK C — INTEGRITY &amp; COMPLIANCE</div>
+        <div class="space-y-2">
+          <% [
+            ["C1", t("dashboard.methodology.flags.c1_title"), t("dashboard.methodology.flags.c1_desc")],
+            ["C2", t("dashboard.methodology.flags.c2_title"), t("dashboard.methodology.flags.c2_desc")],
+            ["C3", t("dashboard.methodology.flags.c3_title"), t("dashboard.methodology.flags.c3_desc")],
+            ["C4", t("dashboard.methodology.flags.c4_title"), t("dashboard.methodology.flags.c4_desc")],
+            ["C5", t("dashboard.methodology.flags.c5_title"), t("dashboard.methodology.flags.c5_desc")]
+          ].each do |code, title, desc| %>
+            <div class="flex gap-3 bg-white/[0.02] border border-white/[0.06] rounded-lg p-3.5">
+              <span class="font-mono text-[10px] font-bold text-[#e8e0d4] w-6 shrink-0 pt-0.5"><%= code %></span>
+              <div>
+                <span class="font-mono text-xs font-semibold text-[#e8e0d4]"><%= title %></span>
+                <span class="font-mono text-xs text-white/40 ml-2"><%= desc %></span>
+              </div>
+            </div>
+          <% end %>
+        </div>
+      </div>
+
+      <%# Sources %>
+      <div class="border-t border-white/8 pt-6">
+        <div class="font-mono text-[10px] tracking-[3px] text-white/40 mb-4">PRIMARY REFERENCES</div>
+        <div class="space-y-3">
+          <% [
+            [
+              "OECD/LEGAL/0396",
+              "Recommendation of the Council on Fighting Bid Rigging in Public Procurement (2012, rev. 2023)",
+              "https://legalinstruments.oecd.org/en/instruments/OECD-LEGAL-0396"
+            ],
+            [
+              "OECD (2025)",
+              "OECD Guidelines for Fighting Bid Rigging in Public Procurement — 2025 Update",
+              "https://doi.org/10.1787/cbe05a56-en"
+            ],
+            [
+              "OECD/LEGAL/0411",
+              "Recommendation of the Council on Public Procurement",
+              "https://legalinstruments.oecd.org/en/instruments/OECD-LEGAL-0411"
+            ],
+            [
+              "OCDS v1.2",
+              "Open Contracting Data Standard — field definitions and risk indicators",
+              "https://standard.open-contracting.org/"
+            ],
+            [
+              "IMPIC / dados.gov.pt",
+              "Contratos Públicos — Portal Base (2012–2026), updated daily",
+              "https://dados.gov.pt/datasets/66d72d488ca4b7cb2de28712"
+            ]
+          ].each do |ref, title, url| %>
+            <div class="flex items-start gap-3">
+              <span class="font-mono text-[10px] text-[#c8a84e] w-32 shrink-0 pt-0.5"><%= ref %></span>
+              <%= link_to title, url, target: "_blank", rel: "noopener noreferrer",
+                    class: "font-mono text-xs text-white/55 hover:text-white/80 transition-colors" %>
+            </div>
+          <% end %>
+        </div>
+      </div>
+
+      <%# Disclaimer %>
+      <div class="mt-8 bg-[#c8a84e08] border border-[#c8a84e22] rounded-lg p-4">
+        <p class="font-mono text-[11px] text-white/40 leading-relaxed">
+          <%= t("dashboard.methodology.disclaimer") %>
+        </p>
+      </div>
     </div>
   </div>
 
