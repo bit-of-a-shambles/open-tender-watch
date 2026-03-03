@@ -21,55 +21,84 @@ module PublicContracts
       DADOS_GOV_API = "https://dados.gov.pt/api/1"
       DATASET_ID    = "66d72d488ca4b7cb2de28712"
 
+      # Batch size for streaming rows out of the spreadsheet.
+      # Keeps memory usage bounded — each batch is GC-able after processing.
+      BATCH_SIZE = 500
+
       def initialize(config = {})
         super(DADOS_GOV_API)
-        @years = Array(config.fetch("years", Time.current.year))
-        @rows  = nil
+        @years     = Array(config.fetch("years", Time.current.year))
+        @resources = nil
       end
 
       def country_code = COUNTRY_CODE
       def source_name  = SOURCE_NAME
 
+      # Returns an approximate total by summing last_row across all XLSX files.
+      # Subtract 1 per file for the header row.
       def total_count
-        all_rows.size
+        resources = fetch_resources
+        @years.sum do |year|
+          res = resources.find { |r| resource_year(r) == year }
+          next 0 unless res
+          count_rows_in_resource(res["url"])
+        end
       end
 
-      def fetch_contracts(page: 1, limit: 100)
-        start = (page - 1) * limit
-        all_rows[start, limit] || []
+      # Streams contracts in batches — never holds the full spreadsheet in RAM.
+      # Yields (or returns) one page of BATCH_SIZE normalised hashes at a time.
+      def fetch_contracts(page: 1, limit: BATCH_SIZE)
+        resources = fetch_resources
+        batch     = []
+        offset    = (page - 1) * limit
+
+        @years.each do |year|
+          res = resources.find { |r| resource_year(r) == year }
+          unless res
+            Rails.logger.warn "[PortalBaseClient] No XLSX resource found for year #{year}"
+            next
+          end
+
+          stream_xlsx_resource(res["url"]) do |row|
+            offset > 0 ? (offset -= 1) : (batch << row)
+            return batch if batch.size >= limit
+          end
+        end
+
+        batch
       end
 
       private
 
-      def all_rows
-        @rows ||= load_rows
-      end
-
-      def load_rows
-        resources = fetch_resources
-        @years.flat_map do |year|
-          res = resources.find { |r| r["title"]&.downcase == "contratos#{year}.xlsx" }
-          unless res
-            Rails.logger.warn "[PortalBaseClient] No XLSX resource found for year #{year}"
-            next []
-          end
-          parse_xlsx_resource(res["url"])
-        end.compact
+      def resource_year(res)
+        m = res["title"]&.downcase&.match(/contratos(\d{4})\.xlsx/)
+        m ? m[1].to_i : nil
       end
 
       def fetch_resources
-        result = get("/datasets/#{DATASET_ID}/")
-        Array(result&.dig("resources")).select { |r| r["format"]&.downcase == "xlsx" }
+        @resources ||= begin
+          result = get("/datasets/#{DATASET_ID}/")
+          Array(result&.dig("resources")).select { |r| r["format"]&.downcase == "xlsx" }
+        end
       end
 
-      def parse_xlsx_resource(url)
-        rows = []
+      def count_rows_in_resource(url)
+        Tempfile.create(["portal_base_count", ".xlsx"], binmode: true) do |tmp|
+          download_file(url, tmp)
+          tmp.flush
+          xlsx = Roo::Spreadsheet.open(tmp.path)
+          return [ xlsx.sheet(0).last_row - 1, 0 ].max
+        end
+      end
+
+      # Streams rows one at a time from an XLSX resource, yielding each
+      # normalised contract hash without accumulating all rows in memory.
+      def stream_xlsx_resource(url)
         Tempfile.create(["portal_base", ".xlsx"], binmode: true) do |tmp|
           download_file(url, tmp)
           tmp.flush
-          rows = parse_spreadsheet(tmp.path)
+          stream_spreadsheet(tmp.path) { |row| yield row }
         end
-        rows
       end
 
       # rubocop:disable Security/Open
@@ -78,11 +107,21 @@ module PublicContracts
       end
       # rubocop:enable Security/Open
 
-      def parse_spreadsheet(path)
-        xlsx  = Roo::Spreadsheet.open(path)
-        sheet = xlsx.sheet(0)
+      def stream_spreadsheet(path)
+        xlsx    = Roo::Spreadsheet.open(path)
+        sheet   = xlsx.sheet(0)
         headers = sheet.row(1)
-        (2..sheet.last_row).filter_map { |i| normalize_row(headers, sheet.row(i)) }
+        (2..sheet.last_row).each do |i|
+          row = normalize_row(headers, sheet.row(i))
+          yield row if row
+        end
+      end
+
+      # Keep parse_spreadsheet for test stubbing convenience
+      def parse_spreadsheet(path)
+        rows = []
+        stream_spreadsheet(path) { |r| rows << r }
+        rows
       end
 
       def normalize_row(headers, values)

@@ -237,32 +237,74 @@ class PublicContracts::PT::PortalBaseClientTest < ActiveSupport::TestCase
   end
 
   # ---------------------------------------------------------------------------
-  # fetch_contracts (integration via stubbed rows)
+  # resource_year
   # ---------------------------------------------------------------------------
 
-  test "fetch_contracts paginates correctly" do
-    rows = (1..10).map { |i| { "external_id" => i.to_s } }
-    @client.instance_variable_set(:@rows, rows)
-    page1 = @client.fetch_contracts(page: 1, limit: 4)
-    page2 = @client.fetch_contracts(page: 2, limit: 4)
-    page3 = @client.fetch_contracts(page: 3, limit: 4)
-    assert_equal 4, page1.size
-    assert_equal 4, page2.size
-    assert_equal 2, page3.size
+  test "resource_year extracts year from title" do
+    res = { "title" => "contratos2025.xlsx" }
+    assert_equal 2025, @client.send(:resource_year, res)
   end
 
-  test "fetch_contracts returns empty array beyond last page" do
-    @client.instance_variable_set(:@rows, [])
-    assert_equal [], @client.fetch_contracts(page: 99, limit: 50)
+  test "resource_year returns nil for unrecognised title" do
+    assert_nil @client.send(:resource_year, { "title" => "readme.txt" })
+  end
+
+  # ---------------------------------------------------------------------------
+  # fetch_contracts (streaming via stubbed stream_xlsx_resource)
+  # ---------------------------------------------------------------------------
+
+  test "fetch_contracts returns first page of matching rows" do
+    resources = [ { "title" => "contratos2024.xlsx", "format" => "xlsx",
+                    "url" => "https://example.com/contratos2024.xlsx" } ]
+    rows = (1..10).map { |i| { "external_id" => i.to_s } }
+
+    @client.stub(:fetch_resources, resources) do
+      @client.stub(:stream_xlsx_resource, ->(url, &blk) { rows.each { |r| blk.call(r) } }) do
+        result = @client.fetch_contracts(page: 1, limit: 4)
+        assert_equal 4, result.size
+        assert_equal "1", result.first["external_id"]
+      end
+    end
+  end
+
+  test "fetch_contracts paginates correctly" do
+    resources = [ { "title" => "contratos2024.xlsx", "format" => "xlsx",
+                    "url" => "https://example.com/contratos2024.xlsx" } ]
+    rows = (1..10).map { |i| { "external_id" => i.to_s } }
+
+    @client.stub(:fetch_resources, resources) do
+      @client.stub(:stream_xlsx_resource, ->(url, &blk) { rows.each { |r| blk.call(r) } }) do
+        page2 = @client.fetch_contracts(page: 2, limit: 4)
+        assert_equal 4, page2.size
+        assert_equal "5", page2.first["external_id"]
+      end
+    end
+  end
+
+  test "fetch_contracts returns empty array when no matching resource" do
+    @client.stub(:fetch_resources, []) do
+      assert_equal [], @client.fetch_contracts
+    end
   end
 
   # ---------------------------------------------------------------------------
   # total_count
   # ---------------------------------------------------------------------------
 
-  test "total_count returns row count" do
-    @client.instance_variable_set(:@rows, [ {}, {}, {} ])
-    assert_equal 3, @client.total_count
+  test "total_count sums rows across configured years" do
+    resources = [ { "title" => "contratos2024.xlsx", "format" => "xlsx",
+                    "url" => "https://example.com/contratos2024.xlsx" } ]
+    @client.stub(:fetch_resources, resources) do
+      @client.stub(:count_rows_in_resource, 42) do
+        assert_equal 42, @client.total_count
+      end
+    end
+  end
+
+  test "total_count returns 0 when year not found" do
+    @client.stub(:fetch_resources, []) do
+      assert_equal 0, @client.total_count
+    end
   end
 
   # ---------------------------------------------------------------------------
@@ -308,41 +350,41 @@ class PublicContracts::PT::PortalBaseClientTest < ActiveSupport::TestCase
   end
 
   # ---------------------------------------------------------------------------
-  # parse_xlsx_resource
+  # stream_xlsx_resource
   # ---------------------------------------------------------------------------
 
-  test "parse_xlsx_resource downloads and parses xlsx from url" do
+  test "stream_xlsx_resource yields rows from downloaded file" do
     fake_rows = [ { "external_id" => "1" }, { "external_id" => "2" } ]
+    collected = []
 
     @client.stub(:download_file, nil) do
-      @client.stub(:parse_spreadsheet, fake_rows) do
-        result = @client.send(:parse_xlsx_resource, "https://example.com/test.xlsx")
-        assert_equal fake_rows, result
+      @client.stub(:stream_spreadsheet, ->(path, &blk) { fake_rows.each { |r| blk.call(r) } }) do
+        @client.send(:stream_xlsx_resource, "https://example.com/test.xlsx") { |r| collected << r }
       end
     end
+
+    assert_equal fake_rows, collected
   end
 
   # ---------------------------------------------------------------------------
-  # load_rows
+  # count_rows_in_resource
   # ---------------------------------------------------------------------------
 
-  test "load_rows returns empty array and warns when year resource not found" do
-    @client.stub(:fetch_resources, []) do
-      result = @client.send(:load_rows)
-      assert_equal [], result
-    end
-  end
+  test "count_rows_in_resource returns last_row minus header" do
+    sheet_mock = Minitest::Mock.new
+    sheet_mock.expect(:last_row, 51)
 
-  test "load_rows processes matching xlsx resource for configured year" do
-    resources  = [ { "title" => "contratos2024.xlsx", "format" => "xlsx",
-                     "url" => "https://example.com/contratos2024.xlsx" } ]
-    fake_rows  = [ { "external_id" => "42" } ]
+    xlsx_mock = Minitest::Mock.new
+    xlsx_mock.expect(:sheet, sheet_mock, [ 0 ])
 
-    @client.stub(:fetch_resources, resources) do
-      @client.stub(:parse_xlsx_resource, fake_rows) do
-        result = @client.send(:load_rows)
-        assert_equal fake_rows, result
+    @client.stub(:download_file, nil) do
+      Roo::Spreadsheet.stub(:open, xlsx_mock) do
+        count = @client.send(:count_rows_in_resource, "https://example.com/test.xlsx")
+        assert_equal 50, count
       end
     end
+
+    assert_mock sheet_mock
+    assert_mock xlsx_mock
   end
 end
