@@ -516,21 +516,65 @@ class PublicContracts::ImportServiceTest < ActiveSupport::TestCase
     end
   end
 
-  test "call_streaming logs and skips when save! raises RecordInvalid on duplicate" do
-    # To force the RecordInvalid rescue path we stub find_existing_contract to
-    # always return nil, so both rows attempt a fresh insert. The second insert
-    # triggers ActiveRecord's uniqueness validation (it finds the first row that
-    # was committed in the previous savepoint) and raises RecordInvalid.
+  test "call_streaming silently ignores in-batch duplicates via insert_all" do
+    # Yield the same external_id twice in a single batch. insert_all's
+    # ON CONFLICT DO NOTHING absorbs the second row — no exception raised.
     same_attrs = build_contract_attrs("external_id" => "force-skip-001")
     adapter = Object.new
     adapter.define_singleton_method(:each_contract) { |&blk| 2.times { blk.call(same_attrs) } }
     ds = data_sources(:portal_base)
     ds.stub(:adapter, adapter) do
-      svc = PublicContracts::ImportService.new(ds)
-      # Force find_existing_contract to always return nil on this instance
-      svc.define_singleton_method(:find_existing_contract) { |*_| nil }
       assert_difference "Contract.count", 1 do
-        svc.call_streaming(batch_size: 10, progress: nil)
+        PublicContracts::ImportService.new(ds).call_streaming(batch_size: 10, progress: nil)
+      end
+    end
+  end
+
+  test "call_streaming skips batch where all rows have blank object (valid_rows guard)" do
+    # All rows have a blank object — filter_map returns empty valid_rows, so
+    # flush_bulk returns early with 0 imported.
+    attrs = build_contract_attrs("object" => "")
+    adapter = Object.new
+    adapter.define_singleton_method(:each_contract) { |&blk| blk.call(attrs) }
+    ds = data_sources(:portal_base)
+    ds.stub(:adapter, adapter) do
+      assert_no_difference "Contract.count" do
+        PublicContracts::ImportService.new(ds).call_streaming(progress: nil)
+      end
+      assert_equal 0, ds.reload.record_count
+    end
+  end
+
+  test "call_streaming skips batch where contracting entity has blank name (contract_rows guard)" do
+    # contracting_entity has blank name → find_or_create_entity_cached returns nil
+    # → next unless contracting filters every row → contract_rows is empty → early return.
+    attrs = build_contract_attrs(
+      "contracting_entity" => { "tax_identifier" => "500000002", "name" => "", "is_public_body" => true }
+    )
+    adapter = Object.new
+    adapter.define_singleton_method(:each_contract) { |&blk| blk.call(attrs) }
+    ds = data_sources(:portal_base)
+    ds.stub(:adapter, adapter) do
+      assert_no_difference "Contract.count" do
+        PublicContracts::ImportService.new(ds).call_streaming(progress: nil)
+      end
+    end
+  end
+
+  test "call_streaming skips winner when entity not resolvable (blank winner name)" do
+    # Winner has a blank name — find_or_create_entity_cached returns nil —
+    # next unless winner skips it — no ContractWinner row created.
+    attrs = build_contract_attrs(
+      "winners" => [ { "tax_identifier" => "509000001", "name" => "", "is_company" => true } ]
+    )
+    adapter = Object.new
+    adapter.define_singleton_method(:each_contract) { |&blk| blk.call(attrs) }
+    ds = data_sources(:portal_base)
+    ds.stub(:adapter, adapter) do
+      assert_difference "Contract.count", 1 do
+        assert_no_difference "ContractWinner.count" do
+          PublicContracts::ImportService.new(ds).call_streaming(progress: nil)
+        end
       end
     end
   end

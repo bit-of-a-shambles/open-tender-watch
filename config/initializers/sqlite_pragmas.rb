@@ -11,6 +11,12 @@ if defined?(ActiveRecord::ConnectionAdapters::SQLite3Adapter)
           @raw_connection.execute("PRAGMA journal_mode=WAL")
           @raw_connection.execute("PRAGMA synchronous=NORMAL")
           @raw_connection.execute("PRAGMA busy_timeout=30000")
+          # 64 MB page cache (negative = kibibytes)
+          @raw_connection.execute("PRAGMA cache_size=-65536")
+          # 256 MB memory-mapped I/O — dramatically reduces read syscall overhead
+          @raw_connection.execute("PRAGMA mmap_size=268435456")
+          # Keep temp tables and indexes in memory instead of temp files
+          @raw_connection.execute("PRAGMA temp_store=MEMORY")
         end
       end)
     end

@@ -10,13 +10,14 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_02_27_191500) do
+ActiveRecord::Schema[8.0].define(version: 2026_03_04_000000) do
   create_table "contract_winners", force: :cascade do |t|
     t.integer "contract_id", null: false
     t.integer "entity_id", null: false
     t.decimal "price_share", precision: 15, scale: 2
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.index ["contract_id", "entity_id"], name: "index_contract_winners_on_contract_id_and_entity_id", unique: true
     t.index ["contract_id"], name: "index_contract_winners_on_contract_id"
     t.index ["entity_id"], name: "index_contract_winners_on_entity_id"
   end
