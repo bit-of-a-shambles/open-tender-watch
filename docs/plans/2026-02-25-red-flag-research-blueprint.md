@@ -1,6 +1,6 @@
 # Red Flag Research Blueprint — Portuguese Public Procurement
 
-> Deep research blueprint for flagging corruption and abuse in Portuguese public tendering using open data. Source: practical field research synthesising OECD, OCP, Portal BASE, TED, AdC, and TdC documentation.
+> Deep research blueprint for flagging corruption and abuse in Portuguese public tendering using open data. Source: practical field research synthesising [OECD "Preventing Corruption in Public Procurement"](https://www.oecd.org/en/publications/preventing-corruption-in-public-procurement_9789264059765-en.html), [OCP "Red Flags for Integrity"](https://www.open-contracting.org/resources/red-flags-for-integrity-giving-green-light-to-open-data-solutions/), Portal BASE, TED, AdC, and [TdC](https://www.tcontas.pt/) documentation.
 
 ---
 

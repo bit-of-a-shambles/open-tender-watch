@@ -6,7 +6,7 @@ A Rails 8 app that monitors public procurement data across multiple countries to
 
 ## Overview
 
-The app ingests procurement data from country-specific and EU-wide sources, then scores contracts against a red flag catalogue derived from OECD, OCP, and Tribunal de Contas methodology.
+The app ingests procurement data from country-specific and EU-wide sources, then scores contracts against a red flag catalogue derived from [OECD](https://www.oecd.org/en/publications/preventing-corruption-in-public-procurement_9789264059765-en.html), [OCP](https://www.open-contracting.org/resources/red-flags-for-integrity-giving-green-light-to-open-data-solutions/), and [Tribunal de Contas](https://www.tcontas.pt/) methodology.
 
 ![Dashboard](screenshot.png)
 *Dashboard showing flagged contracts with risk scores*
@@ -106,7 +106,7 @@ A single composite score is too easy to game and too hard to explain. Instead th
 
 Each flagged case records which fields triggered it, a data completeness score, and a confidence level. Missing NIFs, impossible date sequences, and blank mandatory fields are themselves scored as flags — incomplete data often points at the same entities worth scrutinising.
 
-See `AGENTS.md` for the full catalogue with OECD and OCP methodology references.
+See `AGENTS.md` for the full catalogue with [OECD](https://www.oecd.org/en/publications/preventing-corruption-in-public-procurement_9789264059765-en.html) and [OCP](https://www.open-contracting.org/resources/red-flags-for-integrity-giving-green-light-to-open-data-solutions/) methodology references.
 
 ## How the data pipeline works
 

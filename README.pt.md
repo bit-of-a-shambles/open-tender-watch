@@ -6,7 +6,7 @@ Uma aplicação Rails 8 que monitoriza dados de contratação pública em vário
 
 ## Visão Geral
 
-A aplicação ingere dados de contratação de fontes nacionais e europeias, cruzando-os contra um catálogo de sinais de alerta derivado da metodologia da OCDE, OCP e Tribunal de Contas.
+A aplicação ingere dados de contratação de fontes nacionais e europeias, cruzando-os contra um catálogo de sinais de alerta derivado da metodologia da [OCDE](https://www.oecd.org/en/publications/preventing-corruption-in-public-procurement_9789264059765-en.html), [OCP](https://www.open-contracting.org/resources/red-flags-for-integrity-giving-green-light-to-open-data-solutions/) e [Tribunal de Contas](https://www.tcontas.pt/).
 
 ![Dashboard](screenshot.png)
 *Dashboard com contratos sinalizados e pontuações de risco*
@@ -206,7 +206,7 @@ Não é necessário escrever código para contribuir:
 
 - **Assinalar um contrato** — se detetar algo suspeito na interface, abrir uma issue no GitHub com o URL do contrato e o que chamou a atenção.
 - **Sugerir uma fonte de dados** — se conhecer um portal de contratação pública ou base de dados de integridade ainda não coberto, abrir uma issue com um link e uma breve descrição.
-- **Melhorar o catálogo de alertas** — se conhecer a metodologia da OCDE, do TdC ou da OCP e considerar que falta um indicador ou que um está mal calibrado, abrir uma issue.
+- **Melhorar o catálogo de alertas** — se conhecer a metodologia da [OCDE](https://www.oecd.org/en/publications/preventing-corruption-in-public-procurement_9789264059765-en.html), do [TdC](https://www.tcontas.pt/) ou da [OCP](https://www.open-contracting.org/resources/red-flags-for-integrity-giving-green-light-to-open-data-solutions/) e considerar que falta um indicador ou que um está mal calibrado, abrir uma issue.
 - **Testar os dados** — verificar uma amostra de contratos no portal de origem (Portal BASE, TED) e reportar discrepâncias.
 - **Traduzir** — os ficheiros de localização estão em `config/locales/`. Um novo idioma é apenas um ficheiro YAML; não é necessário código.
 

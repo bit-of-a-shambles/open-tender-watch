@@ -45,7 +45,7 @@ The approach is **risk scoring, not accusation**. The system surfaces cases for 
 
 ## Red Flag Catalogue
 
-Indicators are grouped into three tracks following OECD methodology:
+Indicators are grouped into three tracks following [OECD methodology](https://www.oecd.org/en/publications/preventing-corruption-in-public-procurement_9789264059765-en.html) (see also [OCP Red Flags for Integrity](https://www.open-contracting.org/resources/red-flags-for-integrity-giving-green-light-to-open-data-solutions/)):
 
 ### Track A — Rule-based red flags (high explainability)
 
