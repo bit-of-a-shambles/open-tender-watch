@@ -12,7 +12,8 @@
 #   bundle exec rails db:sync:import_and_push
 
 PROD_HOST    = "128.140.78.94"
-PROD_DB_PATH = "storage/production.sqlite3"
+PROD_CONTAINER_DB = "/rails/storage/production.sqlite3"
+PROD_DB_PATH = PROD_CONTAINER_DB
 LOCAL_DEV_DB = -> { ActiveRecord::Base.configurations.find_db_config("development").database }
 BACKUP_STAMP = -> { Time.now.strftime("%Y%m%d_%H%M%S") }
 
@@ -48,7 +49,7 @@ namespace :db do
       # Copy to server tmp, then into the container volume
       system("scp #{dev_db} root@#{PROD_HOST}:/tmp/opentenderwatch_db_push.sqlite3")
       system("ssh root@#{PROD_HOST} " \
-        "'docker cp /tmp/opentenderwatch_db_push.sqlite3 #{container_id}:#{PROD_DB_PATH} && " \
+        "'docker cp /tmp/opentenderwatch_db_push.sqlite3 #{container_id}:#{PROD_CONTAINER_DB} && " \
         "rm /tmp/opentenderwatch_db_push.sqlite3'")
 
       puts "==> Database pushed. Rebooting app..."
