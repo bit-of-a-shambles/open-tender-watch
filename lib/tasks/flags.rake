@@ -59,10 +59,16 @@ namespace :flags do
     conn = ActiveRecord::Base.connection
     now  = Time.current.utc.strftime("%Y-%m-%d %H:%M:%S")
 
+    # Use total_effective_price (actual awarded value) where available; fall back
+    # to base_price only when null/zero.  base_price is the framework envelope
+    # ceiling and can be wildly inflated (e.g. €147B for a single drug purchase).
+    price_expr = "COALESCE(NULLIF(c.total_effective_price, 0), c.base_price)"
+
     conn.transaction do
       # -----------------------------------------------------------------------
       # flag_entity_stats — one row per (entity, flag_type, severity).
-      # Counts contracts and sums their base_price, grouped by contracting entity.
+      # Counts distinct contracts and sums their effective price, grouped by
+      # contracting entity.
       # -----------------------------------------------------------------------
       conn.execute("DELETE FROM flag_entity_stats")
       conn.execute(<<~SQL)
@@ -70,13 +76,13 @@ namespace :flags do
           (entity_id, flag_type, severity, total_exposure, contract_count,
            computed_at, created_at, updated_at)
         SELECT
-          c.contracting_entity_id       AS entity_id,
+          c.contracting_entity_id                          AS entity_id,
           f.flag_type,
           f.severity,
-          COALESCE(SUM(c.base_price), 0) AS total_exposure,
-          COUNT(*)                       AS contract_count,
+          COALESCE(SUM(#{price_expr}), 0)                  AS total_exposure,
+          COUNT(DISTINCT f.contract_id)                    AS contract_count,
           '#{now}', '#{now}', '#{now}'
-        FROM flags f
+        FROM (SELECT DISTINCT contract_id, flag_type, severity FROM flags) f
         JOIN contracts c ON c.id = f.contract_id
         GROUP BY c.contracting_entity_id, f.flag_type, f.severity
       SQL
@@ -95,7 +101,7 @@ namespace :flags do
         sev_val    = sev ? "'#{sev}'" : "NULL"
 
         total_exposure = conn.select_value(<<~SQL).to_f
-          SELECT COALESCE(SUM(c.base_price), 0)
+          SELECT COALESCE(SUM(COALESCE(NULLIF(c.total_effective_price, 0), c.base_price)), 0)
           FROM contracts c
           WHERE c.id IN (SELECT DISTINCT f.contract_id FROM flags f #{sev_filter})
         SQL
