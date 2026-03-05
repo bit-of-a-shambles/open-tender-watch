@@ -1,7 +1,7 @@
 class DashboardController < ApplicationController
   include ActionView::Helpers::NumberHelper
 
-  STATS_CACHE_TTL    = 5.minutes
+  STATS_CACHE_TTL    = 15.minutes  # background job warms cache every 5 min
   EXPOSURE_ROW_LIMIT = 200
 
   def index
@@ -91,21 +91,34 @@ class DashboardController < ApplicationController
     @flagged_public_entities_count = aggregates[:flagged_public_entities_count]
     @entity_exposure_rows         = aggregates[:exposure_rows]
 
+    active_sources_count = Rails.cache.fetch("dashboard/active_sources_count", expires_in: STATS_CACHE_TTL) do
+      DataSource.where(status: :active).count
+    end
+
+    all_sources = Rails.cache.fetch("dashboard/all_sources", expires_in: STATS_CACHE_TTL) do
+      DataSource.order(:country_code, :name).map do |ds|
+        { id: ds.id, name: ds.name, country_code: ds.country_code,
+          source_type: ds.source_type, status: ds.status,
+          records: source_contract_counts.fetch(ds.id, 0),
+          synced_at: ds.last_synced_at&.strftime("%Y-%m-%d %H:%M") }
+      end
+    end
+
     @stats = [
-      { label: t("stats.contracts"), value: number_with_delimiter(contract_count),            color: "text-[#c8a84e]" },
-      { label: t("stats.entities"),  value: number_with_delimiter(entity_count),              color: "text-[#e8e0d4]" },
-      { label: t("stats.sources"),   value: DataSource.where(status: :active).count.to_s,    color: "text-[#e8e0d4]" },
-      { label: t("stats.alerts"),    value: number_with_delimiter(@insights_count),           color: "text-[#ff4444]" }
+      { label: t("stats.contracts"), value: number_with_delimiter(contract_count),              color: "text-[#c8a84e]" },
+      { label: t("stats.entities"),  value: number_with_delimiter(entity_count),                color: "text-[#e8e0d4]" },
+      { label: t("stats.sources"),   value: active_sources_count.to_s,                          color: "text-[#e8e0d4]" },
+      { label: t("stats.alerts"),    value: number_with_delimiter(@insights_count),             color: "text-[#ff4444]" }
     ]
 
-    @sources = DataSource.order(:country_code, :name).map do |ds|
+    @sources = all_sources.map do |ds|
       {
-        name:      ds.name,
-        country:   ds.country_code,
-        type:      ds.source_type.capitalize,
-        status:    ds.status,
-        records:   number_with_delimiter(source_contract_counts.fetch(ds.id, 0)),
-        synced_at: ds.last_synced_at&.strftime("%Y-%m-%d %H:%M")
+        name:      ds[:name],
+        country:   ds[:country_code],
+        type:      ds[:source_type].capitalize,
+        status:    ds[:status],
+        records:   number_with_delimiter(ds[:records]),
+        synced_at: ds[:synced_at]
       }
     end
 

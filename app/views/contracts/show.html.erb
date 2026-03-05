@@ -107,7 +107,7 @@
         <div class="bg-white/[0.02] border border-white/[0.06] rounded-lg p-5">
           <div class="font-mono text-[10px] tracking-[2px] text-white/35 mb-4 uppercase"><%= t("contracts.show.flags.heading") %></div>
           <div class="space-y-3">
-            <% @contract.flags.order(score: :desc).each do |flag| %>
+            <% @contract.flags.sort_by { |f| -f.score }.each do |flag| %>
               <% severity_color = flag.severity == "high" ? "text-[#ff4444] bg-[#ff44440d] border-[#ff444422]" :
                                   flag.severity == "medium" ? "text-[#ff8844] bg-[#ff88440d] border-[#ff884422]" :
                                   "text-[#c8a84e] bg-[#c8a84e0d] border-[#c8a84e22]" %>

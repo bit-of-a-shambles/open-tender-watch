@@ -10,7 +10,7 @@
       <%= t("contracts.index.title") %>
     </h1>
     <p class="text-white/35 text-sm">
-      <%= t("contracts.index.subtitle", count: @total, total: number_with_delimiter(@total), all: number_with_delimiter(Contract.count)) %>
+      <%= t("contracts.index.subtitle", count: @total, total: number_with_delimiter(@total), all: number_with_delimiter(@all_count)) %>
     </p>
   </header>
 

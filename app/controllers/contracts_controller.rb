@@ -9,7 +9,9 @@ class ContractsController < ApplicationController
     scope = Contract.includes(:contracting_entity, :winners, :data_source, :flags)
     @selected_source_ids = Array(params[:source_ids]).reject(&:blank?).map(&:to_i).uniq
 
-    if params[:q].present?
+    # Require at least 3 characters to avoid leading-wildcard full-table scans
+    # on a 2 million-row table for every keystroke.
+    if params[:q].present? && params[:q].length >= 3
       scope = scope.where("object LIKE ?", "%#{params[:q]}%")
     end
 
@@ -25,17 +27,19 @@ class ContractsController < ApplicationController
       scope = scope.where(data_source_id: @selected_source_ids)
     end
 
-    case params[:flagged]
-    when "only"
+    # flag_type implies "flagged only" — handle it first to avoid a redundant
+    # second joins(:flags).distinct when both flag_type and flagged=only are set.
+    if params[:flag_type].present?
+      scope = scope.joins(:flags).where(flags: { flag_type: params[:flag_type] }).distinct
+    elsif params[:flagged] == "only"
       scope = scope.joins(:flags).distinct
-    when "none"
+    elsif params[:flagged] == "none"
       scope = scope.left_outer_joins(:flags).where(flags: { id: nil })
     end
 
-    if params[:flag_type].present?
-      scope = scope.joins(:flags).where(flags: { flag_type: params[:flag_type] }).distinct
-    end
-
+    # Reuse the dashboard cached count for the "all contracts" total shown in
+    # the subtitle — avoids an uncached SELECT COUNT(*) FROM contracts on every load.
+    @all_count    = Rails.cache.fetch("dashboard/contract_count", expires_in: 10.minutes) { Contract.count }
     @total        = scope.count
     @page         = [ params[:page].to_i, 1 ].max
     @total_pages  = (@total.to_f / PER_PAGE).ceil
