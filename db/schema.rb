@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_03_05_000001) do
+ActiveRecord::Schema[8.0].define(version: 2026_03_05_202232) do
   create_table "contract_winners", force: :cascade do |t|
     t.integer "contract_id", null: false
     t.integer "entity_id", null: false
@@ -94,6 +94,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_03_05_000001) do
     t.index ["contract_id", "flag_type"], name: "index_flags_on_contract_id_and_flag_type", unique: true
     t.index ["contract_id"], name: "index_flags_on_contract_id"
     t.index ["flag_type"], name: "index_flags_on_flag_type"
+    t.index ["severity", "flag_type", "contract_id"], name: "index_flags_on_severity_flag_type_contract_id"
     t.index ["severity"], name: "index_flags_on_severity"
   end
 
