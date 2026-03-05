@@ -37,13 +37,19 @@ class DashboardStatsJob < ApplicationJob
                       expires_in: CACHE_TTL)
 
     # -----------------------------------------------------------------------
-    # Default aggregates — hot path: no severity, no flag_type, sort by value
+    # Default aggregates — hot path: no severity, no flag_type, sort by value.
+    # Also pre-warm all severity-filtered variants so that users who click a
+    # severity filter never trigger a cold, multi-second query inline.
     # -----------------------------------------------------------------------
-    Rails.cache.write(
-      "dashboard/aggregates/sev:/ft:/sort:value",
-      compute_aggregates(severity: nil, flag_type: nil, sort_by: "value"),
-      expires_in: CACHE_TTL
-    )
+    [ nil, "high", "medium", "low" ].each do |sev|
+      [ "value", "count" ].each do |sort|
+        Rails.cache.write(
+          "dashboard/aggregates/sev:#{sev}/ft:/sort:#{sort}",
+          compute_aggregates(severity: sev, flag_type: nil, sort_by: sort),
+          expires_in: CACHE_TTL
+        )
+      end
+    end
   end
 
   private
@@ -101,7 +107,9 @@ class DashboardStatsJob < ApplicationJob
       "contracts.contracting_entity_id AS entity_id",
       "entities.name AS entity_name",
       "COALESCE(SUM(COALESCE(contracts.base_price, 0)), 0) AS exposure_value",
-      "COUNT(DISTINCT contracts.id) AS exposure_count"
+      # COUNT(*) is safe: unique index on (contract_id, flag_type) guarantees
+      # no duplicate contract rows within a (flag_type, entity) group.
+      "COUNT(*) AS exposure_count"
     ).group(
       "flags.flag_type, contracts.contracting_entity_id, entities.name"
     ).order(

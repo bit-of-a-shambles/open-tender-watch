@@ -34,31 +34,34 @@ class DashboardController < ApplicationController
     filter_key = "sev:#{@severity_filter}/ft:#{@entity_flag_type}/sort:#{@entity_sort}"
 
     aggregates = Rails.cache.fetch("dashboard/aggregates/#{filter_key}", expires_in: STATS_CACHE_TTL) do
-      # ALWAYS start queries from flags (37K rows) — never from contracts (2.1M)
-      # or entities (101K) or contract_winners (1.9M). SQLite processes joins
-      # in declaration order; starting from the smallest table is critical.
-      flags_scope = @severity_filter ? Flag.where(severity: @severity_filter) : Flag.all
+      flags_scope      = @severity_filter ? Flag.where(severity: @severity_filter) : Flag.all
+      # Deduplicated contract set — used as a subquery so each contract is
+      # counted exactly once regardless of how many flags it carries.
+      flagged_subquery = flags_scope.select(:contract_id).distinct
 
       flags_count   = flags_scope.count
       flags_by_type = flags_scope.group(:flag_type).order(:flag_type).count
 
-      # flags → contracts (via indexed contract_id)
-      flagged_total_exposure  = flags_scope.joins(:contract).sum("contracts.base_price")
-      flagged_contract_count  = flags_scope.distinct.count(:contract_id)
+      # Sum base_price once per contract — NOT per flag — to avoid multiplying
+      # the total by the number of flag types on each contract.
+      flagged_total_exposure = Contract.where(id: flagged_subquery).sum(:base_price)
+      flagged_contract_count = flagged_subquery.count
 
-      # flags → contract_winners → entities  (all joins via indexed FKs)
-      flagged_companies_count = flags_scope
-        .joins(contract: { contract_winners: :entity })
-        .where(entities: { is_company: true })
+      # Start from Entity (smaller table) rather than from flags to avoid
+      # Cartesian-product expansion through contract_winners.
+      flagged_companies_count = Entity
+        .joins(contract_winners: { contract: :flags })
+        .merge(flags_scope)
+        .where(is_company: true)
         .distinct
-        .count("entities.id")
+        .count
 
-      # flags → contracts → contracting entity
-      flagged_public_entities_count = flags_scope
-        .joins(contract: :contracting_entity)
-        .where(entities: { is_public_body: true })
+      flagged_public_entities_count = Entity
+        .joins(contracts_as_contracting_entity: :flags)
+        .merge(flags_scope)
+        .where(is_public_body: true)
         .distinct
-        .count("contracts.contracting_entity_id")
+        .count
 
       # Materialise the exposure rows into plain hashes so they survive Marshal
       # serialisation into Solid Cache (AR result objects cannot be marshalled).
@@ -143,7 +146,10 @@ class DashboardController < ApplicationController
       "contracts.contracting_entity_id AS entity_id",
       "entities.name AS entity_name",
       "COALESCE(SUM(COALESCE(contracts.base_price, 0)), 0) AS exposure_value",
-      "COUNT(DISTINCT contracts.id) AS exposure_count"
+      # COUNT(*) is safe here: the unique index on (contract_id, flag_type)
+      # ensures that within each (flag_type, entity) group every contract
+      # appears exactly once, so COUNT(*) == COUNT(DISTINCT contracts.id).
+      "COUNT(*) AS exposure_count"
     ).group(
       "flags.flag_type, contracts.contracting_entity_id, entities.name"
     ).order(
