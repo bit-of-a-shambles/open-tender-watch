@@ -34,34 +34,31 @@ class DashboardController < ApplicationController
     filter_key = "sev:#{@severity_filter}/ft:#{@entity_flag_type}/sort:#{@entity_sort}"
 
     aggregates = Rails.cache.fetch("dashboard/aggregates/#{filter_key}", expires_in: STATS_CACHE_TTL) do
-      flags_scope      = @severity_filter ? Flag.where(severity: @severity_filter) : Flag.all
-      flagged_subquery = flags_scope.select(:contract_id).distinct
+      # ALWAYS start queries from flags (37K rows) — never from contracts (2.1M)
+      # or entities (101K) or contract_winners (1.9M). SQLite processes joins
+      # in declaration order; starting from the smallest table is critical.
+      flags_scope = @severity_filter ? Flag.where(severity: @severity_filter) : Flag.all
 
       flags_count   = flags_scope.count
       flags_by_type = flags_scope.group(:flag_type).order(:flag_type).count
 
-      # JOIN-based aggregates — avoid IN (subquery) against multi-million-row
-      # tables (contract_winners has 1.9M rows) which causes full table scans.
-      # flags → 37K rows; subquery on flags table is fine.
-      flagged_total_exposure = Contract.where(id: flagged_subquery).sum(:base_price)
+      # flags → contracts (via indexed contract_id)
+      flagged_total_exposure  = flags_scope.joins(:contract).sum("contracts.base_price")
+      flagged_contract_count  = flags_scope.distinct.count(:contract_id)
 
-      flagged_contract_count = flagged_subquery.count
-
-      # JOIN through contract_winners: Entity → contract_winners → contract → flags
-      flagged_companies_count = Entity
-        .joins(contract_winners: { contract: :flags })
-        .merge(flags_scope)
-        .where(is_company: true)
+      # flags → contract_winners → entities  (all joins via indexed FKs)
+      flagged_companies_count = flags_scope
+        .joins(contract: { contract_winners: :entity })
+        .where(entities: { is_company: true })
         .distinct
-        .count
+        .count("entities.id")
 
-      # JOIN through contracting: Entity → contracts_as_contracting_entity → flags
-      flagged_public_entities_count = Entity
-        .joins(contracts_as_contracting_entity: :flags)
-        .merge(flags_scope)
-        .where(is_public_body: true)
+      # flags → contracts → contracting entity
+      flagged_public_entities_count = flags_scope
+        .joins(contract: :contracting_entity)
+        .where(entities: { is_public_body: true })
         .distinct
-        .count
+        .count("contracts.contracting_entity_id")
 
       # Materialise the exposure rows into plain hashes so they survive Marshal
       # serialisation into Solid Cache (AR result objects cannot be marshalled).
