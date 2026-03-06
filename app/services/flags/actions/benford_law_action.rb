@@ -5,26 +5,31 @@ module Flags
     # B5 — Benford's Law deviation
     #
     # In naturally occurring financial data the leading digit d appears with
-    # probability P(d) = log10(1 + 1/d).  When a contracting entity's contract
+    # probability P(d) = log10(1 + 1/d). When a contracting entity's contract
     # amounts deviate significantly from this distribution it may indicate price
     # manipulation, rounding to avoid thresholds, or fabrication.
     #
     # Algorithm:
-    #   1. For each entity with ≥ MIN_SAMPLE contracts that have a positive
-    #      base_price, extract the leading significant digit (1–9).
-    #   2. Compute the chi-square goodness-of-fit statistic (df = 8).
-    #   3. Entities whose chi-square exceeds CHI2_P05 (p < 0.05) are flagged;
-    #      every qualifying contract of that entity receives a flag.
+    #   1. Pre-filter: only entities with contract_count >= MIN_SAMPLE are
+    #      processed (uses the pre-computed column — skips ~95% of entities).
+    #   2. Batch-process eligible entities in groups of BATCH_SIZE.
+    #   3. For each batch: fetch digit counts scoped to those entity IDs.
+    #   4. Compute chi-square goodness-of-fit statistic (df = 8).
+    #   5. Write BenfordAnalysis rows for ALL eligible entities — flagged or not
+    #      — so digit distributions are available for future visualizations.
+    #   6. Write Flag rows only for anomalous entities (chi2 >= CHI2_P05).
     #
-    # Note: requires sufficient data volume per entity — entities with fewer
-    # than MIN_SAMPLE contracts are silently skipped.
+    # One representative contract is flagged per entity: the highest-value
+    # awarded contract (celebration_date NOT NULL); falls back to highest
+    # base_price if no awarded contract exists.
     class BenfordLawAction
-      FLAG_TYPE  = "B5_BENFORD_DEVIATION"
-      MIN_SAMPLE = 20      # minimum contracts for chi-square validity
-      CHI2_P05   = 15.507  # critical value at p=0.05, df=8  → medium severity
-      CHI2_P01   = 20.090  # critical value at p=0.01, df=8  → high severity
-      SCORE_MED  = 35
-      SCORE_HIGH = 55
+      FLAG_TYPE   = "B5_BENFORD_DEVIATION"
+      MIN_SAMPLE  = 20      # minimum contracts for chi-square validity
+      CHI2_P05    = 15.507  # critical value at p=0.05, df=8  → medium severity
+      CHI2_P01    = 20.090  # critical value at p=0.01, df=8  → high severity
+      SCORE_MED   = 35
+      SCORE_HIGH  = 55
+      BATCH_SIZE  = 200     # entities per SQL batch to keep scoped queries small
 
       # Benford expected probability for each leading digit 1–9
       BENFORD = (1..9).each_with_object({}) do |d, h|
@@ -32,25 +37,112 @@ module Flags
       end.freeze
 
       def call
-        digit_counts = fetch_digit_counts
-        anomalous    = detect_anomalies(digit_counts)
-        flagged_rows = fetch_contracts_for_entities(anomalous.keys)
-        upsert_flags(flagged_rows, anomalous)
-        cleanup_stale_flags(flagged_rows.map(&:first))
-        flagged_rows.size
+        # Clean-slate: delete all existing B5 flags upfront.
+        # This eliminates the expensive WHERE NOT IN cleanup that caused
+        # 20+ min runtimes when 1.87M stale records were present.
+        Flag.where(flag_type: FLAG_TYPE).delete_all
+
+        # Pre-filter to entities with enough contracts for statistical validity.
+        # Uses the pre-computed contract_count column — instant index scan.
+        eligible_ids = Entity.where("contract_count >= ?", MIN_SAMPLE).pluck(:id)
+
+        flagged_count = 0
+        batch_num     = 0
+
+        eligible_ids.each_slice(BATCH_SIZE) do |batch_ids|
+          batch_num    += 1
+          digit_counts  = fetch_digit_counts_for(batch_ids)
+          rep_contracts = fetch_representative_contracts(batch_ids)
+
+          now       = Time.current
+          analyses  = []
+          flag_rows = []
+
+          batch_ids.each do |entity_id|
+            counts = digit_counts[entity_id]
+            n      = counts&.values&.sum.to_i
+            next if n < MIN_SAMPLE
+
+            chi2      = compute_chi2(counts, n)
+            anomalous = chi2 >= CHI2_P05
+            severity  = anomalous ? (chi2 >= CHI2_P01 ? "high" : "medium") : nil
+            dist_json = (1..9).each_with_object({}) { |d, h| h[d.to_s] = counts[d].to_i }
+
+            analyses << {
+              entity_id:                  entity_id,
+              sample_size:                n,
+              chi_square:                 chi2.round(4),
+              flagged:                    anomalous,
+              severity:                   severity,
+              digit_distribution:         dist_json,
+              representative_contract_id: rep_contracts[entity_id],
+              computed_at:                now,
+              created_at:                 now,
+              updated_at:                 now
+            }
+
+            next unless anomalous
+
+            contract_id = rep_contracts[entity_id]
+            next unless contract_id
+
+            flag_rows << {
+              contract_id:  contract_id,
+              flag_type:    FLAG_TYPE,
+              severity:     severity,
+              score:        chi2 >= CHI2_P01 ? SCORE_HIGH : SCORE_MED,
+              details: {
+                "chi2"        => chi2.round(4).to_s,
+                "sample_size" => n.to_s,
+                "observed"    => dist_json,
+                "rule"        => "B5 Benford's Law deviation: chi-square #{chi2.round(4)} " \
+                                 "(df=8, n=#{n}, threshold=#{CHI2_P05})"
+              },
+              fired_at:    now,
+              created_at:  now,
+              updated_at:  now
+            }
+          end
+
+          BenfordAnalysis.upsert_all(
+            analyses,
+            unique_by: :index_benford_analyses_on_entity_id
+          ) if analyses.any?
+
+          Flag.upsert_all(
+            flag_rows,
+            unique_by: :index_flags_on_contract_id_and_flag_type
+          ) if flag_rows.any?
+
+          flagged_count += flag_rows.size
+          puts "B5 batch #{batch_num}: #{analyses.size} analysed, #{flag_rows.size} flagged " \
+               "(total flagged: #{flagged_count})"
+        end
+
+        flagged_count
       end
 
       private
 
-      # Returns { entity_id => { digit => count } } for all entities with base_price ≥ 1
-      def fetch_digit_counts
+      # Chi-square goodness-of-fit against Benford's distribution (df = 8).
+      def compute_chi2(counts, n)
+        (1..9).sum do |d|
+          observed = counts[d].to_f
+          expected = BENFORD[d] * n
+          (observed - expected)**2 / expected
+        end
+      end
+
+      # Returns { entity_id => { digit(int) => count } } scoped to batch_ids only.
+      def fetch_digit_counts_for(batch_ids)
+        safe_ids = batch_ids.map(&:to_i).join(",")
         sql = <<~SQL
           SELECT contracting_entity_id,
                  SUBSTR(CAST(CAST(base_price AS INTEGER) AS TEXT), 1, 1) AS leading_digit,
                  COUNT(*) AS cnt
           FROM   contracts
           WHERE  base_price >= 1
-            AND  contracting_entity_id IS NOT NULL
+            AND  contracting_entity_id IN (#{safe_ids})
           GROUP  BY contracting_entity_id, leading_digit
           HAVING leading_digit BETWEEN '1' AND '9'
         SQL
@@ -65,97 +157,29 @@ module Flags
         counts
       end
 
-      # Returns { entity_id => { chi2:, n:, observed:, severity: } } for entities that deviate
-      def detect_anomalies(digit_counts)
-        anomalous = {}
-
-        digit_counts.each do |entity_id, by_digit|
-          n = by_digit.values.sum
-          next if n < MIN_SAMPLE
-
-          chi2 = (1..9).sum do |d|
-            observed = by_digit[d].to_f
-            expected = BENFORD[d] * n
-            (observed - expected)**2 / expected
-          end.round(4)
-
-          next if chi2 < CHI2_P05
-
-          anomalous[entity_id] = {
-            chi2:     chi2,
-            n:        n,
-            observed: (1..9).each_with_object({}) { |d, h| h[d.to_s] = by_digit[d] },
-            severity: chi2 >= CHI2_P01 ? "high" : "medium"
-          }
-        end
-
-        anomalous
-      end
-
-      # Returns ONE representative contract per anomalous entity.
-      # Prefers the highest-priced *awarded* contract (celebration_date NOT NULL)
-      # so open tenders are not shown as the B5 representative.
-      # Falls back to highest base_price if no awarded contract exists.
-      def fetch_contracts_for_entities(entity_ids)
-        return [] if entity_ids.empty?
-
-        safe_ids = entity_ids.map(&:to_i).join(",")
+      # Returns { entity_id => contract_id } for the representative contract of
+      # each entity in the batch. Uses a window function (single-pass, no
+      # correlated subqueries). Prefers awarded contracts (celebration_date NOT
+      # NULL) ordered by base_price DESC.
+      def fetch_representative_contracts(batch_ids)
+        safe_ids = batch_ids.map(&:to_i).join(",")
         sql = <<~SQL
-          SELECT c.id, c.contracting_entity_id, c.base_price
-          FROM contracts c
-          WHERE c.contracting_entity_id IN (#{safe_ids})
-            AND c.base_price >= 1
-            AND c.id = (
-              SELECT c2.id FROM contracts c2
-              WHERE c2.contracting_entity_id = c.contracting_entity_id
-                AND c2.base_price >= 1
-              ORDER BY (c2.celebration_date IS NOT NULL) DESC, c2.base_price DESC
-              LIMIT 1
-            )
-          GROUP BY c.contracting_entity_id
+          SELECT entity_id, contract_id FROM (
+            SELECT contracting_entity_id AS entity_id,
+                   id                   AS contract_id,
+                   ROW_NUMBER() OVER (
+                     PARTITION BY contracting_entity_id
+                     ORDER BY (celebration_date IS NOT NULL) DESC, base_price DESC
+                   ) AS rn
+            FROM contracts
+            WHERE contracting_entity_id IN (#{safe_ids})
+              AND base_price >= 1
+          ) ranked
+          WHERE rn = 1
         SQL
 
-        ApplicationRecord.connection.select_all(sql).map do |r|
-          [ r["id"].to_i, r["contracting_entity_id"].to_i, r["base_price"].to_f ]
-        end
-      end
-
-      def upsert_flags(flagged_rows, anomalous)
-        return if flagged_rows.empty?
-
-        now  = Time.current
-        rows = flagged_rows.map do |contract_id, entity_id, base_price|
-          stats = anomalous[entity_id]
-          score = stats[:chi2] >= CHI2_P01 ? SCORE_HIGH : SCORE_MED
-
-          {
-            contract_id: contract_id,
-            flag_type:   FLAG_TYPE,
-            severity:    stats[:severity],
-            score:       score,
-            details: {
-              "chi2"                => stats[:chi2].to_s,
-              "sample_size"         => stats[:n].to_s,
-              "contract_base_price" => base_price.to_s,
-              "observed"            => stats[:observed],
-              "rule"                => "B5 Benford's Law deviation: chi-square #{stats[:chi2]} " \
-                                       "(df=8, n=#{stats[:n]}, threshold=#{CHI2_P05})"
-            },
-            fired_at:   now,
-            created_at: now,
-            updated_at: now
-          }
-        end
-
-        Flag.upsert_all(rows, unique_by: :index_flags_on_contract_id_and_flag_type)
-      end
-
-      def cleanup_stale_flags(flagged_contract_ids)
-        stale_scope = Flag.where(flag_type: FLAG_TYPE)
-        if flagged_contract_ids.empty?
-          stale_scope.delete_all
-        else
-          stale_scope.where.not(contract_id: flagged_contract_ids).delete_all
+        ApplicationRecord.connection.select_all(sql).each_with_object({}) do |row, h|
+          h[row["entity_id"]] = row["contract_id"]
         end
       end
     end

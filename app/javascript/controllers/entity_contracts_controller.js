@@ -1,13 +1,24 @@
 import { Controller } from "@hotwired/stimulus"
 
 export default class extends Controller {
-  start() {
-    this.element.setAttribute("aria-busy", "true")
-    this.element.classList.add("opacity-60", "pointer-events-none")
+  connect() {
+    this.observer = new MutationObserver(() => this.sync())
+    this.observer.observe(this.element, {
+      attributes: true,
+      attributeFilter: ["busy"]
+    })
+
+    this.sync()
   }
 
-  finish() {
-    this.element.removeAttribute("aria-busy")
-    this.element.classList.remove("opacity-60", "pointer-events-none")
+  disconnect() {
+    this.observer?.disconnect()
+  }
+
+  sync() {
+    const isBusy = this.element.hasAttribute("busy")
+
+    this.element.classList.toggle("opacity-60", isBusy)
+    this.element.classList.toggle("pointer-events-none", isBusy)
   }
 }

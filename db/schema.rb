@@ -10,7 +10,23 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_03_06_102526) do
+ActiveRecord::Schema[8.0].define(version: 2026_03_06_120000) do
+  create_table "benford_analyses", force: :cascade do |t|
+    t.integer "entity_id", null: false
+    t.integer "representative_contract_id"
+    t.integer "sample_size", null: false
+    t.decimal "chi_square", precision: 10, scale: 4, null: false
+    t.boolean "flagged", default: false, null: false
+    t.string "severity"
+    t.json "digit_distribution", default: {}, null: false
+    t.datetime "computed_at", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["entity_id"], name: "index_benford_analyses_on_entity_id", unique: true
+    t.index ["flagged"], name: "index_benford_analyses_on_flagged"
+    t.index ["representative_contract_id"], name: "index_benford_analyses_on_representative_contract_id"
+  end
+
   create_table "contract_winners", force: :cascade do |t|
     t.integer "contract_id", null: false
     t.integer "entity_id", null: false
@@ -129,6 +145,8 @@ ActiveRecord::Schema[8.0].define(version: 2026_03_06_102526) do
     t.index ["severity"], name: "index_flags_on_severity"
   end
 
+  add_foreign_key "benford_analyses", "contracts", column: "representative_contract_id", on_delete: :nullify
+  add_foreign_key "benford_analyses", "entities"
   add_foreign_key "contract_winners", "contracts"
   add_foreign_key "contract_winners", "entities"
   add_foreign_key "contracts", "data_sources"

@@ -67,5 +67,7 @@ class EntitiesController < ApplicationController
       .order(Arel.sql(order_sql))
       .limit(PER_PAGE)
       .offset((@page - 1) * PER_PAGE)
+
+    @benford_analysis = BenfordAnalysis.find_by(entity_id: @entity.id)
   end
 end

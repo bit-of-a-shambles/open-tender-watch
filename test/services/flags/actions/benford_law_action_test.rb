@@ -8,8 +8,10 @@ class Flags::Actions::BenfordLawActionTest < ActiveSupport::TestCase
   # Creates contracts for the given entity with the supplied base_price values.
   # Uses entities(:two) by default as it carries no fixture contracts, keeping
   # chi-square calculations predictable.
+  # Also updates entity.contract_count so the BenfordLawAction pre-filter works
+  # (the action uses the pre-computed column for performance).
   def create_contracts(prices:, entity: entities(:two), prefix: "benford")
-    prices.each_with_index.map do |price, i|
+    contracts = prices.each_with_index.map do |price, i|
       Contract.create!(
         external_id:          "#{prefix}-#{i}",
         country_code:         "PT",
@@ -20,6 +22,9 @@ class Flags::Actions::BenfordLawActionTest < ActiveSupport::TestCase
         data_source:          data_sources(:portal_base)
       )
     end
+    # Keep pre-computed count in sync so the action's pre-filter includes this entity
+    entity.update_column(:contract_count, entity.contracts_as_contracting_entity.count)
+    contracts
   end
 
   # 20 prices approximating Benford's distribution (chi-square ~1.3, well under 15.507)
@@ -30,11 +35,12 @@ class Flags::Actions::BenfordLawActionTest < ActiveSupport::TestCase
     4_100, 4_200,                                  # 2 × leading 4  (~10%)
     5_100, 5_200,                                  # 2 × leading 5  (~10%)
     6_100,                                         # 1 × leading 6  (~5%)
-    7_100                                          # 1 × leading 7  (~5%)
+    7_100,                                         # 1 × leading 7  (~5%)
+    8_100                                          # 1 × leading 8  (~5%)
   ].freeze
 
   # -------------------------------------------------------------------
-  # Tests
+  # Tests — flagging behaviour
   # -------------------------------------------------------------------
 
   test "does not flag entity with fewer than MIN_SAMPLE contracts" do
@@ -49,7 +55,7 @@ class Flags::Actions::BenfordLawActionTest < ActiveSupport::TestCase
 
   test "flags ONE representative contract of entity whose prices strongly deviate from Benford's law" do
     # 25 contracts all starting with '9' — chi-square >> 15.507
-    # After the entity-level fix, only the highest-priced contract is flagged.
+    # Only the highest-priced contract is flagged (one per entity).
     contracts = create_contracts(prices: Array.new(25) { |i| 9_000 + i }, prefix: "benford-anomaly")
 
     assert_difference "Flag.count", 1 do
@@ -130,8 +136,9 @@ class Flags::Actions::BenfordLawActionTest < ActiveSupport::TestCase
     Flags::Actions::BenfordLawAction.new.call
     assert_equal 1, Flag.where(flag_type: "B5_BENFORD_DEVIATION").count
 
-    # Remove enough contracts to drop below MIN_SAMPLE
+    # Remove enough contracts to drop below MIN_SAMPLE and update pre-computed count
     contracts.last(6).each(&:destroy)
+    entities(:two).update_column(:contract_count, entities(:two).contracts_as_contracting_entity.count)
 
     Flags::Actions::BenfordLawAction.new.call
     assert_equal 0, Flag.where(flag_type: "B5_BENFORD_DEVIATION").count
@@ -160,5 +167,99 @@ class Flags::Actions::BenfordLawActionTest < ActiveSupport::TestCase
     assert_difference "Flag.count", 1 do
       Flags::Actions::BenfordLawAction.new.call
     end
+  end
+
+  # -------------------------------------------------------------------
+  # Tests — BenfordAnalysis records
+  # -------------------------------------------------------------------
+
+  test "creates BenfordAnalysis record for anomalous entity" do
+    create_contracts(prices: Array.new(25) { |i| 9_000 + i }, prefix: "ba-anom")
+
+    Flags::Actions::BenfordLawAction.new.call
+
+    analysis = BenfordAnalysis.find_by(entity: entities(:two))
+    assert_not_nil analysis
+    assert analysis.flagged
+    assert_equal "high", analysis.severity
+    assert analysis.chi_square > 15.507
+    assert_equal 25, analysis.sample_size
+  end
+
+  test "creates BenfordAnalysis record for non-anomalous entity" do
+    create_contracts(prices: BENFORD_PRICES, prefix: "ba-ok")
+
+    Flags::Actions::BenfordLawAction.new.call
+
+    analysis = BenfordAnalysis.find_by(entity: entities(:two))
+    assert_not_nil analysis
+    assert_not analysis.flagged
+    assert_nil analysis.severity
+    assert analysis.chi_square < 15.507
+  end
+
+  test "BenfordAnalysis digit_distribution contains correct counts" do
+    prices = Array.new(20) { |i| 9_000 + i }   # 20 × leading-9
+    create_contracts(prices: prices, prefix: "ba-dist")
+
+    Flags::Actions::BenfordLawAction.new.call
+
+    analysis = BenfordAnalysis.find_by!(entity: entities(:two))
+    dist = analysis.digit_distribution
+    assert_equal 20, dist["9"].to_i
+    assert_equal 0,  dist["1"].to_i
+  end
+
+  test "does not create BenfordAnalysis for entity below MIN_SAMPLE" do
+    create_contracts(prices: Array.new(19) { |i| 9_000 + i }, prefix: "ba-small")
+
+    Flags::Actions::BenfordLawAction.new.call
+
+    assert_nil BenfordAnalysis.find_by(entity: entities(:two))
+  end
+
+  test "BenfordAnalysis representative_contract_id points to highest-priced contract" do
+    contracts = create_contracts(prices: Array.new(25) { |i| 9_000 + i }, prefix: "ba-rep")
+    highest   = contracts.max_by(&:base_price)
+
+    Flags::Actions::BenfordLawAction.new.call
+
+    analysis = BenfordAnalysis.find_by!(entity: entities(:two))
+    assert_equal highest.id, analysis.representative_contract_id
+  end
+
+  test "BenfordAnalysis prefers awarded contract over open tender as representative" do
+    # Create 24 open-tender (no celebration_date) contracts and 1 awarded with lower price
+    open_prices   = Array.new(24) { |i| 9_000 + i }
+    create_contracts(prices: open_prices, prefix: "ba-open-tender", entity: entities(:two))
+    awarded = Contract.create!(
+      external_id:        "ba-awarded",
+      country_code:       "PT",
+      object:             "Awarded contract",
+      procedure_type:     "Concurso Público",
+      base_price:         5_000.to_d,  # lower price but has celebration_date
+      celebration_date:   Date.new(2025, 1, 1),
+      contracting_entity: entities(:two),
+      data_source:        data_sources(:portal_base)
+    )
+    entities(:two).update_column(:contract_count, entities(:two).contracts_as_contracting_entity.count)
+
+    Flags::Actions::BenfordLawAction.new.call
+
+    analysis = BenfordAnalysis.find_by!(entity: entities(:two))
+    assert_equal awarded.id, analysis.representative_contract_id
+  end
+
+  test "upsert updates existing BenfordAnalysis on second run" do
+    create_contracts(prices: Array.new(25) { |i| 9_000 + i }, prefix: "ba-upsert")
+
+    Flags::Actions::BenfordLawAction.new.call
+    first_chi2 = BenfordAnalysis.find_by!(entity: entities(:two)).chi_square
+
+    Flags::Actions::BenfordLawAction.new.call
+    second_chi2 = BenfordAnalysis.find_by!(entity: entities(:two)).chi_square
+
+    assert_equal first_chi2, second_chi2
+    assert_equal 1, BenfordAnalysis.where(entity: entities(:two)).count
   end
 end

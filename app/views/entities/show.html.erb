@@ -28,11 +28,7 @@
 
     <%# Contract list %>
     <div>
-      <%= turbo_frame_tag "entity-contracts",
-            data: {
-              controller: "entity-contracts",
-              action: "turbo:before-fetch-request->entity-contracts#start turbo:frame-load->entity-contracts#finish"
-            } do %>
+      <%= turbo_frame_tag "entity-contracts", data: { controller: "entity-contracts" } do %>
         <%# Flag filter chips %>
         <% if @flag_types.any? %>
           <div class="flex flex-wrap items-center gap-2 mb-4">
@@ -197,6 +193,52 @@
                 </div>
               </div>
             <% end %>
+          </div>
+        </div>
+      <% end %>
+
+      <%# Benford distribution data — rendered client-side into a chart by a future JS controller.
+          The data-benford-* attributes carry everything needed: observed digit counts, Benford
+          expected percentages, chi-square stat, and sample size. %>
+      <% if @benford_analysis %>
+        <% benford_expected = (1..9).each_with_object({}) { |d, h| h[d.to_s] = (Math.log10(1.0 + 1.0 / d) * 100).round(2) } %>
+        <div id="benford-chart-placeholder"
+             class="bg-white/[0.02] border border-white/[0.06] rounded-lg p-5"
+             data-controller="benford-chart"
+             data-benford-chart-observed-value="<%= @benford_analysis.digit_distribution.to_json %>"
+             data-benford-chart-expected-value="<%= benford_expected.to_json %>"
+             data-benford-chart-chi2-value="<%= @benford_analysis.chi_square %>"
+             data-benford-chart-sample-size-value="<%= @benford_analysis.sample_size %>"
+             data-benford-chart-flagged-value="<%= @benford_analysis.flagged %>">
+          <div class="font-mono text-[10px] tracking-[2px] text-white/35 mb-3 uppercase">
+            <%= t("entities.show.benford_distribution") %>
+          </div>
+          <div class="font-mono text-[10px] text-white/30 mb-1">
+            n = <%= number_with_delimiter(@benford_analysis.sample_size) %> contratos
+            · χ² = <%= @benford_analysis.chi_square %>
+          </div>
+          <%# Inline bar chart — digits 1–9, observed vs expected %>
+          <div class="mt-3 space-y-1">
+            <% (1..9).each do |d| %>
+              <% obs_count = @benford_analysis.digit_distribution[d.to_s].to_i %>
+              <% obs_pct   = @benford_analysis.sample_size > 0 ? (obs_count.to_f / @benford_analysis.sample_size * 100).round(1) : 0 %>
+              <% exp_pct   = benford_expected[d.to_s] %>
+              <% bar_color = @benford_analysis.flagged && (obs_pct - exp_pct).abs > 5 ? "bg-[#ff4444]" : "bg-[#c8a84e]" %>
+              <div class="flex items-center gap-2">
+                <span class="font-mono text-[10px] text-white/40 w-3 shrink-0"><%= d %></span>
+                <div class="flex-1 relative h-3 bg-white/[0.05] rounded-sm overflow-hidden">
+                  <div class="absolute inset-y-0 left-0 <%= bar_color %> opacity-60 rounded-sm transition-all"
+                       style="width: <%= [obs_pct, 100].min %>%"></div>
+                  <div class="absolute inset-y-0 left-0 border-r border-white/40"
+                       style="width: <%= [exp_pct, 100].min %>%"></div>
+                </div>
+                <span class="font-mono text-[9px] text-white/30 w-8 text-right shrink-0"><%= obs_pct %>%</span>
+              </div>
+            <% end %>
+          </div>
+          <div class="mt-2 flex items-center gap-3 font-mono text-[9px] text-white/30">
+            <span class="flex items-center gap-1"><span class="inline-block w-3 h-2 bg-[#c8a84e] opacity-60 rounded-sm"></span> <%= t("entities.show.benford_observed") %></span>
+            <span class="flex items-center gap-1"><span class="inline-block w-px h-3 bg-white/40"></span> <%= t("entities.show.benford_expected") %></span>
           </div>
         </div>
       <% end %>

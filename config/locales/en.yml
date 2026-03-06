@@ -268,3 +268,6 @@ en:
       sort_object: "Object"
       filter_by_flag: "Signal"
       filter_all_flags: "All"
+      benford_distribution: "Digit Distribution"
+      benford_observed: "Observed"
+      benford_expected: "Expected (Benford)"

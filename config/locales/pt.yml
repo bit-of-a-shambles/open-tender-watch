@@ -263,3 +263,6 @@ pt:
       sort_object: "Objeto"
       filter_by_flag: "Indicador"
       filter_all_flags: "Todos"
+      benford_distribution: "Distribuição de Dígitos"
+      benford_observed: "Observado"
+      benford_expected: "Esperado (Benford)"
