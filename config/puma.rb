@@ -30,17 +30,6 @@ threads threads_count, threads_count
 # Specifies the `port` that Puma will listen on to receive requests; default is 3000.
 port ENV.fetch("PORT", 3000)
 
-# Fail fast when all threads are busy: drop requests that have been waiting
-# more than 10 s with a 503 rather than letting them pile up and starve memory.
-# Default is 30 s — too long for a 2 GB VPS under load.
-wait_timeout 10
-
-# If a worker thread is stuck for 60 s (e.g. a runaway DB query), restart it.
-worker_timeout 60
-
-# Run GC in parent process before forking to reduce memory via copy-on-write.
-nakayoshi_fork true if ENV["WEB_CONCURRENCY"].to_i > 1
-
 # Allow puma to be restarted by `bin/rails restart` command.
 plugin :tmp_restart
 
