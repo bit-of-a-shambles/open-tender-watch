@@ -111,7 +111,7 @@
         </div>
       <% else %>
         <% @contracts.each do |contract| %>
-          <%= link_to contract_path(contract), class: "flex flex-col sm:grid sm:grid-cols-[1fr_180px_140px_120px_110px] px-4 sm:px-5 py-3 sm:py-3.5 border-b border-white/[0.04] last:border-0 hover:bg-white/[0.03] transition-colors group sm:items-start gap-1 sm:gap-0" do %>
+          <%= link_to contract_path(contract), class: "flex flex-col sm:grid sm:grid-cols-[1fr_180px_140px_120px_110px] px-4 sm:px-5 py-3 sm:py-3.5 border-b border-white/[0.04] last:border-0 hover:bg-white/[0.03] transition-colors group sm:items-start gap-1 sm:gap-0", data: { turbo_frame: "_top" } do %>
             <div class="pr-0 sm:pr-4">
               <div class="text-sm text-[#e8e0d4] group-hover:text-white transition-colors line-clamp-2 leading-snug">
                 <%= contract.object %>

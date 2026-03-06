@@ -68,7 +68,7 @@
             </div>
           <% else %>
             <% @contracts.each do |contract| %>
-              <%= link_to contract_path(contract), class: "grid grid-cols-[1fr_140px_100px_90px] px-4 py-3 border-b border-white/[0.04] last:border-0 hover:bg-white/[0.03] transition-colors group items-start" do %>
+              <%= link_to contract_path(contract), class: "grid grid-cols-[1fr_140px_100px_90px] px-4 py-3 border-b border-white/[0.04] last:border-0 hover:bg-white/[0.03] transition-colors group items-start", data: { turbo_frame: "_top" } do %>
                 <div class="pr-4">
                   <div class="text-sm text-[#e8e0d4] group-hover:text-white transition-colors line-clamp-2 leading-snug">
                     <%= contract.object %>
