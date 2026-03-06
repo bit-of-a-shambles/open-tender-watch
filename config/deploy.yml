@@ -48,7 +48,9 @@ env:
     # JOB_CONCURRENCY: 3
 
     # Set number of cores available to the application on each server (default: 1).
-    # WEB_CONCURRENCY: 2
+    # 2 workers × 3 threads = 6 concurrent requests. Each worker ~150MB → safe on 2GB.
+    # Keep at 2 for a single-server SQLite setup — SQLite serialises writes anyway.
+    WEB_CONCURRENCY: 2
 
     # Match this to any external database server to configure Active Record correctly
     # Use opentenderwatch-db for a db accessory server on same machine via local kamal docker network.

@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>High Traffic — Open Tender Watch</title>
+  <!-- Auto-retry every 8 seconds. Gives the "queue" UX without JavaScript. -->
+  <meta http-equiv="refresh" content="8">
+  <style>
+    :root { --bg: #0d0f14; --gold: #c8a84e; --text: #e8e0d4; --dim: rgba(255,255,255,0.35); }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Courier New', monospace;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem;
+    }
+    .card {
+      max-width: 520px;
+      width: 100%;
+      border: 1px solid rgba(200,168,78,0.25);
+      border-radius: 4px;
+      padding: 2.5rem 2rem;
+      background: rgba(200,168,78,0.04);
+    }
+    .label {
+      font-size: 10px;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      color: var(--gold);
+      margin-bottom: 1rem;
+    }
+    h1 {
+      font-size: 1.5rem;
+      font-weight: 700;
+      margin-bottom: 1rem;
+      line-height: 1.3;
+    }
+    p {
+      color: var(--dim);
+      font-size: 0.875rem;
+      line-height: 1.7;
+      margin-bottom: 1.25rem;
+    }
+    .progress {
+      height: 2px;
+      background: rgba(200,168,78,0.15);
+      border-radius: 1px;
+      overflow: hidden;
+      margin-bottom: 1.5rem;
+    }
+    .progress-bar {
+      height: 100%;
+      background: var(--gold);
+      animation: fill 8s linear forwards;
+      border-radius: 1px;
+    }
+    @keyframes fill { from { width: 0% } to { width: 100% } }
+    .retry-text {
+      font-size: 10px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--dim);
+    }
+    a { color: var(--gold); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="label">503 — High Traffic</div>
+    <h1>We're experiencing high demand</h1>
+    <p>
+      Open Tender Watch is serving an unusually large number of visitors right
+      now. We're retrying your request automatically in a few seconds.
+    </p>
+    <div class="progress"><div class="progress-bar"></div></div>
+    <div class="retry-text">Retrying automatically&hellip;</div>
+    <p style="margin-top:1.5rem; margin-bottom:0">
+      If this persists, try again in a minute.<br>
+      Questions? <a href="mailto:hello@opentenderwatch.com">hello@opentenderwatch.com</a>
+    </p>
+  </div>
+</body>
+</html>

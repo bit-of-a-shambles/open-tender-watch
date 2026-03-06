@@ -12,6 +12,12 @@ class ContractsController < ApplicationController
   }.freeze
 
   def index
+    # HTTP cache: list pages are public, safe to cache in browsers/CDNs.
+    # A 304 costs ~2ms vs ~200ms for a full render on the 2M-row table.
+    expires_in 2.minutes, public: true,
+               stale_while_revalidate: 30.seconds,
+               stale_if_error:         1.hour
+
     # :winners and :data_source are only needed on the show page.
     # Loading them for 50 list rows adds 2 unnecessary batch queries every request.
     scope = Contract.includes(:contracting_entity, :flags)

@@ -31,15 +31,33 @@ production:
   primary:
     <<: *default
     database: storage/production.sqlite3
+    pragmas:
+      journal_mode: wal        # multiple concurrent readers; single writer serialised
+      synchronous: normal      # safe with WAL — only lose the last transaction on crash
+      busy_timeout: 30000      # wait up to 30s for a write lock before raising BUSY
+      cache_size: -20000       # 20MB page cache per connection
+      mmap_size: 134217728     # 128MB memory-mapped I/O for faster reads
   cache:
     <<: *default
     database: storage/production_cache.sqlite3
     migrations_paths: db/cache_migrate
+    pragmas:
+      journal_mode: wal
+      synchronous: normal
+      busy_timeout: 30000
   queue:
     <<: *default
     database: storage/production_queue.sqlite3
     migrations_paths: db/queue_migrate
+    pragmas:
+      journal_mode: wal
+      synchronous: normal
+      busy_timeout: 30000
   cable:
     <<: *default
     database: storage/production_cable.sqlite3
     migrations_paths: db/cable_migrate
+    pragmas:
+      journal_mode: wal
+      synchronous: normal
+      busy_timeout: 30000
