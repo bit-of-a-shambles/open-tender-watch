@@ -28,25 +28,31 @@ class Rack::Attack
   end
 
   # ---------------------------------------------------------------------------
+  # Real-IP helper — Cloudflare passes the actual visitor IP in CF-Connecting-IP.
+  # Fall back to req.ip if the header is absent (direct connections / tests).
+  # ---------------------------------------------------------------------------
+  def self.real_ip(req)
+    req.env["HTTP_CF_CONNECTING_IP"].presence || req.ip
+  end
+
+  # ---------------------------------------------------------------------------
   # Throttles — reads are generous (this is a public data service).
   # ---------------------------------------------------------------------------
 
-  # General browsing: 300 req / 1 min per IP.
-  # A human reading pages hits ~1–5 req/s bursts; an aggregator/scraper ~50/s.
-  throttle("req/ip/1m", limit: 300, period: 1.minute) do |req|
-    req.ip unless req.path.start_with?("/assets", "/up")
+  # General browsing: 120 req / 1 min per real IP.
+  throttle("req/ip/1m", limit: 120, period: 1.minute) do |req|
+    Rack::Attack.real_ip(req) unless req.path.start_with?("/assets", "/up")
   end
 
   # API-style pattern: same endpoint hammered repeatedly.
-  # 60 req / 1 min per IP per path (covers /contracts, /dashboard).
-  throttle("req/ip/path/1m", limit: 60, period: 1.minute) do |req|
-    "#{req.ip}:#{req.path}" unless req.path.start_with?("/assets", "/up")
+  # 30 req / 1 min per real IP per path.
+  throttle("req/ip/path/1m", limit: 30, period: 1.minute) do |req|
+    "#{Rack::Attack.real_ip(req)}:#{req.path}" unless req.path.start_with?("/assets", "/up")
   end
 
   # Export / heavy queries — contracts index with filters can be slow.
-  # Tighter limit for requests that look like bulk scraping.
-  throttle("contracts/ip/1m", limit: 30, period: 1.minute) do |req|
-    req.ip if req.path.start_with?("/contracts") && req.get?
+  throttle("contracts/ip/1m", limit: 20, period: 1.minute) do |req|
+    Rack::Attack.real_ip(req) if req.path.start_with?("/contracts") && req.get?
   end
 
   # ---------------------------------------------------------------------------
