@@ -28,11 +28,7 @@
 
     <%# Contract list %>
     <div>
-      <%= turbo_frame_tag "entity-contracts",
-            data: {
-              controller: "entity-contracts",
-              action: "turbo:before-fetch-request->entity-contracts#start turbo:frame-load->entity-contracts#finish"
-            } do %>
+      <%= turbo_frame_tag "entity-contracts", data: { controller: "entity-contracts" } do %>
         <%# Flag filter chips %>
         <% if @flag_types.any? %>
           <div class="flex flex-wrap items-center gap-2 mb-4">
