@@ -2,6 +2,11 @@
 
 module PublicContracts
   class ImportService
+    # Prices above this threshold (EUR 1 trillion) are almost certainly data entry
+    # errors — e.g. a price entered in cents, or extra zero digits appended.  These
+    # are nulled out on import so that C3 flags them as missing rather than
+    # distorting aggregate statistics.
+    MAX_PLAUSIBLE_PRICE = BigDecimal("1_000_000_000_000")
     def initialize(data_source_record)
       @ds = data_source_record
     end
@@ -220,8 +225,8 @@ module PublicContracts
         "procedure_type" => normalize_optional_text(attrs["procedure_type"]),
         "publication_date" => attrs["publication_date"],
         "celebration_date" => attrs["celebration_date"],
-        "base_price" => attrs["base_price"],
-        "total_effective_price" => attrs["total_effective_price"],
+        "base_price" => plausible_price(attrs["base_price"]),
+        "total_effective_price" => plausible_price(attrs["total_effective_price"]),
         "cpv_code" => normalize_optional_text(attrs["cpv_code"]),
         "location" => normalize_optional_text(attrs["location"]),
         "contracting_entity" => normalize_entity(attrs["contracting_entity"]),
@@ -245,6 +250,15 @@ module PublicContracts
 
     def normalize_optional_text(value)
       value.is_a?(String) ? value.strip.presence : value
+    end
+
+    # Returns nil for prices above MAX_PLAUSIBLE_PRICE (data entry errors such as
+    # extra zeros or cent values). Negative prices (e.g. concession net-receipts)
+    # are checked against the absolute value, so -€1T+ is also treated as an error.
+    def plausible_price(value)
+      return nil if value.nil?
+
+      value.abs > MAX_PLAUSIBLE_PRICE ? nil : value
     end
 
     def merge_contract_attributes!(contract, attrs, contracting)

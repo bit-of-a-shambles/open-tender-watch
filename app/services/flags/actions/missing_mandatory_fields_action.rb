@@ -4,13 +4,18 @@ module Flags
   module Actions
     # C3 — Missing mandatory fields
     #
-    # Contracts that are missing CPV code, procedure type, or base price.
-    # Absence of these fields is a risk signal in itself — it may indicate
-    # evasion, late entry, or data manipulation.
+    # Contracts that are missing CPV code, procedure type, or base price, OR that
+    # carry a base_price value that is implausible (> €1 trillion absolute value —
+    # almost certainly a data-entry error such as a price entered in cents or with
+    # extra zero digits). Absence or corruption of these fields is a risk signal in
+    # itself — it may indicate evasion, late entry, or data manipulation.
     class MissingMandatoryFieldsAction
       FLAG_TYPE = "C3_MISSING_MANDATORY_FIELDS"
       SCORE     = 20
       SEVERITY  = "low"
+
+      # Prices above this absolute threshold are treated as implausible data errors.
+      IMPLAUSIBLE_PRICE_THRESHOLD = BigDecimal("1_000_000_000_000")
 
       def call
         flagged_rows = anomaly_scope.pluck(:id, :cpv_code, :procedure_type, :base_price)
@@ -23,7 +28,10 @@ module Flags
 
       def anomaly_scope
         Contract.where(
-          "cpv_code IS NULL OR procedure_type IS NULL OR base_price IS NULL"
+          "cpv_code IS NULL OR procedure_type IS NULL OR base_price IS NULL " \
+          "OR base_price > :threshold OR base_price < :neg_threshold",
+          threshold: IMPLAUSIBLE_PRICE_THRESHOLD,
+          neg_threshold: -IMPLAUSIBLE_PRICE_THRESHOLD
         )
       end
 
@@ -33,9 +41,10 @@ module Flags
         now = Time.current
         rows = flagged_rows.map do |contract_id, cpv_code, procedure_type, base_price|
           missing = []
-          missing << "cpv_code"      if cpv_code.nil?
-          missing << "procedure_type" if procedure_type.nil?
-          missing << "base_price"    if base_price.nil?
+          missing << "cpv_code"               if cpv_code.nil?
+          missing << "procedure_type"         if procedure_type.nil?
+          missing << "base_price"             if base_price.nil?
+          missing << "implausible_base_price" if base_price && base_price.abs > IMPLAUSIBLE_PRICE_THRESHOLD
 
           {
             contract_id: contract_id,

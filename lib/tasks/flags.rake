@@ -7,6 +7,9 @@ namespace :flags do
     puts "A2/A3 date-sequence anomalies flagged: #{flagged}"
   end
 
+  desc "Run A2/A3 date-sequence anomaly scoring (alias for run_first_action)"
+  task run_a2: :run_first_action
+
   desc "Run A9 price anomaly scoring (base vs effective price ratio)"
   task run_a9: :environment do
     flagged = Flags::Actions::PriceAnomalyAction.new.call

@@ -98,4 +98,51 @@ class ContractTest < ActiveSupport::TestCase
     contract.destroy
     assert_equal 0, Flag.where(contract_id: contract.id).count
   end
+
+  # ---------------------------------------------------------------------------
+  # Sense-check regressions — price edge cases (2026-03-06)
+  # ---------------------------------------------------------------------------
+
+  test "accepts negative base_price for concession contracts" do
+    # Portuguese BASE data contains contracts where a private entity pays the
+    # public body (e.g. billboard licences, bar concessions, vehicle sales).
+    # These have negative base_price. The model must not reject them.
+    concession = Contract.new(
+      external_id:        "conc-001",
+      object:             "Concessão de bar e esplanada — Parque Municipal",
+      country_code:       "PT",
+      contracting_entity: entities(:one),
+      base_price:         -54_000,
+      procedure_type:     "Concessão de Serviços Públicos"
+    )
+    assert concession.valid?,
+           "Negative base_price must be accepted — concession contracts have negative values (private pays public)"
+  end
+
+  test "accepts negative total_effective_price for concession contracts" do
+    concession = Contract.new(
+      external_id:           "conc-002",
+      object:                "Concessão de parque de estacionamento",
+      country_code:          "PT",
+      contracting_entity:    entities(:one),
+      base_price:            -50_000,
+      total_effective_price: -48_500
+    )
+    assert concession.valid?,
+           "Negative total_effective_price must be accepted for concession contracts"
+  end
+
+  test "accepts very large base_price for framework agreements" do
+    # Some Portuguese framework contracts have a ceiling in the billions of EUR.
+    # The model must not impose an upper cap; outlier detection is handled by A9.
+    framework = Contract.new(
+      external_id:        "framework-001",
+      object:             "Acordo-quadro IT — toda a Administração Pública",
+      country_code:       "PT",
+      contracting_entity: entities(:one),
+      base_price:         10_575_800_000
+    )
+    assert framework.valid?,
+           "base_price > EUR 1B must be accepted; framework agreements can have large ceilings"
+  end
 end

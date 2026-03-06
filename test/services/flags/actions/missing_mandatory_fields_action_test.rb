@@ -129,4 +129,62 @@ class Flags::Actions::MissingMandatoryFieldsActionTest < ActiveSupport::TestCase
       Flags::Actions::MissingMandatoryFieldsAction.new.call
     end
   end
+
+  # ---------------------------------------------------------------------------
+  # Implausible base_price — C3 data quality extension
+  # ---------------------------------------------------------------------------
+  #
+  # BASE data frequently contains base_price values that are clearly data-entry
+  # errors: prices entered in cents, with extra zero digits, etc. Values above
+  # IMPLAUSIBLE_PRICE_THRESHOLD (€1 trillion) are treated as missing/corrupt.
+  # The import service also nulls these out on ingestion, but existing records
+  # in the DB (imported before the cap was introduced) are caught here.
+
+  test "flags a contract with an implausible base_price above 1 trillion" do
+    contract = create_contract(
+      external_id:    "c3-implausible-001",
+      cpv_code:       "30192000",
+      procedure_type: "Ajuste Direto",
+      base_price:     BigDecimal("147_456_136_800_00")  # ~€147 billion — typical BASE data error
+    )
+
+    assert_difference "Flag.count", 1 do
+      Flags::Actions::MissingMandatoryFieldsAction.new.call
+    end
+
+    flag = Flag.find_by!(contract_id: contract.id,
+                         flag_type: Flags::Actions::MissingMandatoryFieldsAction::FLAG_TYPE)
+    assert_includes flag.details["missing_fields"], "implausible_base_price"
+    assert_match(/implausible_base_price/, flag.details["rule"])
+  end
+
+  test "does not flag a contract with a large but plausible base_price (below 1 trillion)" do
+    # €999 billion is within threshold — unusual but technically plausible
+    create_contract(
+      external_id:    "c3-large-price-ok",
+      cpv_code:       "30192000",
+      procedure_type: "Ajuste Direto",
+      base_price:     BigDecimal("999_999_999_999")
+    )
+
+    assert_no_difference "Flag.count" do
+      Flags::Actions::MissingMandatoryFieldsAction.new.call
+    end
+  end
+
+  test "implausible_base_price is added alongside other missing fields" do
+    contract = create_contract(
+      external_id:    "c3-implausible-plus-missing",
+      cpv_code:       nil,
+      procedure_type: "Ajuste Direto",
+      base_price:     BigDecimal("5_000_000_000_000")  # €5 trillion
+    )
+
+    Flags::Actions::MissingMandatoryFieldsAction.new.call
+
+    flag = Flag.find_by!(contract_id: contract.id,
+                         flag_type: Flags::Actions::MissingMandatoryFieldsAction::FLAG_TYPE)
+    assert_includes flag.details["missing_fields"], "cpv_code"
+    assert_includes flag.details["missing_fields"], "implausible_base_price"
+  end
 end

@@ -652,6 +652,49 @@ class PublicContracts::ImportServiceTest < ActiveSupport::TestCase
     assert ds.reload.error?
   end
 
+  # ── price cap — plausible_price ───────────────────────────────────────────
+
+  test "nulls out base_price when it exceeds MAX_PLAUSIBLE_PRICE (1 trillion)" do
+    # Simulate a BASE data-entry error: price entered as cents (~€147 billion).
+    implausible = BigDecimal("147_456_136_800_000")
+    attrs = build_contract_attrs("base_price" => implausible, "total_effective_price" => 147_456.0)
+
+    with_mocked_adapter([ attrs ]) do |ds, _|
+      PublicContracts::ImportService.new(ds).call
+    end
+
+    contract = Contract.last
+    assert_nil contract.base_price,
+               "base_price above MAX_PLAUSIBLE_PRICE must be stored as nil"
+    assert_equal BigDecimal("147456.0"), contract.total_effective_price,
+               "total_effective_price below threshold should be stored unchanged"
+  end
+
+  test "nulls out total_effective_price when it exceeds MAX_PLAUSIBLE_PRICE" do
+    implausible = BigDecimal("2_000_000_000_000")  # €2 trillion
+    attrs = build_contract_attrs("base_price" => 50_000.0, "total_effective_price" => implausible)
+
+    with_mocked_adapter([ attrs ]) do |ds, _|
+      PublicContracts::ImportService.new(ds).call
+    end
+
+    contract = Contract.last
+    assert_equal BigDecimal("50000.0"), contract.base_price
+    assert_nil contract.total_effective_price
+  end
+
+  test "preserves valid prices below MAX_PLAUSIBLE_PRICE" do
+    attrs = build_contract_attrs("base_price" => 999_999.0, "total_effective_price" => 950_000.0)
+
+    with_mocked_adapter([ attrs ]) do |ds, _|
+      PublicContracts::ImportService.new(ds).call
+    end
+
+    contract = Contract.last
+    assert_equal BigDecimal("999999.0"), contract.base_price
+    assert_equal BigDecimal("950000.0"), contract.total_effective_price
+  end
+
   # ── error handling ─────────────────────────────────────────────────────────
 
   test "call sets status to error when adapter raises" do

@@ -155,4 +155,64 @@ class Flags::Actions::PriceAnomalyActionTest < ActiveSupport::TestCase
     action.call
     assert_equal "high", Flag.find_by!(contract_id: c.id, flag_type: "A9_PRICE_ANOMALY").severity
   end
+
+  # ---------------------------------------------------------------------------
+  # Sense-check regressions — patterns found in production data (2026-03-06)
+  # ---------------------------------------------------------------------------
+
+  test "fires A9_PRICE_REDUCTION for extreme ratio (base price entered in wrong units)" do
+    # Seen in BASE production data: drug/medicine contracts where base_price
+    # appears to have been entered in cents rather than euros, or with extra
+    # zeroes (e.g. €147,456,136,800 base vs €147,456 effective — ratio ~0.000001).
+    # The A9_PRICE_REDUCTION flag must catch these extreme mismatches.
+    c = create_contract(
+      external_id:           "a9-extreme-ratio",
+      base_price:            147_456_136_800,
+      total_effective_price: 147_456
+    )
+
+    assert_difference "Flag.count", 1 do
+      Flags::Actions::PriceAnomalyAction.new.call
+    end
+
+    flag = Flag.find_by!(contract_id: c.id, flag_type: "A9_PRICE_REDUCTION")
+    assert ratio = flag.details["ratio"].to_f
+    assert ratio < 0.001,
+           "expected near-zero ratio for extreme data entry error, got #{ratio}"
+    assert_equal "reduction", flag.details["direction"]
+  end
+
+  test "does not fire A9 for concession contract where both prices are negative and within normal ratio" do
+    # Concession contracts (billboard licences, bar franchises, parking lots)
+    # record a negative base_price because the private entity pays the public body.
+    # When both prices agree in sign and magnitude (ratio within [0.5, 1.5]), no flag.
+    create_contract(
+      external_id:           "a9-concession-ok",
+      base_price:            -54_000,
+      total_effective_price: -50_000  # ratio = 0.926 — within [0.5, 1.5]
+    )
+
+    assert_no_difference "Flag.count" do
+      Flags::Actions::PriceAnomalyAction.new.call
+    end
+  end
+
+  test "fires A9_PRICE_REDUCTION when negative base_price has zero effective price" do
+    # Edge case: concession contract where the final payment was zero.
+    # ratio = 0 / -54000 = 0.0, which is below the 0.5 RATIO_MIN threshold.
+    # The current implementation fires a low-severity reduction flag here —
+    # this is a known false-positive for concession contracts (no effective price).
+    c = create_contract(
+      external_id:           "a9-concession-zero-eff",
+      base_price:            -54_000,
+      total_effective_price: 0
+    )
+
+    assert_difference "Flag.count", 1 do
+      Flags::Actions::PriceAnomalyAction.new.call
+    end
+
+    flag = Flag.find_by!(contract_id: c.id, flag_type: "A9_PRICE_REDUCTION")
+    assert_equal "low", flag.severity
+  end
 end

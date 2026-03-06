@@ -52,7 +52,7 @@ Indicators are grouped into three tracks following [OECD methodology](https://ww
 | # | Indicator | Data fields | Notes |
 |---|---|---|---|
 | A1 | Repeat direct awards / prior consultations to same supplier by same authority | `procedure_type`, `contracting_entity_id`, winner NIF, `publication_date` | OECD: repeat awards and concentration over 3 years |
-| A2 | Contract published after execution starts | `publication_date`, `celebration_date`, `execution_start_date` | OECD: contract data earlier than adjudication date |
+| A2 | Contract published after execution starts | `publication_date`, `celebration_date`, `execution_start_date` | OECD: contract data earlier than adjudication date. **Implementation note:** Portuguese law requires signing first then publishing. Only gaps > 10 days are flagged (`MIN_PUBLICATION_DELAY_DAYS = 10`). Before this threshold was introduced, A2 fired on ~85% of all contracts (any gap). |
 | A3 | Execution begins before publication in BASE | `publication_date` vs actual start | OECD: contracts implemented before publication |
 | A4 | Amendment inflation — large or frequent modifications | `base_price`, amendment value, amendment count | BASE publishes modifications above thresholds |
 | A5 | Contract value just below procedural thresholds | `base_price`, `procedure_type` | Threshold-splitting / fragmentation |
@@ -74,9 +74,9 @@ Indicators are grouped into three tracks following [OECD methodology](https://ww
 
 | # | Indicator | Data fields | Notes |
 |---|---|---|---|
-| C1 | Missing supplier NIF | `tax_identifier` null or invalid | OECD: VAT number completeness is itself a risk signal |
+| C1 | Missing supplier NIF / unidentified winner | `tax_identifier` null or invalid; zero `contract_winners` with positive effective price | OECD: VAT number completeness is a risk signal. Two sub-cases: (a) winner exists but NIF is blank; (b) contract was awarded (effective_price > 0) but no winner recorded. Investigation of BASE data found ~217K such contracts — primarily "Ajuste Direto Regime Geral" where the contracting authority published a notice without completing supplier fields. This is a known BASE data quality pattern. |
 | C2 | Impossible date sequences | date ordering checks | Catches data manipulation or late entry |
-| C3 | Missing mandatory fields by procedure type | CPV, location, base price | Absence is a risk signal, not just a data defect |
+| C3 | Missing mandatory fields by procedure type | CPV, location, base price; implausible `base_price` > €1T | Absence or corruption is a risk signal, not just a data defect. **Implementation note:** `base_price` values above €1 trillion absolute value are treated as data-entry errors (price entered in cents, extra zeros). The import service nulls these out on ingestion (`MAX_PLAUSIBLE_PRICE = 1_000_000_000_000`); C3 catches any that bypass the cap. Typical BASE examples: €147B drug contract, €80B tablet purchase. |
 | C4 | Supplier overlap with AdC sanction cases | winner NIF × AdC case database | OECD: AdC sanctions enriched with NIF for cross-referencing |
 | C5 | Entity name variations masking same entity | fuzzy match + NIF | Entity resolution is mandatory — names vary widely |
 | C6 | Contract not submitted to TdC when required | TdC data (constrained) | Some indicators require TdC internal data |
@@ -89,6 +89,8 @@ Missing or inconsistent data is not just a technical defect — it can indicate 
 - Contract amendments with missing legal basis
 - Repeated manual text variations for the same entity name
 - Date fields outside plausible ranges
+- `base_price` above €1 trillion (almost certainly a data-entry error — price in cents or extra zeros)
+- Awarded contract (`total_effective_price > 0`) with no winner recorded (known BASE pattern: ~217K contracts as of 2025)
 
 ---
 
