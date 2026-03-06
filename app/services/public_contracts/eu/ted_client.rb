@@ -14,6 +14,7 @@ module PublicContracts
 
       DEFAULT_FIELDS = %w[
         publication-number
+        procedure-identifier
         publication-date
         notice-type
         notice-title
@@ -127,7 +128,7 @@ module PublicContracts
         iso2       = COUNTRY_MAP.fetch(alpha3, "EU")
 
         {
-          "external_id"        => notice["publication-number"],
+          "external_id"        => notice["procedure-identifier"].presence || notice["publication-number"],
           "country_code"       => iso2,
           "object"             => extract_title(notice["notice-title"]),
           "publication_date"   => notice["publication-date"]&.delete_suffix("Z"),

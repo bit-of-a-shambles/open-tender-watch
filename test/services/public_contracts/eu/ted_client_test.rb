@@ -3,6 +3,7 @@ require "test_helper"
 class PublicContracts::EU::TedClientTest < ActiveSupport::TestCase
   FULL_NOTICE = {
     "publication-number"         => "2026/S001-001",
+    "procedure-identifier"       => "proc-uuid-001",
     "publication-date"           => "2026-01-15Z",
     "notice-type"                => "cn-standard",
     "notice-title"               => { "eng" => "Supply of surgical equipment", "por" => "Fornecimento de equipamento cirúrgico" },
@@ -120,7 +121,7 @@ class PublicContracts::EU::TedClientTest < ActiveSupport::TestCase
     Net::HTTP.stub(:new, mock) do
       result = @client.fetch_contracts
       assert_equal 1, result.size
-      assert_equal "2026/S001-001", result.first["external_id"]
+      assert_equal "proc-uuid-001", result.first["external_id"]
     end
     mock.verify
   end
@@ -161,13 +162,24 @@ class PublicContracts::EU::TedClientTest < ActiveSupport::TestCase
     Net::HTTP.stub(:new, mock) do
       result = client.fetch_contracts
       assert_equal 1, result.size
-      assert_equal "2026/S001-001", result.first["external_id"]
+      assert_equal "proc-uuid-001", result.first["external_id"]
     end
     mock.verify
   end
 
-  test "normalize maps publication-number to external_id" do
+  test "normalize uses procedure-identifier as external_id" do
     mock = mock_http_post(fake_success(NOTICES_PAYLOAD.to_json))
+    Net::HTTP.stub(:new, mock) do
+      result = @client.fetch_contracts
+      assert_equal "proc-uuid-001", result.first["external_id"]
+    end
+    mock.verify
+  end
+
+  test "normalize falls back to publication-number when procedure-identifier absent" do
+    notice_no_proc_id = FULL_NOTICE.except("procedure-identifier")
+    payload = { "notices" => [ notice_no_proc_id ], "totalNoticeCount" => 1 }
+    mock = mock_http_post(fake_success(payload.to_json))
     Net::HTTP.stub(:new, mock) do
       result = @client.fetch_contracts
       assert_equal "2026/S001-001", result.first["external_id"]
@@ -319,7 +331,7 @@ class PublicContracts::EU::TedClientTest < ActiveSupport::TestCase
     Net::HTTP.stub(:new, mock) do
       result = @client.fetch_contracts
       assert_equal 1, result.length
-      assert_equal "2026/S001-001", result.first["external_id"]
+      assert_equal "proc-uuid-001", result.first["external_id"]
     end
     mock.verify
   end
