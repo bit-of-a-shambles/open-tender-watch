@@ -42,10 +42,11 @@
 
     <%# Table %>
     <div class="border border-white/[0.08] rounded-lg overflow-hidden">
-      <div class="grid grid-cols-[1fr_100px_90px_80px] sm:grid-cols-[1fr_140px_100px_90px] bg-white/[0.03] px-4 sm:px-5 py-3 border-b border-white/[0.08] font-mono text-[10px] tracking-[2px] text-white/35 uppercase">
+      <div class="grid grid-cols-[1fr_90px_80px] sm:grid-cols-[1fr_140px_100px_160px_80px] bg-white/[0.03] px-4 sm:px-5 py-3 border-b border-white/[0.08] font-mono text-[10px] tracking-[2px] text-white/35 uppercase">
         <span><%= t("entities.index.col_entity") %></span>
         <span class="hidden sm:block"><%= t("entities.index.col_country") %></span>
         <span class="text-center"><%= t("entities.index.col_type") %></span>
+        <span class="hidden sm:block text-right"><%= t("entities.index.col_value") %></span>
         <span class="text-right"><%= t("entities.index.col_contracts") %></span>
       </div>
 
@@ -55,7 +56,7 @@
         </div>
       <% else %>
         <% @entities.each do |entity| %>
-          <%= link_to entity_path(entity), class: "grid grid-cols-[1fr_100px_90px_80px] sm:grid-cols-[1fr_140px_100px_90px] px-4 sm:px-5 py-3.5 border-b border-white/[0.04] last:border-0 hover:bg-white/[0.03] transition-colors group items-center", data: { turbo_frame: "_top" } do %>
+          <%= link_to entity_path(entity), class: "grid grid-cols-[1fr_90px_80px] sm:grid-cols-[1fr_140px_100px_160px_80px] px-4 sm:px-5 py-3.5 border-b border-white/[0.04] last:border-0 hover:bg-white/[0.03] transition-colors group items-center", data: { turbo_frame: "_top" } do %>
             <div class="pr-3">
               <div class="text-sm text-[#e8e0d4] group-hover:text-white transition-colors leading-snug line-clamp-2">
                 <%= entity.name %>
@@ -72,6 +73,13 @@
                 <span class="font-mono text-[9px] tracking-wide text-white/40 bg-white/[0.04] border border-white/[0.08] px-1.5 py-0.5 rounded">
                   <%= t("entities.index.private") %>
                 </span>
+              <% end %>
+            </div>
+            <div class="hidden sm:block text-right font-mono text-xs text-white/50">
+              <% if entity.respond_to?(:total_value) && entity.total_value.to_f > 0 %>
+                €<%= number_with_delimiter(entity.total_value.to_i) %>
+              <% else %>
+                <span class="text-white/20">—</span>
               <% end %>
             </div>
             <div class="text-right font-mono text-xs text-[#c8a84e] font-medium">

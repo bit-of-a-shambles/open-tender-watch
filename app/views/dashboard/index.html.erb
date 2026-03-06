@@ -290,12 +290,18 @@
       <div class="mb-6">
         <div class="font-mono text-[10px] tracking-[3px] text-[#c8a84e] mb-3"><%= t("dashboard.methodology.track_b") %></div>
         <div class="space-y-2">
-          <%# B5 is active — show without opacity %>
-            <div class="flex gap-3 bg-white/[0.02] border border-[#c8a84e33] rounded-lg p-3.5 mb-2">
-              <span class="font-mono text-[10px] font-bold text-[#c8a84e] w-6 shrink-0 pt-0.5">B5</span>
-              <div>
-                <span class="font-mono text-xs font-semibold text-[#e8e0d4]"><%= t("dashboard.methodology.flags.b5_title") %></span>
-                <span class="font-mono text-xs text-white/40 ml-2"><%= t("dashboard.methodology.flags.b5_desc") %></span>
+          <%# B5 is active — expanded card %>
+            <div class="bg-white/[0.02] border border-[#c8a84e33] rounded-lg p-4 mb-2">
+              <div class="flex gap-3 mb-3">
+                <span class="font-mono text-[10px] font-bold text-[#c8a84e] w-6 shrink-0 pt-0.5">B5</span>
+                <div>
+                  <span class="font-mono text-xs font-semibold text-[#e8e0d4]"><%= t("dashboard.methodology.flags.b5_title") %></span>
+                  <span class="font-mono text-xs text-white/40 ml-2"><%= t("dashboard.methodology.flags.b5_desc") %></span>
+                </div>
+              </div>
+              <div class="ml-9 space-y-2">
+                <p class="font-mono text-[11px] text-white/55 leading-relaxed"><%= t("dashboard.methodology.flags.b5_detail") %></p>
+                <p class="font-mono text-[11px] text-white/35 leading-relaxed"><%= t("dashboard.methodology.flags.b5_how") %></p>
               </div>
             </div>
           <%# B1–B4 pending sufficient data volume %>

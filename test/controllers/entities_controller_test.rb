@@ -66,4 +66,9 @@ class EntitiesControllerTest < ActionDispatch::IntegrationTest
     get entity_url(entities(:one), sort: "invalid_col", dir: "sideways")
     assert_response :success
   end
+
+  test "show filters contracts by flag_type" do
+    get entity_url(entities(:one), flag_type: "A2")
+    assert_response :success
+  end
 end
