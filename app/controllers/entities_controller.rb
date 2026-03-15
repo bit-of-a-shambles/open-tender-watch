@@ -49,13 +49,14 @@ class EntitiesController < ApplicationController
     base_scope = @entity.contracts_as_contracting_entity
     @entity_contract_total = base_scope.count
 
-    # Use a subquery for flag filtering to avoid DISTINCT + includes slowness.
-    # JOIN + DISTINCT forces Rails into a slow subquery strategy when combined
-    # with includes; a correlated subquery lets the planner use the
-    # index_flags_on_contract_id_and_flag_type index efficiently.
+    # Use a correlated EXISTS subquery rather than IN (subquery).
+    # IN materialises the full set of matching flag rows (1M+ for A2), which
+    # is extremely slow.  EXISTS short-circuits on the first hit and the
+    # planner uses the composite index_flags_on_contract_id_and_flag_type
+    # index: O(entity_contracts) vs O(total_flagged_contracts).
     if @flag_filter.present?
       base_scope = base_scope.where(
-        "contracts.id IN (SELECT contract_id FROM flags WHERE flag_type = ?)",
+        "EXISTS (SELECT 1 FROM flags f WHERE f.contract_id = contracts.id AND f.flag_type = ?)",
         @flag_filter
       )
     end
