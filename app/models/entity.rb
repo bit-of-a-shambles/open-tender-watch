@@ -3,6 +3,7 @@ class Entity < ApplicationRecord
   has_many :contract_winners
   has_many :contracts_won, through: :contract_winners, source: :contract
   has_many :flag_entity_stats
+  has_many :company_directors, dependent: :destroy
 
   validates :tax_identifier, presence: true,
                              uniqueness: { scope: :country_code }

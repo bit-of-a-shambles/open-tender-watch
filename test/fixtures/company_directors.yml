@@ -1,0 +1,13 @@
+one:
+  entity: two
+  name: João Silva
+  role: Gerente
+  tax_identifier: "123456789"
+  country_code: PT
+
+two:
+  entity: two
+  name: Maria Santos
+  role: Sócio
+  tax_identifier: "987654321"
+  country_code: PT

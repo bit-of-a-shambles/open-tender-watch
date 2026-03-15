@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_03_06_155344) do
+ActiveRecord::Schema[8.0].define(version: 2026_03_15_112820) do
   create_table "benford_analyses", force: :cascade do |t|
     t.integer "entity_id", null: false
     t.integer "representative_contract_id"
@@ -25,6 +25,18 @@ ActiveRecord::Schema[8.0].define(version: 2026_03_06_155344) do
     t.index ["entity_id"], name: "index_benford_analyses_on_entity_id", unique: true
     t.index ["flagged"], name: "index_benford_analyses_on_flagged"
     t.index ["representative_contract_id"], name: "index_benford_analyses_on_representative_contract_id"
+  end
+
+  create_table "company_directors", force: :cascade do |t|
+    t.integer "entity_id", null: false
+    t.string "name", null: false
+    t.string "role"
+    t.string "tax_identifier"
+    t.string "country_code", default: "PT", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["entity_id", "tax_identifier"], name: "index_company_directors_entity_nif", unique: true, where: "tax_identifier IS NOT NULL"
+    t.index ["entity_id"], name: "index_company_directors_on_entity_id"
   end
 
   create_table "contract_winners", force: :cascade do |t|
@@ -151,6 +163,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_03_06_155344) do
 
   add_foreign_key "benford_analyses", "contracts", column: "representative_contract_id", on_delete: :nullify
   add_foreign_key "benford_analyses", "entities"
+  add_foreign_key "company_directors", "entities"
   add_foreign_key "contract_winners", "contracts"
   add_foreign_key "contract_winners", "entities"
   add_foreign_key "contracts", "data_sources"

@@ -1,0 +1,138 @@
+<div class="animate-fade-up">
+  <%# Header %>
+  <header class="py-8 border-b border-white/10">
+    <div class="mb-1">
+      <%= link_to root_path, class: "font-mono text-[11px] tracking-[2px] text-white/30 hover:text-white/60 transition-colors" do %>
+        ← <%= t("nav.dashboard") %>
+      <% end %>
+    </div>
+    <h1 class="font-['Space_Grotesk'] text-3xl font-bold tracking-tight bg-gradient-to-r from-[#e8e0d4] to-[#c8a84e] bg-clip-text text-transparent mb-1 mt-2">
+      <%= t("companies.index.title") %>
+    </h1>
+    <p class="text-white/35 text-sm">
+      <%= t("companies.index.subtitle", count: @total, total: number_with_delimiter(@total)) %>
+    </p>
+  </header>
+
+  <%# Filters %>
+  <turbo-frame id="companies-table">
+    <%= form_with url: companies_path, method: :get, class: "flex flex-wrap gap-2 my-6" do |f| %>
+      <div class="flex-1 min-w-[180px]">
+        <%= f.text_field :q, value: @query,
+            placeholder: t("companies.index.search_placeholder"),
+            class: "w-full bg-white/[0.04] border border-white/[0.1] rounded px-3 py-2 font-mono text-xs text-[#e8e0d4] placeholder-white/20 focus:outline-none focus:border-[#c8a84e55] transition-all" %>
+      </div>
+      <%# Preserve sort params across filter changes %>
+      <%= hidden_field_tag :sort, @sort_col %>
+      <%= hidden_field_tag :dir, @sort_dir %>
+      <%= f.submit t("companies.index.filter"),
+          class: "bg-[#c8a84e1a] border border-[#c8a84e44] text-[#c8a84e] font-mono text-xs tracking-widest px-4 py-2 rounded hover:bg-[#c8a84e33] transition-all cursor-pointer" %>
+      <% if @query.present? %>
+        <%= link_to t("companies.index.clear"), companies_path,
+            class: "border border-white/10 text-white/30 font-mono text-xs tracking-widest px-4 py-2 rounded hover:text-white/50 transition-all" %>
+      <% end %>
+    <% end %>
+
+    <%# Sort controls %>
+    <div class="flex items-center gap-3 mb-4">
+      <span class="font-mono text-[10px] tracking-[2px] text-white/35 uppercase"><%= t("companies.index.sort_by") %>:</span>
+      <% [
+        ["won_value", t("companies.index.sort_value")],
+        ["won_count", t("companies.index.sort_count")],
+        ["name",      t("companies.index.sort_name")]
+      ].each do |col, label| %>
+        <% active = @sort_col == col %>
+        <% next_dir = (active && @sort_dir == "desc") ? "asc" : "desc" %>
+        <%= link_to companies_path(sort: col, dir: next_dir, q: @query),
+            class: "font-mono text-[10px] tracking-[1px] px-2.5 py-1 rounded border transition-all #{active ? 'border-[#c8a84e66] text-[#c8a84e] bg-[#c8a84e0d]' : 'border-white/10 text-white/35 hover:text-white/60 hover:border-white/20'}" do %>
+          <%= label %>
+          <% if active %><%= @sort_dir == "asc" ? " ↑" : " ↓" %><% end %>
+        <% end %>
+      <% end %>
+    </div>
+
+    <%# Pagination info %>
+    <% if @total > 0 %>
+      <p class="font-mono text-[11px] text-white/30 mb-3">
+        <%= t("companies.index.pagination.info", page: @page, total_pages: [@total_pages, 1].max, total: number_with_delimiter(@total)) %>
+      </p>
+    <% end %>
+
+    <%# Table %>
+    <div class="border border-white/[0.08] rounded-lg overflow-hidden">
+      <%# Header row %>
+      <div class="hidden sm:grid grid-cols-[1fr_100px_120px_120px_60px] bg-white/[0.03] px-5 py-3 border-b border-white/[0.08] font-mono text-[10px] tracking-[2px] text-white/35 uppercase">
+        <span><%= t("companies.index.col_company") %></span>
+        <span><%= t("companies.index.col_country") %></span>
+        <span class="text-right"><%= t("companies.index.col_value") %></span>
+        <span class="text-right"><%= t("companies.index.col_contracts") %></span>
+        <span class="text-center"><%= t("companies.index.col_risk") %></span>
+      </div>
+
+      <% if @companies.empty? %>
+        <div class="px-5 py-12 text-center font-mono text-sm text-white/25">
+          <%= t("companies.index.empty") %>
+        </div>
+      <% else %>
+        <% @companies.each do |company| %>
+          <%= link_to company_path(company), class: "flex flex-col sm:grid sm:grid-cols-[1fr_100px_120px_120px_60px] px-5 py-3.5 border-b border-white/[0.04] last:border-0 hover:bg-white/[0.03] transition-colors group items-center gap-1 sm:gap-0", data: { turbo_frame: "_top" } do %>
+            <div class="sm:pr-4">
+              <div class="text-sm text-[#e8e0d4] group-hover:text-white transition-colors leading-snug">
+                <%= company.name %>
+              </div>
+              <div class="font-mono text-[10px] text-white/25 mt-0.5 flex items-center gap-2">
+                <span>NIF <%= company.tax_identifier %></span>
+                <% if company.locality.present? %>
+                  <span class="text-white/15">·</span>
+                  <span><%= company.locality %></span>
+                <% end %>
+              </div>
+            </div>
+            <div class="hidden sm:block font-mono text-xs text-white/40">
+              <%= company.country_code %>
+            </div>
+            <div class="hidden sm:block text-right font-mono text-xs text-[#c8a84e]">
+              <% if company.won_value.to_f > 0 %>
+                €<%= number_with_delimiter(company.won_value.to_i) %>
+              <% else %>
+                <span class="text-white/20">—</span>
+              <% end %>
+            </div>
+            <div class="flex sm:justify-end items-center gap-3 sm:gap-0">
+              <span class="font-mono text-xs text-white/50">
+                <%= number_with_delimiter(company.won_count.to_i) %>
+                <span class="sm:hidden text-white/25"> <%= t("companies.index.contracts_short") %></span>
+              </span>
+              <% if company.won_value.to_f > 0 %>
+                <span class="sm:hidden font-mono text-xs text-[#c8a84e]">€<%= number_with_delimiter(company.won_value.to_i) %></span>
+              <% end %>
+            </div>
+            <div class="hidden sm:flex justify-center">
+              <% if company.has_high_flag == 1 %>
+                <span class="inline-block w-2 h-2 rounded-full bg-[#ff4444] shadow-[0_0_6px_rgba(255,68,68,0.6)]" title="<%= t('companies.index.high_flag_tooltip') %>"></span>
+              <% else %>
+                <span class="inline-block w-2 h-2 rounded-full bg-white/10"></span>
+              <% end %>
+            </div>
+          <% end %>
+        <% end %>
+      <% end %>
+    </div>
+
+    <%# Pagination %>
+    <% if @total_pages > 1 %>
+      <div class="flex items-center justify-end mt-4 font-mono text-xs text-white/35 gap-2">
+        <% if @page > 1 %>
+          <%= link_to t("companies.index.pagination.prev"),
+                companies_path(sort: @sort_col, dir: @sort_dir, q: @query, page: @page - 1),
+                class: "border border-white/10 px-3 py-1.5 rounded hover:border-[#c8a84e44] hover:text-[#c8a84e] transition-all" %>
+        <% end %>
+        <% if @page < @total_pages %>
+          <%= link_to t("companies.index.pagination.next"),
+                companies_path(sort: @sort_col, dir: @sort_dir, q: @query, page: @page + 1),
+                class: "border border-white/10 px-3 py-1.5 rounded hover:border-[#c8a84e44] hover:text-[#c8a84e] transition-all" %>
+        <% end %>
+      </div>
+    <% end %>
+  </turbo-frame>
+</div>

@@ -1,0 +1,425 @@
+<div class="animate-fade-up">
+  <%# Header %>
+  <header class="py-8 border-b border-white/10">
+    <div class="flex items-center gap-4 mb-3">
+      <%= link_to companies_path, class: "font-mono text-[11px] tracking-[2px] text-white/30 hover:text-white/60 transition-colors" do %>
+        ← <%= t("companies.index.title") %>
+      <% end %>
+      <span class="font-mono text-[10px] text-[#c8a84e] bg-[#c8a84e12] px-2 py-0.5 rounded border border-[#c8a84e33]">
+        <%= t("companies.show.company_badge") %>
+      </span>
+      <span class="font-mono text-[10px] text-white/40 bg-white/[0.04] px-2 py-0.5 rounded border border-white/[0.08]">
+        <%= @entity.country_code %>
+      </span>
+    </div>
+    <h1 class="font-['Space_Grotesk'] text-2xl font-bold text-[#e8e0d4] leading-snug mb-2">
+      <%= @entity.name %>
+    </h1>
+    <div class="font-mono text-[11px] text-white/25 flex flex-wrap items-center gap-x-3 gap-y-1">
+      <span>NIF <%= @entity.tax_identifier %></span>
+      <% if @entity.address.present? %>
+        <span class="text-white/15">·</span>
+        <span><%= [@entity.address, @entity.locality, @entity.postal_code].compact.reject(&:empty?).join(", ") %></span>
+      <% end %>
+    </div>
+  </header>
+
+  <div class="flex flex-col-reverse lg:grid lg:grid-cols-[1fr_280px] gap-6 mt-6">
+
+    <%# Main — pivot + contracts won %>
+    <div class="space-y-10">
+
+      <%# Pivot: contracts grouped by contracting authority %>
+      <%= turbo_frame_tag "company-pivot" do %>
+        <section>
+          <h2 class="font-['Space_Grotesk'] text-base font-semibold text-[#e8e0d4] mb-4"><%= t("companies.show.pivot_heading") %></h2>
+
+          <div class="border border-white/[0.08] rounded-lg overflow-hidden">
+            <div class="hidden sm:grid grid-cols-[1fr_100px_130px] bg-white/[0.03] px-4 py-3 border-b border-white/[0.08] font-mono text-[10px] tracking-[2px] text-white/35 uppercase">
+              <span><%= t("companies.show.pivot_col_authority") %></span>
+              <span class="text-right"><%= t("companies.show.pivot_col_contracts") %></span>
+              <span class="text-right"><%= t("companies.show.pivot_col_value") %></span>
+            </div>
+
+            <% if @authority_pivot.empty? %>
+              <div class="px-5 py-8 text-center font-mono text-sm text-white/25">
+                <%= t("companies.show.pivot_empty") %>
+              </div>
+            <% else %>
+              <% @authority_pivot.each do |row| %>
+                <div class="flex flex-col sm:grid sm:grid-cols-[1fr_100px_130px] px-4 py-3 border-b border-white/[0.04] last:border-0 items-start sm:items-center gap-1 sm:gap-0">
+                  <div>
+                    <% if row.auth_entity_id.present? %>
+                      <%= link_to entity_path(row.auth_entity_id),
+                          class: "font-mono text-[11px] text-white/70 hover:text-[#c8a84e] transition-colors leading-snug",
+                          data: { turbo_frame: "_top" } do %>
+                        <%= row.authority_name %>
+                      <% end %>
+                    <% else %>
+                      <span class="font-mono text-[11px] text-white/50"><%= row.authority_name.presence || "—" %></span>
+                    <% end %>
+                    <% if row.authority_nif.present? %>
+                      <div class="font-mono text-[9px] text-white/20 mt-0.5">NIF <%= row.authority_nif %></div>
+                    <% end %>
+                  </div>
+                  <div class="text-right font-mono text-xs text-[#e8e0d4]"><%= number_with_delimiter(row.contract_count) %></div>
+                  <div class="text-right font-mono text-xs text-[#c8a84e] font-medium">€<%= number_with_delimiter(row.total_value.to_i) %></div>
+                </div>
+              <% end %>
+            <% end %>
+          </div>
+
+          <%# Pivot pagination %>
+          <% if @pivot_total_pages > 1 || @pivot_total > 0 %>
+            <div class="flex items-center justify-between mt-3 font-mono text-[10px] text-white/35">
+              <span><%= t("companies.show.pivot_pagination_info", page: @pivot_page, total_pages: @pivot_total_pages, total: number_with_delimiter(@pivot_total)) %></span>
+              <div class="flex gap-2">
+                <% if @pivot_page > 1 %>
+                  <%= link_to t("companies.show.pagination_prev"),
+                        company_path(@entity, pivot_page: @pivot_page - 1, page: @page, sort: @sort_col, dir: @sort_dir, flag_type: @flag_filter, date_from: @date_from, date_to: @date_to),
+                        class: "border border-white/10 px-3 py-1.5 rounded hover:border-[#c8a84e44] hover:text-[#c8a84e] transition-all" %>
+                <% end %>
+                <% if @pivot_page < @pivot_total_pages %>
+                  <%= link_to t("companies.show.pagination_next"),
+                        company_path(@entity, pivot_page: @pivot_page + 1, page: @page, sort: @sort_col, dir: @sort_dir, flag_type: @flag_filter, date_from: @date_from, date_to: @date_to),
+                        class: "border border-white/10 px-3 py-1.5 rounded hover:border-[#c8a84e44] hover:text-[#c8a84e] transition-all" %>
+                <% end %>
+              </div>
+            </div>
+          <% end %>
+        </section>
+      <% end %>
+
+      <%# Contracts won %>
+      <%= turbo_frame_tag "company-contracts" do %>
+        <section>
+          <h2 class="font-['Space_Grotesk'] text-base font-semibold text-[#e8e0d4] mb-4"><%= t("companies.show.contracts_heading") %></h2>
+
+      <%# Flag filter chips %>
+      <% if @flag_types.any? %>
+        <div class="flex flex-wrap items-center gap-2 mb-4">
+          <span class="font-mono text-[10px] tracking-[2px] text-white/35 uppercase shrink-0"><%= t("companies.show.filter_by_flag") %>:</span>
+          <%= link_to company_path(@entity, sort: @sort_col, dir: @sort_dir, date_from: @date_from, date_to: @date_to, page: 1),
+                class: "font-mono text-[10px] px-2.5 py-1 rounded border transition-all #{@flag_filter.nil? ? 'border-white/30 text-white/60 bg-white/[0.06]' : 'border-white/10 text-white/30 hover:text-white/60 hover:border-white/20'}" do %>
+            <%= t("companies.show.filter_all") %>
+          <% end %>
+          <% @flag_types.each do |ft| %>
+            <% active_ft = @flag_filter == ft %>
+            <%= link_to company_path(@entity, sort: @sort_col, dir: @sort_dir, flag_type: ft, date_from: @date_from, date_to: @date_to, page: 1),
+                  class: "font-mono text-[10px] px-2.5 py-1 rounded border transition-all #{active_ft ? 'border-[#c8a84e66] text-[#c8a84e] bg-[#c8a84e0d]' : 'border-white/10 text-white/30 hover:text-white/60 hover:border-white/20'}" do %>
+              <%= flag_type_label(ft) %>
+            <% end %>
+          <% end %>
+        </div>
+      <% end %>
+
+      <%# Date filter %>
+      <%= form_with url: company_path(@entity), method: :get, class: "flex items-center gap-2 mb-3 flex-wrap" do |f| %>
+        <%= hidden_field_tag :sort, @sort_col %>
+        <%= hidden_field_tag :dir, @sort_dir %>
+        <%= hidden_field_tag :flag_type, @flag_filter %>
+        <label class="font-mono text-[10px] text-white/35 shrink-0"><%= t("companies.show.date_from") %></label>
+        <%= f.date_field :date_from, value: @date_from,
+            class: "bg-white/[0.04] border border-white/[0.1] rounded px-2 py-1.5 font-mono text-xs text-[#e8e0d4] focus:outline-none focus:border-[#c8a84e55] transition-all" %>
+        <label class="font-mono text-[10px] text-white/35 shrink-0"><%= t("companies.show.date_to") %></label>
+        <%= f.date_field :date_to, value: @date_to,
+            class: "bg-white/[0.04] border border-white/[0.1] rounded px-2 py-1.5 font-mono text-xs text-[#e8e0d4] focus:outline-none focus:border-[#c8a84e55] transition-all" %>
+        <%= f.submit t("companies.show.filter"),
+            class: "bg-[#c8a84e1a] border border-[#c8a84e44] text-[#c8a84e] font-mono text-[10px] tracking-widest px-3 py-1.5 rounded hover:bg-[#c8a84e33] transition-all cursor-pointer" %>
+        <% if @date_from.present? || @date_to.present? %>
+          <%= link_to t("companies.show.clear"), company_path(@entity, sort: @sort_col, dir: @sort_dir, flag_type: @flag_filter),
+              class: "font-mono text-[10px] text-white/30 hover:text-white/50 transition-all" %>
+        <% end %>
+      <% end %>
+
+      <%# Sort controls %>
+      <div class="flex items-center gap-3 mb-4">
+        <span class="font-mono text-[10px] tracking-[2px] text-white/35 uppercase"><%= t("companies.show.sort_by") %>:</span>
+        <% [
+          ["celebration_date", t("companies.show.sort_date")],
+          ["base_price",       t("companies.show.sort_price")],
+          ["object",           t("companies.show.sort_object")]
+        ].each do |col, label| %>
+          <% active = @sort_col == col %>
+          <% next_dir = (active && @sort_dir == "desc") ? "asc" : "desc" %>
+          <%= link_to company_path(@entity, sort: col, dir: next_dir, flag_type: @flag_filter, date_from: @date_from, date_to: @date_to, page: 1, pivot_page: @pivot_page),
+              class: "font-mono text-[10px] tracking-[1px] px-2.5 py-1 rounded border transition-all #{active ? 'border-[#c8a84e66] text-[#c8a84e] bg-[#c8a84e0d]' : 'border-white/10 text-white/35 hover:text-white/60 hover:border-white/20'}" do %>
+            <%= label %>
+            <% if active %><%= @sort_dir == "asc" ? " ↑" : " ↓" %><% end %>
+          <% end %>
+        <% end %>
+      </div>
+
+      <%# Count %>
+      <% if @total > 0 %>
+        <p class="font-mono text-[11px] text-white/30 mb-3">
+          <%= t("companies.show.contracts_pagination_info", page: @page, total_pages: [@total_pages, 1].max, total: number_with_delimiter(@total)) %>
+        </p>
+      <% end %>
+
+      <%# Contracts won table %>
+      <div class="border border-white/[0.08] rounded-lg overflow-hidden">
+        <div class="hidden sm:grid grid-cols-[1fr_150px_110px_90px] bg-white/[0.03] px-4 py-3 border-b border-white/[0.08] font-mono text-[10px] tracking-[2px] text-white/35 uppercase">
+          <span><%= t("companies.show.col_contract") %></span>
+          <span><%= t("companies.show.col_authority") %></span>
+          <span class="text-right"><%= t("companies.show.col_price") %></span>
+          <span class="text-right"><%= t("companies.show.col_date") %></span>
+        </div>
+
+        <% if @contracts.empty? %>
+          <div class="px-5 py-12 text-center font-mono text-sm text-white/25">
+            <%= t("companies.show.no_contracts") %>
+          </div>
+        <% else %>
+          <% @contracts.each do |contract| %>
+            <%= link_to contract_path(contract), class: "flex flex-col sm:grid sm:grid-cols-[1fr_150px_110px_90px] px-4 py-3 border-b border-white/[0.04] last:border-0 hover:bg-white/[0.03] transition-colors group sm:items-start gap-1 sm:gap-0", data: { turbo_frame: "_top" } do %>
+              <div class="sm:pr-4">
+                <div class="text-sm text-[#e8e0d4] group-hover:text-white transition-colors line-clamp-2 leading-snug">
+                  <%= contract.object %>
+                </div>
+                <div class="font-mono text-[10px] text-white/25 mt-1">
+                  <%= contract.country_code %> · <%= contract.external_id %>
+                  <% if contract.procedure_type.present? %> · <%= contract.procedure_type.truncate(25) %><% end %>
+                </div>
+                <% if contract.flags.any? %>
+                  <div class="mt-1.5 flex flex-wrap gap-1">
+                    <% contract.flags.first(2).each do |flag| %>
+                      <span class="font-mono text-[9px] tracking-wide text-[#ff6666] bg-[#ff444412] border border-[#ff444433] px-1.5 py-0.5 rounded">
+                        <%= flag_type_label(flag.flag_type) %>
+                      </span>
+                    <% end %>
+                    <% if contract.flags.size > 2 %>
+                      <span class="font-mono text-[9px] text-white/35">+<%= contract.flags.size - 2 %></span>
+                    <% end %>
+                  </div>
+                <% end %>
+              </div>
+              <%# Contracting authority — who hired this company %>
+              <div class="hidden sm:block sm:pr-2">
+                <% if contract.contracting_entity %>
+                  <%= link_to entity_path(contract.contracting_entity),
+                      class: "font-mono text-[10px] text-white/50 hover:text-[#c8a84e] transition-colors leading-snug line-clamp-2",
+                      data: { turbo_frame: "_top" } do %>
+                    <%= contract.contracting_entity.name.truncate(30) %>
+                  <% end %>
+                  <div class="font-mono text-[9px] text-white/20 mt-0.5">
+                    NIF <%= contract.contracting_entity.tax_identifier %>
+                  </div>
+                <% else %>
+                  <span class="text-white/20">—</span>
+                <% end %>
+              </div>
+              <div class="hidden sm:block text-right font-mono text-xs text-[#c8a84e] font-medium pt-0.5">
+                <% if contract.base_price.present? %>
+                  €<%= number_with_delimiter(contract.base_price.to_i) %>
+                <% else %>
+                  <span class="text-white/20">—</span>
+                <% end %>
+              </div>
+              <div class="hidden sm:block text-right font-mono text-[11px] text-white/35 pt-0.5">
+                <%= contract.celebration_date&.strftime("%Y-%m-%d") || "—" %>
+              </div>
+              <%# Mobile: price + date inline %>
+              <div class="flex items-center gap-2 sm:hidden">
+                <% if contract.base_price.present? %>
+                  <span class="font-mono text-xs text-[#c8a84e]">€<%= number_with_delimiter(contract.base_price.to_i) %></span>
+                <% end %>
+                <span class="font-mono text-[10px] text-white/30"><%= contract.celebration_date&.strftime("%Y-%m-%d") %></span>
+              </div>
+            <% end %>
+          <% end %>
+        <% end %>
+      </div>
+
+      <%# Pagination %>
+      <% if @total_pages > 1 %>
+        <div class="flex items-center justify-end mt-4 font-mono text-xs text-white/35 gap-2">
+          <% if @page > 1 %>
+            <%= link_to t("companies.show.pagination_prev"),
+                  company_path(@entity, sort: @sort_col, dir: @sort_dir, flag_type: @flag_filter, date_from: @date_from, date_to: @date_to, page: @page - 1, pivot_page: @pivot_page),
+                  class: "border border-white/10 px-3 py-1.5 rounded hover:border-[#c8a84e44] hover:text-[#c8a84e] transition-all" %>
+          <% end %>
+          <% if @page < @total_pages %>
+            <%= link_to t("companies.show.pagination_next"),
+                  company_path(@entity, sort: @sort_col, dir: @sort_dir, flag_type: @flag_filter, date_from: @date_from, date_to: @date_to, page: @page + 1, pivot_page: @pivot_page),
+                  class: "border border-white/10 px-3 py-1.5 rounded hover:border-[#c8a84e44] hover:text-[#c8a84e] transition-all" %>
+          <% end %>
+        </div>
+      <% end %>
+        </section>
+      <% end %>
+    </div>
+
+    <%# Sidebar %>
+    <div class="space-y-4">
+
+      <%# Overview stats %>
+      <div class="bg-white/[0.02] border border-white/[0.06] rounded-lg p-5">
+        <div class="font-mono text-[10px] tracking-[2px] text-white/35 mb-4 uppercase"><%= t("companies.show.overview") %></div>
+        <div class="space-y-4">
+          <div>
+            <div class="font-mono text-[10px] text-white/30 mb-0.5"><%= t("companies.show.total_won_value") %></div>
+            <div class="font-['Space_Grotesk'] text-2xl font-bold text-[#c8a84e]">
+              €<%= number_with_delimiter(@total_won_value.to_i) %>
+            </div>
+          </div>
+          <div>
+            <div class="font-mono text-[10px] text-white/30 mb-0.5"><%= t("companies.show.contracts_won") %></div>
+            <div class="font-['Space_Grotesk'] text-xl font-bold text-[#e8e0d4]">
+              <%= number_with_delimiter(@entity_won_total) %>
+            </div>
+          </div>
+          <%# Company metadata %>
+          <% details = {
+               t("companies.show.nif")       => @entity.tax_identifier,
+               t("companies.show.country")   => @entity.country_code,
+               t("companies.show.address")   => @entity.address,
+               t("companies.show.locality")  => @entity.locality,
+               t("companies.show.postal")    => @entity.postal_code
+             }.reject { |_, v| v.blank? } %>
+          <% if details.any? %>
+            <dl class="space-y-2 pt-2 border-t border-white/[0.06]">
+              <% details.each do |label, value| %>
+                <div>
+                  <dt class="font-mono text-[10px] text-white/30"><%= label %></dt>
+                  <dd class="font-mono text-xs text-[#e8e0d4]"><%= value %></dd>
+                </div>
+              <% end %>
+            </dl>
+          <% end %>
+        </div>
+      </div>
+
+      <%# Directors & Officers %>
+      <div class="bg-white/[0.02] border border-white/[0.06] rounded-lg p-5">
+        <div class="font-mono text-[10px] tracking-[2px] text-white/35 mb-4 uppercase"><%= t("companies.show.directors_heading") %></div>
+        <% if @directors.any? %>
+          <ul class="space-y-3">
+            <% @directors.each do |d| %>
+              <li class="border-b border-white/[0.05] pb-3 last:border-0 last:pb-0">
+                <div class="font-mono text-xs text-[#e8e0d4]"><%= d.name %></div>
+                <% if d.role.present? %>
+                  <div class="font-mono text-[10px] text-[#c8a84e] mt-0.5"><%= d.role %></div>
+                <% end %>
+                <% if d.tax_identifier.present? %>
+                  <div class="font-mono text-[9px] text-white/30 mt-0.5">NIF <%= d.tax_identifier %></div>
+                <% end %>
+              </li>
+            <% end %>
+          </ul>
+        <% else %>
+          <p class="font-mono text-[10px] text-white/35 leading-relaxed mb-2"><%= t("companies.show.no_directors") %></p>
+          <p class="font-mono text-[9px] text-white/25 leading-relaxed"><%= t("companies.show.directors_note") %></p>
+        <% end %>
+      </div>
+
+      <%# Ownership / External Registries %>
+      <div class="bg-white/[0.02] border border-white/[0.06] rounded-lg p-5">
+        <div class="font-mono text-[10px] tracking-[2px] text-white/35 mb-3 uppercase"><%= t("companies.show.ownership_heading") %></div>        <p class="font-mono text-[10px] text-white/40 leading-relaxed mb-4">
+          <%= t("companies.show.ownership_note") %>
+        </p>
+        <div class="space-y-2">
+          <% if @entity.country_code == "PT" %>
+            <a href="https://publicacoes.mj.pt/" target="_blank" rel="noopener noreferrer"
+               class="flex items-center gap-2 font-mono text-[11px] text-white/50 hover:text-[#c8a84e] transition-colors group">
+              <span class="w-1.5 h-1.5 rounded-full bg-white/20 group-hover:bg-[#c8a84e] transition-colors shrink-0"></span>
+              <%= t("companies.show.registo_comercial") %>
+              <span class="text-white/20 text-[9px]">↗</span>
+            </a>
+            <a href="https://rcbe.justica.gov.pt/" target="_blank" rel="noopener noreferrer"
+               class="flex items-center gap-2 font-mono text-[11px] text-white/50 hover:text-[#c8a84e] transition-colors group">
+              <span class="w-1.5 h-1.5 rounded-full bg-white/20 group-hover:bg-[#c8a84e] transition-colors shrink-0"></span>
+              <%= t("companies.show.rcbe") %>
+              <span class="text-white/20 text-[9px]">↗</span>
+            </a>
+            <p class="font-mono text-[9px] text-white/20 mt-2 leading-relaxed">
+              <%= t("companies.show.rcbe_note") %>
+            </p>
+          <% end %>
+          <a href="https://ted.europa.eu/en/search/result?queryText=<%= CGI.escape(@entity.name) %>" target="_blank" rel="noopener noreferrer"
+             class="flex items-center gap-2 font-mono text-[11px] text-white/50 hover:text-[#c8a84e] transition-colors group">
+            <span class="w-1.5 h-1.5 rounded-full bg-white/20 group-hover:bg-[#c8a84e] transition-colors shrink-0"></span>
+            <%= t("companies.show.ted_search") %>
+            <span class="text-white/20 text-[9px]">↗</span>
+          </a>
+        </div>
+        <div class="mt-4 pt-3 border-t border-white/[0.06]">
+          <span class="font-mono text-[9px] tracking-wide text-white/20 bg-white/[0.03] border border-white/[0.06] px-2 py-0.5 rounded uppercase">
+            <%= t("companies.show.phase_7_label") %>
+          </span>
+        </div>
+      </div>
+
+      <%# Risk flags on won contracts %>
+      <% if @flag_stats.any? %>
+        <div class="bg-white/[0.02] border border-white/[0.06] rounded-lg p-5">
+          <div class="font-mono text-[10px] tracking-[2px] text-white/35 mb-4 uppercase"><%= t("entities.show.risk_flags") %></div>
+          <div class="space-y-3">
+            <% @flag_stats.group_by(&:flag_type).each do |ft, stats| %>
+              <% max_severity = stats.map(&:severity).max_by { |s| %w[low medium high].index(s) || 0 } %>
+              <% total_count = stats.sum(&:contract_count) %>
+              <% color = max_severity == "high" ? "text-[#ff4444]" : max_severity == "medium" ? "text-[#ff8844]" : "text-[#c8a84e]" %>
+              <div class="border-b border-white/5 pb-3 last:border-0 last:pb-0">
+                <div class="font-mono text-[10px] <%= color %> mb-1">
+                  <%= flag_type_label(ft) %>
+                </div>
+                <div class="font-mono text-xs text-white/40">
+                  <%= number_with_delimiter(total_count) %> <%= t("companies.show.flagged_contracts") %>
+                </div>
+              </div>
+            <% end %>
+          </div>
+        </div>
+      <% end %>
+
+      <%# Benford chart — same as entity show %>
+      <% if @benford_analysis %>
+        <% benford_expected = (1..9).each_with_object({}) { |d, h| h[d.to_s] = (Math.log10(1.0 + 1.0 / d) * 100).round(2) } %>
+        <div id="benford-chart-placeholder"
+             class="bg-white/[0.02] border border-white/[0.06] rounded-lg p-5"
+             data-controller="benford-chart"
+             data-benford-chart-observed-value="<%= @benford_analysis.digit_distribution.to_json %>"
+             data-benford-chart-expected-value="<%= benford_expected.to_json %>"
+             data-benford-chart-chi2-value="<%= @benford_analysis.chi_square %>"
+             data-benford-chart-sample-size-value="<%= @benford_analysis.sample_size %>"
+             data-benford-chart-flagged-value="<%= @benford_analysis.flagged %>">
+          <div class="font-mono text-[10px] tracking-[2px] text-white/35 mb-3 uppercase">
+            <%= t("entities.show.benford_distribution") %>
+          </div>
+          <div class="font-mono text-[10px] text-white/30 mb-1">
+            n = <%= number_with_delimiter(@benford_analysis.sample_size) %> contratos · χ² = <%= @benford_analysis.chi_square %>
+          </div>
+          <div class="mt-3 space-y-1">
+            <% (1..9).each do |d| %>
+              <% obs_count = @benford_analysis.digit_distribution[d.to_s].to_i %>
+              <% obs_pct   = @benford_analysis.sample_size > 0 ? (obs_count.to_f / @benford_analysis.sample_size * 100).round(1) : 0 %>
+              <% exp_pct   = benford_expected[d.to_s] %>
+              <% bar_color = @benford_analysis.flagged && (obs_pct - exp_pct).abs > 5 ? "bg-[#ff4444]" : "bg-[#c8a84e]" %>
+              <div class="flex items-center gap-2">
+                <span class="font-mono text-[10px] text-white/40 w-3 shrink-0"><%= d %></span>
+                <div class="flex-1 relative h-3 bg-white/[0.05] rounded-sm overflow-hidden">
+                  <div class="absolute inset-y-0 left-0 <%= bar_color %> opacity-60 transition-all"
+                       style="width: <%= obs_pct %>%"></div>
+                  <div class="absolute inset-y-0 left-0 border-r-2 border-white/40"
+                       style="width: <%= exp_pct %>%"></div>
+                </div>
+                <span class="font-mono text-[9px] text-white/30 w-8 text-right shrink-0"><%= obs_pct %>%</span>
+              </div>
+            <% end %>
+          </div>
+          <div class="mt-3 flex items-center gap-4">
+            <div class="flex items-center gap-1.5">
+              <div class="w-3 h-2 bg-[#c8a84e] opacity-60 rounded-xs"></div>
+              <span class="font-mono text-[9px] text-white/30"><%= t("entities.show.benford_observed") %></span>
+            </div>
+            <div class="flex items-center gap-1.5">
+              <div class="w-0.5 h-2 bg-white/40"></div>
+              <span class="font-mono text-[9px] text-white/30"><%= t("entities.show.benford_expected") %></span>
+            </div>
+          </div>
+        </div>
+      <% end %>
+
+    </div>
+  </div>
+</div>

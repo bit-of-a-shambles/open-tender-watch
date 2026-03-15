@@ -3,6 +3,7 @@ Rails.application.routes.draw do
   get "dashboard/index"
   resources :contracts, only: [ :index, :show ]
   resources :entities, only: [ :index, :show ]
+  resources :companies, only: [ :index, :show ]
   get "locale/:locale", to: "locales#set", as: :set_locale
   # Define your application routes per the DSL in https://guides.rubyonrails.org/routing.html
 
