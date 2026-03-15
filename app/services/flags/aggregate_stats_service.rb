@@ -110,7 +110,7 @@ module Flags
           ), 0)
           FROM contracts c
           LEFT JOIN winner_counts wc ON wc.contract_id = c.id
-          WHERE c.id IN (SELECT DISTINCT f.contract_id FROM flags f #{sev_where})
+          WHERE EXISTS (SELECT 1 FROM flags f WHERE f.contract_id = c.id #{sev_and})
         SQL
 
         flagged_contracts = conn.select_value(<<~SQL).to_i

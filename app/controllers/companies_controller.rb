@@ -27,22 +27,17 @@ class CompaniesController < ApplicationController
     @total       = entity_scope.count
     @total_pages = [ (@total.to_f / PER_PAGE).ceil, 1 ].max
 
-    # Join contract_winners → contracts to compute won value and won count.
-    # LEFT JOIN so companies with no won contracts still appear (won_value = 0).
-    # GROUP BY entities.id; SQLite supports ORDER BY computed aliases.
+    # Use pre-computed won_value / won_contract_count columns — avoids a
+    # GROUP BY + SUM over millions of contract_winners rows.
+    # has_high_flag hits flag_entity_stats (small, indexed) rather than flags.
     @companies = entity_scope
-      .joins("LEFT JOIN contract_winners cw ON cw.entity_id = entities.id")
-      .joins("LEFT JOIN contracts c ON c.id = cw.contract_id")
-      .group("entities.id")
       .select(
         "entities.*",
-        "COUNT(DISTINCT cw.id)       AS won_count",
-        "COALESCE(SUM(c.base_price), 0) AS won_value",
-        # High-severity flag indicator — 1 if any won contract carries a high flag
+        "entities.won_contract_count AS won_count",
+        "entities.won_value",
         "CASE WHEN EXISTS (
-           SELECT 1 FROM flags f2
-           JOIN contract_winners cw2 ON cw2.contract_id = f2.contract_id
-           WHERE cw2.entity_id = entities.id AND f2.severity = 'high'
+           SELECT 1 FROM flag_entity_stats fes
+           WHERE fes.entity_id = entities.id AND fes.severity = 'high'
          ) THEN 1 ELSE 0 END AS has_high_flag"
       )
       .order(Arel.sql("#{@sort_col} #{@sort_dir}"))

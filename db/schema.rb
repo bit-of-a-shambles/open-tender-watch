@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_03_15_112820) do
+ActiveRecord::Schema[8.0].define(version: 2026_03_15_200000) do
   create_table "benford_analyses", force: :cascade do |t|
     t.integer "entity_id", null: false
     t.integer "representative_contract_id"
@@ -112,7 +112,11 @@ ActiveRecord::Schema[8.0].define(version: 2026_03_15_112820) do
     t.string "country_code", default: "PT", null: false
     t.integer "contract_count", default: 0, null: false
     t.decimal "total_contracted_value", precision: 15, scale: 2, default: "0.0", null: false
+    t.integer "won_contract_count", default: 0, null: false
+    t.decimal "won_value", precision: 15, scale: 2, default: "0.0", null: false
     t.index ["contract_count"], name: "index_entities_on_contract_count"
+    t.index ["is_company", "won_contract_count"], name: "index_entities_on_is_company_won_contract_count"
+    t.index ["is_company", "won_value"], name: "index_entities_on_is_company_won_value"
     t.index ["is_company"], name: "index_entities_on_is_company"
     t.index ["is_public_body"], name: "index_entities_on_is_public_body"
     t.index ["tax_identifier", "country_code"], name: "index_entities_on_tax_identifier_and_country_code", unique: true

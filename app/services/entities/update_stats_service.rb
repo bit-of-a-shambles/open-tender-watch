@@ -53,6 +53,31 @@ module Entities
           )
       SQL
 
+      # Compute won_contract_count and won_value for private entities (contract
+      # winners).  Uses the same simple SUM(base_price) shown in the companies
+      # index — sufficient for ranking; adjust to three-tier logic if needed.
+      ApplicationRecord.connection.execute(<<~SQL)
+        WITH winner_sums AS (
+          SELECT
+            cw.entity_id,
+            COUNT(*)                    AS won_cnt,
+            COALESCE(SUM(c.base_price), 0) AS won_val
+          FROM contract_winners cw
+          JOIN contracts c ON c.id = cw.contract_id
+          GROUP BY cw.entity_id
+        )
+        UPDATE entities
+        SET
+          won_contract_count = COALESCE(
+            (SELECT won_cnt FROM winner_sums WHERE winner_sums.entity_id = entities.id),
+            0
+          ),
+          won_value = COALESCE(
+            (SELECT won_val FROM winner_sums WHERE winner_sums.entity_id = entities.id),
+            0
+          )
+      SQL
+
       true
     end
   end

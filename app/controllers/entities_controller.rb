@@ -75,7 +75,15 @@ class EntitiesController < ApplicationController
     @sort_col = SORT_COLS.include?(params[:sort]) ? params[:sort] : "celebration_date"
     @sort_dir = params[:dir] == "asc" ? "asc" : "desc"
 
-    @total       = base_scope.count
+    # Avoid COUNT(*) with EXISTS over tens-of-thousands of contracts for large
+    # entities (e.g. 33K contracts for chualgave). When a flag filter is active,
+    # use the pre-computed contract_count from flag_entity_stats instead.
+    # Date filters still fall back to a real count (rare + bounded).
+    @total = if @flag_filter.present? && @date_from.blank? && @date_to.blank?
+      @flag_stats.find { |s| s.flag_type == @flag_filter }&.contract_count.to_i
+    else
+      base_scope.count
+    end
     @page        = [ params[:page].to_i, 1 ].max
     @total_pages = [ (@total.to_f / PER_PAGE).ceil, 1 ].max
 
