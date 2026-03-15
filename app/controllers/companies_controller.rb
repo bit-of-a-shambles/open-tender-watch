@@ -72,7 +72,7 @@ class CompaniesController < ApplicationController
 
     if @flag_filter.present?
       base_scope = base_scope.where(
-        "contracts.id IN (SELECT contract_id FROM flags WHERE flag_type = ?)",
+        "EXISTS (SELECT 1 FROM flags f WHERE f.contract_id = contracts.id AND f.flag_type = ?)",
         @flag_filter
       )
     end
