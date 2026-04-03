@@ -225,4 +225,51 @@ class DashboardControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_match(/Portal BASE.*2 records/m, response.body)
   end
+
+  # --- Backend/frontend contract tests ---
+  #
+  # These tests auto-discover all flag action files and assert that the frontend
+  # stays in sync: every implemented flag must have pt.yml i18n keys and must
+  # appear as an *active* (non-dimmed) card in the methodology pane.
+  #
+  # Adding a new action file without updating the view/locale will fail here.
+
+  IMPLEMENTED_FLAG_CODES = begin
+    action_dir = Rails.root.join("app/services/flags/actions")
+    Dir.glob("#{action_dir}/*.rb").flat_map do |path|
+      # Match string literals like "A7_ABNORMAL_DIRECT_AWARD_RATE" or "B3_PRICE_HIGH"
+      File.read(path).scan(/"([A-Z]\d_[A-Z_]+)"/).flatten.map { |t| t[0, 2] }
+    end.uniq.sort
+  end
+
+  test "every backend flag action has pt.yml i18n keys for title and desc" do
+    assert IMPLEMENTED_FLAG_CODES.any?, "No flag type constants found in action files — check naming"
+
+    IMPLEMENTED_FLAG_CODES.each do |code|
+      prefix = code.downcase
+      assert I18n.exists?("dashboard.methodology.flags.#{prefix}_title", :pt),
+        "pt.yml missing dashboard.methodology.flags.#{prefix}_title (#{code} is implemented)"
+      assert I18n.exists?("dashboard.methodology.flags.#{prefix}_desc", :pt),
+        "pt.yml missing dashboard.methodology.flags.#{prefix}_desc (#{code} is implemented)"
+    end
+  end
+
+  test "every backend flag action appears as an active card in the methodology pane" do
+    assert IMPLEMENTED_FLAG_CODES.any?, "No flag type constants found in action files — check naming"
+
+    get dashboard_index_url
+    assert_response :success
+    body = response.body
+
+    IMPLEMENTED_FLAG_CODES.each do |code|
+      assert_includes body, ">#{code}<",
+        "Methodology pane does not render a card for implemented flag #{code}"
+
+      assert_no_match(
+        /<div class="[^"]*opacity-60[^"]*">\s*<span[^>]*>\s*#{Regexp.escape(code)}\s*</,
+        body,
+        "#{code} is implemented — mark it active in the methodology pane (remove opacity-60)"
+      )
+    end
+  end
 end
