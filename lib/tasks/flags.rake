@@ -52,6 +52,18 @@ namespace :flags do
     puts "B2 supplier concentration flagged: #{flagged}"
   end
 
+  desc "Run A7 abnormal direct award rate scoring (authority DA rate vs CPV-division peer median)"
+  task run_a7: :environment do
+    flagged = Flags::Actions::AbnormalDirectAwardAction.new.call
+    puts "A7 abnormal direct award rates flagged: #{flagged}"
+  end
+
+  desc "Run B3 pricing z-score anomaly scoring (unusual base_price relative to CPV-division × year peers)"
+  task run_b3: :environment do
+    flagged = Flags::Actions::PricingZScoreAction.new.call
+    puts "B3 pricing z-score anomalies flagged: #{flagged}"
+  end
+
   # ---------------------------------------------------------------------------
   # Aggregation — pre-compute materialized stats so the dashboard never has to
   # run expensive joins across 2M+ flags at request time.
@@ -142,7 +154,7 @@ namespace :flags do
       # -----------------------------------------------------------------------
       conn.execute("DELETE FROM flag_summary_stats")
 
-      [nil, "high", "medium", "low"].each do |sev|
+      [ nil, "high", "medium", "low" ].each do |sev|
         sev_filter = sev ? "WHERE f.severity = '#{sev}'" : ""
         sev_val    = sev ? "'#{sev}'" : "NULL"
 
@@ -223,7 +235,7 @@ namespace :flags do
 
   desc "Run all scoring actions then aggregate stats"
   task run_all: :environment do
-    %i[run_first_action run_a9 run_a5 run_a1 run_b5_benford run_c1 run_c3 run_b2 aggregate].each do |t|
+    %i[run_first_action run_a9 run_a5 run_a1 run_b5_benford run_c1 run_c3 run_b2 run_a7 run_b3 aggregate].each do |t|
       Rake::Task["flags:#{t}"].invoke
     end
   end

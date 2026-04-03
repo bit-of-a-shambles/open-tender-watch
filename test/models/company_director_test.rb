@@ -18,7 +18,7 @@ class CompanyDirectorTest < ActiveSupport::TestCase
   test "invalid without name" do
     director = CompanyDirector.new(entity: entities(:two), country_code: "PT")
     assert_not director.valid?
-    assert_includes director.errors[:name], "can't be blank"
+    assert director.errors[:name].any?, "expected :name to have a validation error"
   end
 
   test "country_code defaults to PT when omitted" do

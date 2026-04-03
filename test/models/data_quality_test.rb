@@ -197,19 +197,21 @@ class DataQualityTest < ActiveSupport::TestCase
       A1_REPEAT_DIRECT_AWARD
       A2_PUBLICATION_AFTER_CELEBRATION
       A5_THRESHOLD_SPLITTING
+      A7_ABNORMAL_DIRECT_AWARD_RATE
       A9_PRICE_ANOMALY
       A9_PRICE_REDUCTION
       B2_SUPPLIER_CONCENTRATION
+      B3_PRICE_HIGH
+      B3_PRICE_LOW
       B5_BENFORD_DEVIATION
       C1_MISSING_WINNER_NIF
       C3_MISSING_MANDATORY_FIELDS
     ].freeze
 
-    Flag.all.each do |flag|
-      assert_includes known_types, flag.flag_type,
-                      "Flag ##{flag.id} has unrecognised flag_type '#{flag.flag_type}'; " \
-                      "add it to the known_types list in data_quality_test.rb"
-    end
+    unknown_flags = Flag.where.not(flag_type: known_types)
+    assert_empty unknown_flags,
+                 "Flags with unrecognised flag_types: #{unknown_flags.pluck(:flag_type).uniq.inspect}; " \
+                 "add to the known_types list in data_quality_test.rb"
   end
 
   test "flag action constants are all in the known flag_type registry" do
@@ -220,9 +222,12 @@ class DataQualityTest < ActiveSupport::TestCase
       A1_REPEAT_DIRECT_AWARD
       A2_PUBLICATION_AFTER_CELEBRATION
       A5_THRESHOLD_SPLITTING
+      A7_ABNORMAL_DIRECT_AWARD_RATE
       A9_PRICE_ANOMALY
       A9_PRICE_REDUCTION
       B2_SUPPLIER_CONCENTRATION
+      B3_PRICE_HIGH
+      B3_PRICE_LOW
       B5_BENFORD_DEVIATION
       C1_MISSING_WINNER_NIF
       C3_MISSING_MANDATORY_FIELDS
@@ -236,7 +241,9 @@ class DataQualityTest < ActiveSupport::TestCase
       Flags::Actions::SupplierConcentrationAction,
       Flags::Actions::MissingMandatoryFieldsAction,
       Flags::Actions::MissingWinnerNifAction,
-      Flags::Actions::BenfordLawAction
+      Flags::Actions::BenfordLawAction,
+      Flags::Actions::AbnormalDirectAwardAction,
+      Flags::Actions::PricingZScoreAction
     ]
 
     action_classes.each do |klass|
