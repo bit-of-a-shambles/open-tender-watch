@@ -37,7 +37,7 @@ class DashboardStatsJob < ApplicationJob
                       expires_in: CACHE_TTL)
 
     # Cache flag counts per severity (fast index lookups — < 100 ms each)
-    [nil, "high", "medium", "low"].each do |sev|
+    [ nil, "high", "medium", "low" ].each do |sev|
       scope = sev ? Flag.where(severity: sev) : Flag.all
       Rails.cache.write("dashboard/flags_count/sev:#{sev}",   scope.count,                            expires_in: CACHE_TTL)
       Rails.cache.write("dashboard/flags_by_type/sev:#{sev}", scope.group(:flag_type).order(:flag_type).count, expires_in: CACHE_TTL)

@@ -90,7 +90,7 @@ module Flags
     def aggregate_summary_stats(conn, now)
       conn.execute("DELETE FROM flag_summary_stats")
 
-      [nil, "high", "medium", "low"].each do |sev|
+      [ nil, "high", "medium", "low" ].each do |sev|
         sev_where = sev ? "WHERE f.severity = #{conn.quote(sev)}" : ""
         sev_and   = sev ? "AND f.severity = #{conn.quote(sev)}"   : ""
         sev_val   = conn.quote(sev)

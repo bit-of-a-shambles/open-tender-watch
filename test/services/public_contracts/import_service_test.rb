@@ -508,7 +508,7 @@ class PublicContracts::ImportServiceTest < ActiveSupport::TestCase
     # Row 1: entity appears as a winner → is_company=true, is_public_body not set
     row1 = build_contract_attrs(
       "external_id" => "cache-upgrade-1",
-      "winners" => [{ "tax_identifier" => shared_nif, "name" => "Shared Public Entity", "is_company" => true }]
+      "winners" => [ { "tax_identifier" => shared_nif, "name" => "Shared Public Entity", "is_company" => true } ]
     )
     # Row 2: same NIF is now the contracting entity → is_public_body=true
     row2 = build_contract_attrs(

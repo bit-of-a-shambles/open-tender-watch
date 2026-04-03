@@ -64,7 +64,7 @@ module Flags
 
       def anomaly_scope
         Contract
-          .where.not(base_price: [nil, 0])
+          .where.not(base_price: [ nil, 0 ])
           .where.not(total_effective_price: nil)
           .where(
             "CAST(total_effective_price AS FLOAT) / CAST(base_price AS FLOAT) < ? OR " \

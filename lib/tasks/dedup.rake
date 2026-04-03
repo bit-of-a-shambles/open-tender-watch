@@ -73,7 +73,7 @@ namespace :dedup do
         ids = group.contract_ids.to_s.split(",").map(&:to_i)
 
         # Sort by (source priority ASC, id ASC) — lowest priority number wins
-        ranked     = ids.sort_by { |id| [priority_by_contract.fetch(id, 99), id] }
+        ranked     = ids.sort_by { |id| [ priority_by_contract.fetch(id, 99), id ] }
         winner_id  = ranked.first
         loser_ids  = ranked.drop(1)
 

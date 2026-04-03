@@ -25,4 +25,3 @@ Rails.application.configure do
   config.content_security_policy_nonce_generator = ->(request) { SecureRandom.base64(16) }
   config.content_security_policy_nonce_directives = %w[]
 end
-

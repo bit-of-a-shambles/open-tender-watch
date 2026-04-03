@@ -287,4 +287,3 @@ module PublicContracts
     end
   end
 end
-
