@@ -10,18 +10,17 @@ class DashboardController < ApplicationController
     @entity_flag_type = params[:entity_flag_type].presence
     @entity_page      = [ params[:entity_page].to_i, 1 ].max
 
-    # HTTP conditional GET — if the client has a cached copy as fresh as the
-    # latest aggregation, return 304 Not Modified (no body, ~1ms).
-    # stale-while-revalidate: serve stale copy while fetching fresh in background.
-    # stale-if-error: serve stale for 24 h if origin is down (hug-of-death safety net).
+    # HTTP conditional GET — locale-aware ETag allows cheap 304 responses while
+    # ensuring a locale change (session cookie) always triggers a fresh 200 response.
+    # Cache-Control: private, no-cache (from stale? with public: false) forces the
+    # browser to always conditional-GET before serving from cache, so locale switches
+    # are reflected immediately. We deliberately avoid max-age: a browser-cached
+    # max-age response would be served without contacting the server, breaking locale
+    # switching within the cache window.
     last_agg = FlagSummaryStat.maximum(:computed_at) || 1.hour.ago
     return unless stale?(last_modified: last_agg,
-                         public: params.except(:controller, :action).empty?)
-
-    expires_in 5.minutes,
-               public:                params.except(:controller, :action).empty?,
-               stale_while_revalidate: 1.minute,
-               stale_if_error:         24.hours
+                         etag: [ last_agg.to_i, I18n.locale.to_s ],
+                         public: false)
 
     # -----------------------------------------------------------------------
     # Stable counts — cheap queries, cache generously

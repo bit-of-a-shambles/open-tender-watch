@@ -1,0 +1,46 @@
+{
+  "ignored_warnings": [
+    {
+      "warning_type": "SQL Injection",
+      "warning_code": 0,
+      "fingerprint": "87031c4643f8b79b77a3dfc302e7690987f1601ee3d12c04006b7087ab179b2f",
+      "check_name": "SQL",
+      "message": "Possible SQL injection",
+      "file": "app/services/flags/actions/benford_law_action.rb",
+      "line": 151,
+      "link": "https://brakemanscanner.org/docs/warning_types/sql_injection/",
+      "code": null,
+      "render_path": null,
+      "location": {
+        "type": "method",
+        "class": "Flags::Actions::BenfordLawAction",
+        "method": "fetch_digit_counts_for"
+      },
+      "user_input": null,
+      "confidence": "Medium",
+      "note": "False positive: safe_ids is built from batch_ids.map(&:to_i) — integer coercion prevents injection"
+    },
+    {
+      "warning_type": "SQL Injection",
+      "warning_code": 0,
+      "fingerprint": "f8da70837106adbde4871703efb2a51e067aae54b5d32bd3776a41747ee4d7af",
+      "check_name": "SQL",
+      "message": "Possible SQL injection",
+      "file": "app/services/flags/actions/benford_law_action.rb",
+      "line": 181,
+      "link": "https://brakemanscanner.org/docs/warning_types/sql_injection/",
+      "code": null,
+      "render_path": null,
+      "location": {
+        "type": "method",
+        "class": "Flags::Actions::BenfordLawAction",
+        "method": "fetch_representative_contracts"
+      },
+      "user_input": null,
+      "confidence": "Medium",
+      "note": "False positive: safe_ids is built from batch_ids.map(&:to_i) — integer coercion prevents injection"
+    }
+  ],
+  "updated": "2026-04-03 18:50:00 +0000",
+  "brakeman_version": "7.0.2"
+}
