@@ -307,11 +307,22 @@
                 <p class="font-mono text-[11px] text-white/35 leading-relaxed"><%= t("dashboard.methodology.flags.b5_how") %></p>
               </div>
             </div>
-          <%# B1–B4 pending sufficient data volume %>
+          <%# B2, B3 active %>
+          <% [
+            ["B2", t("dashboard.methodology.flags.b2_title"), t("dashboard.methodology.flags.b2_desc")],
+            ["B3", t("dashboard.methodology.flags.b3_title"), t("dashboard.methodology.flags.b3_desc")]
+          ].each do |code, title, desc| %>
+            <div class="flex gap-3 bg-white/[0.02] border border-white/[0.06] rounded-lg p-3.5">
+              <span class="font-mono text-[10px] font-bold text-[#c8a84e] w-6 shrink-0 pt-0.5"><%= code %></span>
+              <div>
+                <span class="font-mono text-xs font-semibold text-[#e8e0d4]"><%= title %></span>
+                <span class="font-mono text-xs text-white/40 ml-2"><%= desc %></span>
+              </div>
+            </div>
+          <% end %>
+          <%# B1, B4 pending sufficient data volume %>
           <% [
             ["B1", t("dashboard.methodology.flags.b1_title"), t("dashboard.methodology.flags.b1_desc")],
-            ["B2", t("dashboard.methodology.flags.b2_title"), t("dashboard.methodology.flags.b2_desc")],
-            ["B3", t("dashboard.methodology.flags.b3_title"), t("dashboard.methodology.flags.b3_desc")],
             ["B4", t("dashboard.methodology.flags.b4_title"), t("dashboard.methodology.flags.b4_desc")]
           ].each do |code, title, desc| %>
             <div class="flex gap-3 bg-white/[0.02] border border-white/[0.06] rounded-lg p-3.5 opacity-60">

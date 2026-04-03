@@ -88,7 +88,7 @@ pt:
       primary_refs: "REFERÊNCIAS PRIMÁRIAS"
       approach_p1: "Os indicadores de risco seguem o enquadramento da OCDE para deteção de corrupção e conluio na contratação pública. Cada indicador é pontuado de forma independente e tem um nível de confiança associado — o score degrada quando campos essenciais (NIF, CPV, preço, datas) estão em falta."
       approach_p2: "O sistema destaca casos para auditoria e investigação jornalística. Não produz conclusões. Todos os resultados devem ser tratados como pistas, não como achados."
-      track_b_note: "B5 (Lei de Benford) ativo — análise ao nível da entidade. B1–B4 em desenvolvimento — necessitam de volume de dados mínimo de 2 anos."
+      track_b_note: "B2, B3, B5 ativos. B1, B4 em desenvolvimento — necessitam de volume de dados mínimo de 2 anos."
       disclaimer: "Os scores de risco refletem anomalias estruturais nos dados de contratação. Dados em falta ou inconsistentes são, por si só, um sinal de risco — podem indicar evasão. A ausência de um indicador não significa que o contrato seja irregular."
       flags:
         a1_title: "Ajuste direto repetido"
