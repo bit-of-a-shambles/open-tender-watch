@@ -6,6 +6,7 @@ class LocalesController < ApplicationController
   def set
     locale = params[:locale]
     session[:locale] = locale if AVAILABLE.include?(locale)
+
     redirect_back fallback_location: root_path, status: :see_other
   end
 end

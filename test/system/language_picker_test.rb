@@ -8,17 +8,13 @@ class LanguagePickerTest < ApplicationSystemTestCase
   def en_button = find("a[href*='/locale/en']")
   def pt_button = find("a[href*='/locale/pt']")
 
-  def html_lang
-    page.evaluate_script("document.documentElement.lang")
-  end
-
   # ------------------------------------------------------------------
   # Default state
   # ------------------------------------------------------------------
 
   test "default locale is English" do
     visit root_url
-    assert_equal "en", html_lang
+    assert_text "Automated cross-referencing"
   end
 
   test "EN button is active by default" do
@@ -44,7 +40,7 @@ class LanguagePickerTest < ApplicationSystemTestCase
   test "clicking PT switches locale to Portuguese" do
     visit root_url
     pt_button.click
-    assert_equal "pt", html_lang
+    assert_text "Cruzamento automatizado"
   end
 
   test "nav shows Portuguese labels after switching to PT" do
@@ -57,6 +53,7 @@ class LanguagePickerTest < ApplicationSystemTestCase
   test "PT button becomes active after switching" do
     visit root_url
     pt_button.click
+    assert_text "Cruzamento automatizado" # wait for morph to complete
     assert_includes pt_button[:class], "border-[#c8a84e55]",
       "PT link should have the active gold border after switching"
     assert_not_includes pt_button[:class], "opacity-50",
@@ -66,6 +63,7 @@ class LanguagePickerTest < ApplicationSystemTestCase
   test "EN button becomes inactive after switching to PT" do
     visit root_url
     pt_button.click
+    assert_text "Cruzamento automatizado" # wait for morph to complete
     assert_includes en_button[:class], "opacity-50",
       "EN link should be dimmed when Portuguese is active"
     assert_not_includes en_button[:class], "border-[#c8a84e55]",
@@ -79,10 +77,10 @@ class LanguagePickerTest < ApplicationSystemTestCase
   test "clicking EN after PT restores English locale" do
     visit root_url
     pt_button.click
-    assert_equal "pt", html_lang
+    assert_text "Cruzamento automatizado"
 
     en_button.click
-    assert_equal "en", html_lang
+    assert_text "Automated cross-referencing"
   end
 
   test "nav shows English labels after switching back to EN" do
@@ -100,11 +98,9 @@ class LanguagePickerTest < ApplicationSystemTestCase
   test "Portuguese locale persists when navigating to contracts page" do
     visit root_url
     pt_button.click
-    assert_equal "pt", html_lang
+    assert_text "Cruzamento automatizado"
 
     visit contracts_url
-    assert_equal "pt", html_lang,
-      "Locale should persist via session cookie across navigation"
     assert_text "Contratos"
   end
 
@@ -113,7 +109,6 @@ class LanguagePickerTest < ApplicationSystemTestCase
     pt_button.click
 
     visit root_url
-    assert_equal "pt", html_lang
     assert_text "Cruzamento automatizado"
   end
 

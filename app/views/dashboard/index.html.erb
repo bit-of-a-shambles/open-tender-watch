@@ -96,7 +96,8 @@
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-6">
         <% @flags_by_type.each do |flag_type, count| %>
           <%= link_to dashboard_index_path(entity_flag_type: flag_type, entity_sort: @entity_sort, severity: @severity_filter),
-                class: "bg-white/[0.02] border border-white/[0.06] rounded-lg p-4 hover:border-[#c8a84e44] transition-colors group" do %>
+                class: "bg-white/[0.02] border border-white/[0.06] rounded-lg p-4 hover:border-[#c8a84e44] transition-colors group",
+                data: { turbo_frame: "entity-table" } do %>
             <div class="font-mono text-[10px] tracking-[1px] text-[#c8a84e] mb-2 group-hover:text-[#c8a84e]">
               <%= flag_type_label(flag_type) %>
             </div>

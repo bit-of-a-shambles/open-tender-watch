@@ -207,7 +207,7 @@
                     <%= number_to_currency(stat.total_exposure.to_f, unit: "€", delimiter: ",", separator: ".", format: "%u%n", precision: 0) %>
                   </span>
                   <span class="font-mono text-[10px] text-white/35">
-                    <%= number_with_delimiter(stat.contract_count.to_i) %> contratos
+                    <%= number_with_delimiter(stat.contract_count.to_i) %> <%= t("entities.show.contracts_short") %>
                   </span>
                 </div>
               </div>
@@ -233,7 +233,7 @@
             <%= t("entities.show.benford_distribution") %>
           </div>
           <div class="font-mono text-[10px] text-white/30 mb-1">
-            n = <%= number_with_delimiter(@benford_analysis.sample_size) %> contratos
+            n = <%= number_with_delimiter(@benford_analysis.sample_size) %> <%= t("entities.show.contracts_short") %>
             · χ² = <%= @benford_analysis.chi_square %>
           </div>
           <%# Inline bar chart — digits 1–9, observed vs expected %>
