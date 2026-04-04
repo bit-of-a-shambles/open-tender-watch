@@ -64,7 +64,7 @@
     </div>
     <div>
       <%= f.select :flag_type,
-          [[t("contracts.index.all_flags"), ""]] + @flag_types.map { |flag_type| [flag_type, flag_type] },
+          [[t("contracts.index.all_flags"), ""]] + @flag_types.map { |flag_type| [flag_type_label(flag_type), flag_type] },
           { selected: params[:flag_type] },
           class: "bg-white/[0.04] border border-white/[0.1] rounded px-3 py-2 font-mono text-xs text-[#e8e0d4] focus:outline-none focus:border-[#c8a84e55] transition-all" %>
     </div>

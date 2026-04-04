@@ -2,9 +2,9 @@
   <%# Header %>
   <header class="py-8 border-b border-white/10">
     <div class="flex items-center gap-4 mb-3">
-      <%= link_to contracts_path, class: "font-mono text-[11px] tracking-[2px] text-white/30 hover:text-white/60 transition-colors" do %>
+      <a href="#" onclick="history.length > 1 ? history.back() : (location.href='<%= contracts_path %>')" class="font-mono text-[11px] tracking-[2px] text-white/30 hover:text-white/60 transition-colors">
         <%= t("contracts.show.back") %>
-      <% end %>
+      </a>
       <% if @contract.country_code.present? %>
         <span class="font-mono text-[10px] text-white/20 bg-white/[0.04] px-2 py-0.5 rounded border border-white/[0.06]">
           <%= @contract.country_code %>
@@ -128,9 +128,9 @@
 
       <%# Contracting entity %>
       <% if @contract.contracting_entity %>
-        <div class="bg-white/[0.02] border border-white/[0.06] rounded-lg p-5">
+        <%= link_to entity_path(@contract.contracting_entity), class: "block bg-white/[0.02] border border-white/[0.06] rounded-lg p-5 hover:border-white/[0.12] hover:bg-white/[0.04] transition-colors group" do %>
           <div class="font-mono text-[10px] tracking-[2px] text-white/35 mb-4 uppercase"><%= t("contracts.show.entity.heading") %></div>
-          <div class="text-sm text-[#e8e0d4] font-medium leading-snug mb-1.5">
+          <div class="text-sm text-[#e8e0d4] font-medium leading-snug mb-1.5 group-hover:text-white transition-colors">
             <%= @contract.contracting_entity.name %>
           </div>
           <div class="font-mono text-[10px] text-white/30">
@@ -141,7 +141,7 @@
               <%= t("contracts.show.entity.public_body") %>
             </span>
           <% end %>
-        </div>
+        <% end %>
       <% end %>
 
       <%# Source %>
