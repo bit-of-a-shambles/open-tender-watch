@@ -58,6 +58,12 @@
 # Yarn
 yarn-error.log
 
+# Playwright
+/.playwright-mcp/
+/playwright-report/
+/test-results/
+/playwright/.cache/
+
 # Transparencia prototype — exclude large/generated files
 /transparencia/node_modules/
 /transparencia/dados_base/
