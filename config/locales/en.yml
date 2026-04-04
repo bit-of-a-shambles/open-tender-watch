@@ -225,7 +225,7 @@ en:
       b3_unusual_pricing: "Unusual Pricing"
       b4_procedural_shift: "Procedural Shift"
       b5_benford_deviation: "Benford's Law Deviation"
-      c1_missing_supplier_nif: "Missing Supplier NIF"
+      c1_missing_winner_nif: "Missing Supplier NIF"
       c2_impossible_date_sequence: "Impossible Date Sequence"
       c3_missing_mandatory_fields: "Missing Mandatory Fields"
       c4_adc_sanction_overlap: "AdC Sanction Overlap"
