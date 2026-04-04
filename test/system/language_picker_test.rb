@@ -5,8 +5,8 @@ class LanguagePickerTest < ApplicationSystemTestCase
   # Helpers
   # ------------------------------------------------------------------
 
-  def en_button = find("form[action*='/locale/en'] button")
-  def pt_button = find("form[action*='/locale/pt'] button")
+  def en_button = find("a[href*='/locale/en']")
+  def pt_button = find("a[href*='/locale/pt']")
 
   def html_lang
     page.evaluate_script("document.documentElement.lang")
@@ -123,14 +123,14 @@ class LanguagePickerTest < ApplicationSystemTestCase
 
   test "language picker is visible on the dashboard" do
     visit root_url
-    assert_selector "form[action*='/locale/en']"
-    assert_selector "form[action*='/locale/pt']"
+    assert_selector "a[href*='/locale/en']"
+    assert_selector "a[href*='/locale/pt']"
   end
 
   test "language picker is visible on the contracts page" do
     visit contracts_url
-    assert_selector "form[action*='/locale/en']"
-    assert_selector "form[action*='/locale/pt']"
+    assert_selector "a[href*='/locale/en']"
+    assert_selector "a[href*='/locale/pt']"
   end
 
   # ------------------------------------------------------------------
@@ -145,10 +145,10 @@ class LanguagePickerTest < ApplicationSystemTestCase
 
   test "locale labels EN and PT are always shown" do
     visit root_url
-    within "form[action*='/locale/en']" do
+    within "a[href*='/locale/en']" do
       assert_text "EN"
     end
-    within "form[action*='/locale/pt']" do
+    within "a[href*='/locale/pt']" do
       assert_text "PT"
     end
   end

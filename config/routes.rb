@@ -4,7 +4,7 @@ Rails.application.routes.draw do
   resources :contracts, only: [ :index, :show ]
   resources :entities, only: [ :index, :show ]
   resources :companies, only: [ :index, :show ]
-  post "locale/:locale", to: "locales#set", as: :set_locale
+  match "locale/:locale", to: "locales#set", via: [ :get, :post ], as: :set_locale
   # Define your application routes per the DSL in https://guides.rubyonrails.org/routing.html
 
   # Reveal health status on /up that returns 200 if the app boots with no exceptions, otherwise 500.
