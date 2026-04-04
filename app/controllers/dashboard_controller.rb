@@ -17,7 +17,7 @@ class DashboardController < ApplicationController
     # are reflected immediately. We deliberately avoid max-age: a browser-cached
     # max-age response would be served without contacting the server, breaking locale
     # switching within the cache window.
-    last_agg = FlagSummaryStat.maximum(:computed_at) || 1.hour.ago
+    last_agg = Rails.cache.fetch("dashboard/last_agg", expires_in: 60.seconds) { FlagSummaryStat.maximum(:computed_at) } || 1.hour.ago
     return unless stale?(last_modified: last_agg,
                          etag: [ last_agg.to_i, I18n.locale.to_s ],
                          public: false)
@@ -62,12 +62,15 @@ class DashboardController < ApplicationController
     # Entity exposure table — reads from flag_entity_stats (pre-aggregated),
     # never joins the flags table at request time.
     # -----------------------------------------------------------------------
-    @entity_exposure_rows, @entity_total, @entity_total_pages = entity_exposure_rows(
-      sort_by:   @entity_sort,
-      flag_type: @entity_flag_type,
-      severity:  @severity_filter,
-      page:      @entity_page
-    )
+    exposure_cache_key = "dashboard/entity_exposure/sort:#{@entity_sort}/flag:#{@entity_flag_type}/sev:#{@severity_filter}/page:#{@entity_page}"
+    @entity_exposure_rows, @entity_total, @entity_total_pages = Rails.cache.fetch(exposure_cache_key, expires_in: 5.minutes) do
+      entity_exposure_rows(
+        sort_by:   @entity_sort,
+        flag_type: @entity_flag_type,
+        severity:  @severity_filter,
+        page:      @entity_page
+      )
+    end
 
     active_sources_count = Rails.cache.fetch("dashboard/active_sources_count", expires_in: STATS_CACHE_TTL) do
       DataSource.where(status: :active).count
@@ -93,7 +96,7 @@ class DashboardController < ApplicationController
       {
         name:      ds[:name],
         country:   ds[:country_code],
-        type:      ds[:source_type].capitalize,
+        type:      ds[:source_type],
         status:    ds[:status],
         records:   number_with_delimiter(ds[:records]),
         synced_at: ds[:synced_at]

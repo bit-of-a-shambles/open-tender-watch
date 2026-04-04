@@ -19,7 +19,7 @@
       <%= @entity.name %>
     </h1>
     <div class="font-mono text-[11px] text-white/25">
-      NIF <%= @entity.tax_identifier %>
+      <%= t("entities.show.nif") %> <%= @entity.tax_identifier %>
       · <%= @entity.country_code %>
     </div>
   </header>

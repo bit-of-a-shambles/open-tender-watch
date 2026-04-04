@@ -232,11 +232,11 @@
             </div>
             <div class="flex items-center gap-1.5">
               <div class="w-1.5 h-1.5 rounded-full <%= dot_color %>"></div>
-              <span class="font-mono text-[10px] text-white/35 uppercase"><%= source[:status] %></span>
+              <span class="font-mono text-[10px] text-white/35 uppercase"><%= t("data_sources.status.#{source[:status]}", default: source[:status].to_s) %></span>
             </div>
           </div>
           <div class="flex justify-between font-mono">
-            <span class="text-[11px] text-white/35"><%= source[:type] %></span>
+            <span class="text-[11px] text-white/35"><%= t("data_sources.types.#{source[:type]}", default: source[:type].to_s.capitalize) %></span>
             <span class="text-xs text-[#c8a84e]"><%= t("dashboard.sources.records", count: source[:records]) %></span>
           </div>
           <% if source[:synced_at] %>

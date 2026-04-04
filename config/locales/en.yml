@@ -234,6 +234,14 @@ en:
       c1_blank_nif: "At least one contracting party has no tax identifier"
       c1_no_winner: "Awarded contract with no supplier identified (effective price > 0)"
 
+  data_sources:
+    status:
+      inactive: "Inactive"
+      active: "Active"
+      error: "Error"
+    types:
+      api: "API"
+
   entities:
     index:
       title: "Entities"
@@ -254,6 +262,7 @@ en:
       public: "Public"
       private: "Private"
       empty: "No entities found."
+      nif: "NIF"
       pagination:
         info: "Page %{page} of %{total_pages} · %{total} entities"
         prev: "← Prev"
@@ -278,6 +287,7 @@ en:
       benford_distribution: "Digit Distribution"
       benford_observed: "Observed"
       benford_expected: "Expected (Benford)"
+      nif: "NIF"
 
   companies:
     index:
@@ -300,6 +310,7 @@ en:
       contracts_short: "contracts"
       high_flag_tooltip: "High-severity risk flag on at least one won contract"
       empty: "No companies found."
+      nif: "NIF"
       pagination:
         info: "Page %{page} of %{total_pages} · %{total} companies"
         prev: "← Prev"

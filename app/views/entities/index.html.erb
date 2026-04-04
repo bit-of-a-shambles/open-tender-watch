@@ -61,7 +61,7 @@
               <div class="text-sm text-[#e8e0d4] group-hover:text-white transition-colors leading-snug line-clamp-2">
                 <%= entity.name %>
               </div>
-              <div class="font-mono text-[10px] text-white/25 mt-0.5">NIF <%= entity.tax_identifier %></div>
+              <div class="font-mono text-[10px] text-white/25 mt-0.5"><%= t("entities.index.nif") %> <%= entity.tax_identifier %></div>
             </div>
             <div class="hidden sm:block font-mono text-xs text-white/40"><%= entity.country_code %></div>
             <div class="text-center">

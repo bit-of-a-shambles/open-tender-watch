@@ -81,7 +81,7 @@
                 <%= company.name %>
               </div>
               <div class="font-mono text-[10px] text-white/25 mt-0.5 flex items-center gap-2">
-                <span>NIF <%= company.tax_identifier %></span>
+                <span><%= t("companies.index.nif") %> <%= company.tax_identifier %></span>
                 <% if company.locality.present? %>
                   <span class="text-white/15">·</span>
                   <span><%= company.locality %></span>

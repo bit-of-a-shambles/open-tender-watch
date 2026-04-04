@@ -16,7 +16,7 @@
       <%= @entity.name %>
     </h1>
     <div class="font-mono text-[11px] text-white/25 flex flex-wrap items-center gap-x-3 gap-y-1">
-      <span>NIF <%= @entity.tax_identifier %></span>
+      <span><%= t("companies.show.nif") %> <%= @entity.tax_identifier %></span>
       <% if @entity.address.present? %>
         <span class="text-white/15">·</span>
         <span><%= [@entity.address, @entity.locality, @entity.postal_code].compact.reject(&:empty?).join(", ") %></span>
@@ -59,7 +59,7 @@
                       <span class="font-mono text-[11px] text-white/50"><%= row.authority_name.presence || "—" %></span>
                     <% end %>
                     <% if row.authority_nif.present? %>
-                      <div class="font-mono text-[9px] text-white/20 mt-0.5">NIF <%= row.authority_nif %></div>
+                      <div class="font-mono text-[9px] text-white/20 mt-0.5"><%= t("companies.show.nif") %> <%= row.authority_nif %></div>
                     <% end %>
                   </div>
                   <div class="text-right font-mono text-xs text-[#e8e0d4]"><%= number_with_delimiter(row.contract_count) %></div>
@@ -203,7 +203,7 @@
                     <%= contract.contracting_entity.name.truncate(30) %>
                   <% end %>
                   <div class="font-mono text-[9px] text-white/20 mt-0.5">
-                    NIF <%= contract.contracting_entity.tax_identifier %>
+                    <%= t("companies.show.nif") %> <%= contract.contracting_entity.tax_identifier %>
                   </div>
                 <% else %>
                   <span class="text-white/20">—</span>
@@ -302,7 +302,7 @@
                   <div class="font-mono text-[10px] text-[#c8a84e] mt-0.5"><%= d.role %></div>
                 <% end %>
                 <% if d.tax_identifier.present? %>
-                  <div class="font-mono text-[9px] text-white/30 mt-0.5">NIF <%= d.tax_identifier %></div>
+                  <div class="font-mono text-[9px] text-white/30 mt-0.5"><%= t("companies.show.nif") %> <%= d.tax_identifier %></div>
                 <% end %>
               </li>
             <% end %>

@@ -230,6 +230,14 @@ pt:
       c1_blank_nif: "Pelo menos uma parte contratante não tem nenhum número de identificação fiscal"
       c1_no_winner: "Contrato adjudicado sem fornecedor identificado (preço efetivo > 0)"
 
+  data_sources:
+    status:
+      inactive: "Inativo"
+      active: "Ativo"
+      error: "Erro"
+    types:
+      api: "API"
+
   entities:
     index:
       title: "Entidades"
@@ -250,6 +258,7 @@ pt:
       public: "Pública"
       private: "Privada"
       empty: "Nenhuma entidade encontrada."
+      nif: "NIF"
       pagination:
         info: "Página %{page} de %{total_pages} · %{total} entidades"
         prev: "← Anterior"
@@ -274,6 +283,7 @@ pt:
       benford_distribution: "Distribuição de Dígitos"
       benford_observed: "Observado"
       benford_expected: "Esperado (Benford)"
+      nif: "NIF"
 
   companies:
     index:
@@ -296,6 +306,7 @@ pt:
       contracts_short: "contratos"
       high_flag_tooltip: "Indicador de risco elevado em pelo menos um contrato ganho"
       empty: "Nenhuma empresa encontrada."
+      nif: "NIF"
       pagination:
         info: "Página %{page} de %{total_pages} · %{total} empresas"
         prev: "← Anterior"
