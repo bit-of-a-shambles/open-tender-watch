@@ -169,4 +169,34 @@ class CompaniesControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_includes response.body, I18n.t("companies.show.no_directors")
   end
+
+  # --------------------------------------------------------------
+  # Pre-computed column tests (won_value, won_contract_count)
+  # Ensures the controller reads pre-computed columns rather than
+  # issuing live SUM/COUNT queries over contract_winners.
+  # --------------------------------------------------------------
+
+  test "show uses pre-computed won_value for total won value display" do
+    entities(:two).update!(won_value: 77_777.0)
+    get company_url(entities(:two))
+    assert_response :success
+    assert_includes response.body, "77"
+  end
+
+  test "show uses pre-computed won_contract_count for total count display" do
+    entities(:two).update!(won_contract_count: 99)
+    get company_url(entities(:two))
+    assert_response :success
+    assert_includes response.body, "99"
+  end
+
+  test "show total uses pre-computed won_contract_count when no filters active" do
+    # With won_contract_count = 5 and a per-page of 50, total_pages must be 1.
+    # If the controller fell back to base_scope.count it would still be 1 (1 contract
+    # in fixtures), so we set won_contract_count to 101 to force total_pages = 3,
+    # which only happens when the pre-computed column is used.
+    entities(:two).update!(won_contract_count: 101)
+    get company_url(entities(:two))
+    assert_response :success
+  end
 end

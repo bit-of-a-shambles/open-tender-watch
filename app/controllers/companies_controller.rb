@@ -48,9 +48,10 @@ class CompaniesController < ApplicationController
   def show
     @entity = Entity.find(params[:id])
 
-    # Total won value and contract count (unfiltered)
-    @total_won_value  = @entity.contracts_won.sum(:base_price)
-    @entity_won_total = @entity.contracts_won.count
+    # Total won value and contract count — use pre-computed columns to avoid
+    # a full JOIN + aggregate over potentially thousands of won contracts.
+    @total_won_value  = @entity.won_value
+    @entity_won_total = @entity.won_contract_count
 
     # Flag stats across all won contracts
     won_contract_ids = ContractWinner.where(entity_id: @entity.id).select(:contract_id)
@@ -80,7 +81,12 @@ class CompaniesController < ApplicationController
     @sort_col = CONTRACT_SORT_COLS.include?(params[:sort]) ? params[:sort] : "celebration_date"
     @sort_dir = params[:dir] == "asc" ? "asc" : "desc"
 
-    @total       = base_scope.count
+    # Use pre-computed count when no filters active (mirrors EntitiesController#show).
+    @total = if @flag_filter.blank? && @date_from.blank? && @date_to.blank?
+      @entity.won_contract_count
+    else
+      base_scope.count
+    end
     @page        = [ params[:page].to_i, 1 ].max
     @total_pages = [ (@total.to_f / PER_PAGE).ceil, 1 ].max
 
@@ -106,8 +112,9 @@ class CompaniesController < ApplicationController
       .where(entity_id: @entity.id)
       .group("contracts.contracting_entity_id", "auth.name", "auth.tax_identifier", "auth.id")
 
-    # Count distinct groups separately (no custom select so ActiveRecord can generate valid SQL)
-    @pivot_total       = pivot_base.count.size
+    # Cache the pivot GROUP BY count — changes only when contracts are re-imported,
+    # so 1h TTL is safe and avoids re-running the aggregate on every page nav.
+    @pivot_total       = Rails.cache.fetch("company/#{@entity.id}/pivot_total", expires_in: 1.hour) { pivot_base.count.size }
     @pivot_total_pages = [ (@pivot_total.to_f / PIVOT_PER_PAGE).ceil, 1 ].max
 
     @authority_pivot = pivot_base
