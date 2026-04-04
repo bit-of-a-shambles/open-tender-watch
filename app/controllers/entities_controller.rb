@@ -47,7 +47,7 @@ class EntitiesController < ApplicationController
     @flag_filter = params[:flag_type].presence
 
     base_scope = @entity.contracts_as_contracting_entity
-    @entity_contract_total = base_scope.count
+    @entity_contract_total = @entity.contract_count
 
     # Use a correlated EXISTS subquery rather than IN (subquery).
     # IN materialises the full set of matching flag rows (1M+ for A2), which
@@ -81,6 +81,8 @@ class EntitiesController < ApplicationController
     # Date filters still fall back to a real count (rare + bounded).
     @total = if @flag_filter.present? && @date_from.blank? && @date_to.blank?
       @flag_stats.find { |s| s.flag_type == @flag_filter }&.contract_count.to_i
+    elsif @date_from.blank? && @date_to.blank?
+      @entity.contract_count
     else
       base_scope.count
     end
@@ -93,7 +95,7 @@ class EntitiesController < ApplicationController
     # avoiding the "eager load + large WHERE IN" strategy that Rails picks when
     # it can't determine the final SQL at planning time.
     @contracts = base_scope
-      .preload(:winners, :data_source, :flags)
+      .preload(:winners, :flags)
       .order(Arel.sql(order_sql))
       .limit(PER_PAGE)
       .offset((@page - 1) * PER_PAGE)

@@ -93,8 +93,9 @@
         <%# Table %>
         <div class="border border-white/[0.08] rounded-lg overflow-hidden">
           <%# Header row %>
-          <div class="hidden sm:grid grid-cols-[1fr_140px_100px_90px] bg-white/[0.03] px-4 py-3 border-b border-white/[0.08] font-mono text-[10px] tracking-[2px] text-white/35 uppercase">
+          <div class="hidden sm:grid grid-cols-[1fr_160px_140px_100px_90px] bg-white/[0.03] px-4 py-3 border-b border-white/[0.08] font-mono text-[10px] tracking-[2px] text-white/35 uppercase">
             <span><%= t("contracts.index.col_contract") %></span>
+            <span><%= t("contracts.show.winners.heading", count: 1) %></span>
             <span><%= t("contracts.index.col_procedure") %></span>
             <span class="text-right"><%= t("contracts.index.col_price") %></span>
             <span class="text-right"><%= t("contracts.index.col_date") %></span>
@@ -106,7 +107,7 @@
             </div>
           <% else %>
             <% @contracts.each do |contract| %>
-              <%= link_to contract_path(contract), class: "flex flex-col sm:grid sm:grid-cols-[1fr_140px_100px_90px] px-4 py-3 border-b border-white/[0.04] last:border-0 hover:bg-white/[0.03] transition-colors group sm:items-start gap-1 sm:gap-0", data: { turbo_frame: "_top" } do %>
+              <%= link_to contract_path(contract), class: "flex flex-col sm:grid sm:grid-cols-[1fr_160px_140px_100px_90px] px-4 py-3 border-b border-white/[0.04] last:border-0 hover:bg-white/[0.03] transition-colors group sm:items-start gap-1 sm:gap-0", data: { turbo_frame: "_top" } do %>
                 <div class="pr-0 sm:pr-4">
                   <div class="text-sm text-[#e8e0d4] group-hover:text-white transition-colors line-clamp-2 leading-snug">
                     <%= contract.object %>
@@ -126,6 +127,9 @@
                       <% end %>
                     </div>
                   <% end %>
+                </div>
+                <div class="hidden sm:block truncate pr-4 pt-0.5 text-sm text-white/50">
+                  <%= contract.winners.first&.name&.truncate(22) || "—" %>
                 </div>
                 <div class="flex items-center gap-2 sm:block">
                   <% if contract.procedure_type.present? %>
