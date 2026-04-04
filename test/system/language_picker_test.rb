@@ -5,8 +5,8 @@ class LanguagePickerTest < ApplicationSystemTestCase
   # Helpers
   # ------------------------------------------------------------------
 
-  def en_link = find("a[href*='/locale/en']")
-  def pt_link = find("a[href*='/locale/pt']")
+  def en_button = find("form[action*='/locale/en'] button")
+  def pt_button = find("form[action*='/locale/pt'] button")
 
   def html_lang
     page.evaluate_script("document.documentElement.lang")
@@ -23,18 +23,18 @@ class LanguagePickerTest < ApplicationSystemTestCase
 
   test "EN button is active by default" do
     visit root_url
-    assert_includes en_link[:class], "border-[#c8a84e55]",
-      "EN link should have the active gold border class by default"
-    assert_not_includes en_link[:class], "opacity-50",
-      "EN link should not be dimmed by default"
+    assert_includes en_button[:class], "border-[#c8a84e55]",
+      "EN button should have the active gold border class by default"
+    assert_not_includes en_button[:class], "opacity-50",
+      "EN button should not be dimmed by default"
   end
 
   test "PT button is inactive by default" do
     visit root_url
-    assert_includes pt_link[:class], "opacity-50",
-      "PT link should be dimmed when English is active"
-    assert_not_includes pt_link[:class], "border-[#c8a84e55]",
-      "PT link should not have the active gold border when English is active"
+    assert_includes pt_button[:class], "opacity-50",
+      "PT button should be dimmed when English is active"
+    assert_not_includes pt_button[:class], "border-[#c8a84e55]",
+      "PT button should not have the active gold border when English is active"
   end
 
   # ------------------------------------------------------------------
@@ -43,32 +43,32 @@ class LanguagePickerTest < ApplicationSystemTestCase
 
   test "clicking PT switches locale to Portuguese" do
     visit root_url
-    pt_link.click
+    pt_button.click
     assert_equal "pt", html_lang
   end
 
   test "nav shows Portuguese labels after switching to PT" do
     visit root_url
-    pt_link.click
+    pt_button.click
     assert_text "Cruzamento automatizado"
     assert_no_text "Automated cross-referencing"
   end
 
   test "PT button becomes active after switching" do
     visit root_url
-    pt_link.click
-    assert_includes pt_link[:class], "border-[#c8a84e55]",
+    pt_button.click
+    assert_includes pt_button[:class], "border-[#c8a84e55]",
       "PT link should have the active gold border after switching"
-    assert_not_includes pt_link[:class], "opacity-50",
+    assert_not_includes pt_button[:class], "opacity-50",
       "PT link should not be dimmed when active"
   end
 
   test "EN button becomes inactive after switching to PT" do
     visit root_url
-    pt_link.click
-    assert_includes en_link[:class], "opacity-50",
+    pt_button.click
+    assert_includes en_button[:class], "opacity-50",
       "EN link should be dimmed when Portuguese is active"
-    assert_not_includes en_link[:class], "border-[#c8a84e55]",
+    assert_not_includes en_button[:class], "border-[#c8a84e55]",
       "EN link should not have the active gold border when PT is active"
   end
 
@@ -78,17 +78,17 @@ class LanguagePickerTest < ApplicationSystemTestCase
 
   test "clicking EN after PT restores English locale" do
     visit root_url
-    pt_link.click
+    pt_button.click
     assert_equal "pt", html_lang
 
-    en_link.click
+    en_button.click
     assert_equal "en", html_lang
   end
 
   test "nav shows English labels after switching back to EN" do
     visit root_url
-    pt_link.click
-    en_link.click
+    pt_button.click
+    en_button.click
     assert_text "Automated cross-referencing"
     assert_no_text "Cruzamento automatizado"
   end
@@ -99,7 +99,7 @@ class LanguagePickerTest < ApplicationSystemTestCase
 
   test "Portuguese locale persists when navigating to contracts page" do
     visit root_url
-    pt_link.click
+    pt_button.click
     assert_equal "pt", html_lang
 
     visit contracts_url
@@ -110,7 +110,7 @@ class LanguagePickerTest < ApplicationSystemTestCase
 
   test "Portuguese locale persists when navigating back to root" do
     visit root_url
-    pt_link.click
+    pt_button.click
 
     visit root_url
     assert_equal "pt", html_lang
@@ -123,14 +123,14 @@ class LanguagePickerTest < ApplicationSystemTestCase
 
   test "language picker is visible on the dashboard" do
     visit root_url
-    assert_selector "a[href*='/locale/en']"
-    assert_selector "a[href*='/locale/pt']"
+    assert_selector "form[action*='/locale/en']"
+    assert_selector "form[action*='/locale/pt']"
   end
 
   test "language picker is visible on the contracts page" do
     visit contracts_url
-    assert_selector "a[href*='/locale/en']"
-    assert_selector "a[href*='/locale/pt']"
+    assert_selector "form[action*='/locale/en']"
+    assert_selector "form[action*='/locale/pt']"
   end
 
   # ------------------------------------------------------------------
@@ -145,10 +145,10 @@ class LanguagePickerTest < ApplicationSystemTestCase
 
   test "locale labels EN and PT are always shown" do
     visit root_url
-    within "a[href*='/locale/en']" do
+    within "form[action*='/locale/en']" do
       assert_text "EN"
     end
-    within "a[href*='/locale/pt']" do
+    within "form[action*='/locale/pt']" do
       assert_text "PT"
     end
   end
