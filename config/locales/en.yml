@@ -230,6 +230,9 @@ en:
       c3_missing_mandatory_fields: "Missing Mandatory Fields"
       c4_adc_sanction_overlap: "AdC Sanction Overlap"
       c5_entity_name_variation: "Entity Name Variation"
+    rule:
+      c1_blank_nif: "At least one contracting party has no tax identifier"
+      c1_no_winner: "Awarded contract with no supplier identified (effective price > 0)"
 
   entities:
     index:

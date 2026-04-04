@@ -53,15 +53,11 @@ module Flags
         rows = []
 
         blank_nif_ids.each do |contract_id|
-          rows << build_row(contract_id,
-                            "C1 missing winner NIF: at least one contracting party has no tax identifier",
-                            now)
+          rows << build_row(contract_id, "c1_blank_nif", now)
         end
 
         no_winner_ids.each do |contract_id|
-          rows << build_row(contract_id,
-                            "C1 no winner recorded: awarded contract (effective price > 0) has no supplier identified",
-                            now)
+          rows << build_row(contract_id, "c1_no_winner", now)
         end
 
         Flag.upsert_all(rows, unique_by: :index_flags_on_contract_id_and_flag_type)

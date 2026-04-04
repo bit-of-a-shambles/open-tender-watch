@@ -214,7 +214,7 @@ pt:
       a6_single_bidder: "Concorrente Único"
       a7_abnormal_direct_award_rate: "Taxa Anormal de Ajuste Direto"
       a8_long_execution: "Execução Prolongada"
-      a9_price_anomaly: "Sobrepreço"
+      a9_price_anomaly: "Derrapagem de Preço"
       a9_price_reduction: "Redução Anormal de Preço"
       b1_bid_rotation: "Rotação de Propostas"
       b2_supplier_concentration: "Concentração de Fornecedores"
@@ -226,6 +226,9 @@ pt:
       c3_missing_mandatory_fields: "Campos Obrigatórios em Falta"
       c4_adc_sanction_overlap: "Sobreposição de Sanção AdC"
       c5_entity_name_variation: "Variação do Nome da Entidade"
+    rule:
+      c1_blank_nif: "Pelo menos uma parte contratante não tem nenhum número de identificação fiscal"
+      c1_no_winner: "Contrato adjudicado sem fornecedor identificado (preço efetivo > 0)"
 
   entities:
     index:
