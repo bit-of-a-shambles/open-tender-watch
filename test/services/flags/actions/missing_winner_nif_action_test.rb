@@ -116,7 +116,7 @@ class Flags::Actions::MissingWinnerNifActionTest < ActiveSupport::TestCase
                          flag_type: Flags::Actions::MissingWinnerNifAction::FLAG_TYPE)
     assert_equal Flags::Actions::MissingWinnerNifAction::SCORE,    flag.score
     assert_equal Flags::Actions::MissingWinnerNifAction::SEVERITY, flag.severity
-    assert_match(/no winner recorded/, flag.details["rule"])
+    assert_equal "c1_no_winner", flag.details["rule"]
   end
 
   test "does not flag a winner-less contract when effective_price is zero or nil" do
@@ -144,7 +144,7 @@ class Flags::Actions::MissingWinnerNifActionTest < ActiveSupport::TestCase
     # Only one flag, and rule text matches blank-NIF (not no-winner)
     flag = Flag.find_by!(contract_id: contract.id,
                          flag_type: Flags::Actions::MissingWinnerNifAction::FLAG_TYPE)
-    assert_match(/missing winner NIF/, flag.details["rule"])
+    assert_equal "c1_blank_nif", flag.details["rule"]
   end
 
   test "no-winner flag is cleaned up when winners are later added" do

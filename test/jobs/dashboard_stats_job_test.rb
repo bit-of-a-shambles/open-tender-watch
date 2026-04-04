@@ -74,4 +74,20 @@ class DashboardStatsJobTest < ActiveJob::TestCase
       assert s.key?(:records)
     end
   end
+
+  test "perform pre-warms entity-exposure page 1 for both sort orders" do
+    Rails.cache.write("dashboard/entity_exposure/gen", 7)
+
+    DashboardStatsJob.new.perform
+
+    %w[value count].each do |sort|
+      key = "dashboard/entity_exposure/g7/sort:#{sort}/flag:/sev:/page:1"
+      result = Rails.cache.read(key)
+      assert_not_nil result, "entity_exposure page 1 sort:#{sort} should be pre-warmed"
+      rows, total, pages = result
+      assert_kind_of Array, rows
+      assert_kind_of Integer, total
+      assert_kind_of Integer, pages
+    end
+  end
 end

@@ -230,6 +230,13 @@ namespace :flags do
     dashboard_cache_keys.each { |k| Rails.cache.delete(k) }
     puts "Dashboard cache cleared (#{dashboard_cache_keys.size} keys)."
 
+    # Bump the entity-exposure cache generation so all previously cached
+    # exposure pages (keyed by generation) become orphaned immediately.
+    # SolidCache has no delete_matched, so we use a generation counter instead.
+    new_gen = Rails.cache.read("dashboard/entity_exposure/gen").to_i + 1
+    Rails.cache.write("dashboard/entity_exposure/gen", new_gen, expires_in: 7.days)
+    puts "Entity-exposure cache generation bumped to #{new_gen}."
+
     puts "Aggregation complete."
   end
 

@@ -42,6 +42,16 @@ class DashboardStatsJob < ApplicationJob
       Rails.cache.write("dashboard/flags_count/sev:#{sev}",   scope.count,                            expires_in: CACHE_TTL)
       Rails.cache.write("dashboard/flags_by_type/sev:#{sev}", scope.group(:flag_type).order(:flag_type).count, expires_in: CACHE_TTL)
     end
+
+    # Pre-warm the most common entity-exposure views (unfiltered page 1, both
+    # sort orders) so the first user after a data refresh never hits a cold cache.
+    gen = Rails.cache.fetch("dashboard/entity_exposure/gen") { 0 }
+    %w[value count].each do |sort|
+      key = "dashboard/entity_exposure/g#{gen}/sort:#{sort}/flag:/sev:/page:1"
+      Rails.cache.fetch(key, expires_in: 24.hours) do
+        FlagEntityStat.exposure_rows(sort_by: sort, flag_type: nil, severity: nil, page: 1)
+      end
+    end
   end
 
   private

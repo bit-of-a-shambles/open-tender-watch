@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_03_15_200000) do
+ActiveRecord::Schema[8.0].define(version: 2026_04_04_203011) do
   create_table "benford_analyses", force: :cascade do |t|
     t.integer "entity_id", null: false
     t.integer "representative_contract_id"
@@ -133,6 +133,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_03_15_200000) do
     t.datetime "updated_at", null: false
     t.index ["entity_id", "flag_type", "severity"], name: "index_flag_entity_stats_unique", unique: true
     t.index ["entity_id"], name: "index_flag_entity_stats_on_entity_id"
+    t.index ["flag_type", "entity_id", "severity", "total_exposure", "contract_count"], name: "index_flag_entity_stats_covering"
     t.index ["severity", "contract_count"], name: "index_flag_entity_stats_sev_count"
     t.index ["severity", "total_exposure"], name: "index_flag_entity_stats_sev_exposure"
   end
