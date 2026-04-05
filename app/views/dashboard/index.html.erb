@@ -95,11 +95,18 @@
     <% if @flags_by_type.any? %>
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-6">
         <% @flags_by_type.each do |flag_type, count| %>
+          <% sev = flag_type_severity(flag_type) %>
+          <% sev_styles = severity_styles(sev) %>
           <%= link_to dashboard_index_path(entity_flag_type: flag_type, entity_sort: @entity_sort, severity: @severity_filter),
                 class: "bg-white/[0.02] border border-white/[0.06] rounded-lg p-4 hover:border-[#c8a84e44] transition-colors group",
                 data: { turbo_frame: "entity-table" } do %>
-            <div class="font-mono text-[10px] tracking-[1px] text-[#c8a84e] mb-2 group-hover:text-[#c8a84e]">
-              <%= flag_type_label(flag_type) %>
+            <div class="flex items-start justify-between gap-2 mb-2">
+              <div class="font-mono text-[10px] tracking-[1px] text-[#c8a84e] group-hover:text-[#c8a84e]">
+                <%= flag_type_label(flag_type) %>
+              </div>
+              <span class="shrink-0 font-mono text-[9px] tracking-[1px] uppercase px-1.5 py-0.5 rounded border <%= sev_styles[:text] %> <%= sev_styles[:bg] %> <%= sev_styles[:border] %>">
+                <%= t("dashboard.insights.severity_#{sev}", default: sev.upcase) %>
+              </span>
             </div>
             <div class="font-['Space_Grotesk'] text-2xl font-bold text-[#e8e0d4]"><%= number_with_delimiter(count) %></div>
             <div class="font-mono text-[10px] text-white/30 mt-0.5">
