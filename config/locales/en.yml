@@ -64,6 +64,10 @@ en:
     insights:
       pattern: "Pattern"
       empty: "No scored flags yet. Run the scoring actions to populate this panel."
+      severity_critical: "CRITICAL"
+      severity_high: "HIGH"
+      severity_medium: "MEDIUM"
+      severity_low: "LOW"
       flag_count:
         one: "%{count} contract"
         other: "%{count} contracts"

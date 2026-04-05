@@ -14,7 +14,7 @@ module ApplicationHelper
   # Fixed-severity types map directly; variable-severity types use the worst-case level.
   FLAG_TYPE_SEVERITY = {
     "A1_REPEAT_DIRECT_AWARD"           => "high",    # OECD bid rigging; TI: HIGH
-    "A2_PUBLICATION_AFTER_CELEBRATION" => "medium",  # TI/OLAF: process compliance failure; MEDIUM
+    "A2_PUBLICATION_AFTER_CELEBRATION" => "low",      # TI/OLAF: process compliance failure; LOW
     "A5_THRESHOLD_SPLITTING"           => "high",    # TI/OLAF/ECA: deliberate circumvention; HIGH
     "A7_ABNORMAL_DIRECT_AWARD_RATE"    => "high",    # DIGIWHIST: strongest corruption predictor; HIGH
     "A9_PRICE_ANOMALY"                 => "high",    # OECD: price manipulation; worst case HIGH

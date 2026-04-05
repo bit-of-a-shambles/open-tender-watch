@@ -130,8 +130,9 @@
               <% if contract.flags.any? %>
                 <div class="mt-1.5 flex flex-wrap gap-1">
                   <% contract.flags.first(2).each do |flag| %>
-                    <span class="font-mono text-[9px] tracking-wide text-[#ff6666] bg-[#ff444412] border border-[#ff444433] px-1.5 py-0.5 rounded">
-                      <%= flag.flag_type %>
+                    <% sev_color = flag.severity == "high" ? "text-[#ff4444] bg-[#ff444412] border-[#ff444433]" : flag.severity == "medium" ? "text-[#ff8844] bg-[#ff884412] border-[#ff884433]" : "text-[#c8a84e] bg-[#c8a84e12] border-[#c8a84e33]" %>
+                    <span class="font-mono text-[9px] tracking-wide <%= sev_color %> px-1.5 py-0.5 rounded border">
+                      <%= flag_type_label(flag.flag_type) %>
                     </span>
                   <% end %>
                   <% if contract.flags.size > 2 %>

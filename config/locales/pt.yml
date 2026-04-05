@@ -60,6 +60,10 @@ pt:
     insights:
       pattern: "Padrão"
       empty: "Ainda não existem sinais pontuados. Execute as ações de scoring para preencher este painel."
+      severity_critical: "CRÍTICO"
+      severity_high: "ALTO"
+      severity_medium: "MÉDIO"
+      severity_low: "BAIXO"
       flag_count:
         one: "%{count} contrato"
         other: "%{count} contratos"
