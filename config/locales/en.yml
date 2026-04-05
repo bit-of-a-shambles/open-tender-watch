@@ -203,6 +203,11 @@ en:
         severity_high: "HIGH"
         severity_medium: "MEDIUM"
         severity_low: "LOW"
+        risk_score: "Score %{score} · %{tier}"
+        risk_tier_low: "LOW RISK"
+        risk_tier_medium: "MEDIUM RISK"
+        risk_tier_high: "HIGH RISK"
+        risk_tier_critical: "CRITICAL RISK"
 
   locale:
     en: "EN"

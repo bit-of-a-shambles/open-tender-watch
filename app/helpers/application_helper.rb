@@ -13,18 +13,18 @@ module ApplicationHelper
   # Returns the canonical severity for a given flag_type.
   # Fixed-severity types map directly; variable-severity types use the worst-case level.
   FLAG_TYPE_SEVERITY = {
-    "A1_REPEAT_DIRECT_AWARD"         => "high",
-    "A2_PUBLICATION_AFTER_CELEBRATION" => "high",
-    "A5_THRESHOLD_SPLITTING"         => "medium",
-    "A7_ABNORMAL_DIRECT_AWARD_RATE"  => "medium",
-    "A9_PRICE_ANOMALY"               => "high",    # medium or high; show worst case
-    "A9_PRICE_REDUCTION"             => "low",
-    "B2_SUPPLIER_CONCENTRATION"      => "high",
-    "B3_PRICE_HIGH"                  => "high",    # medium or high
-    "B3_PRICE_LOW"                   => "high",    # medium or high
-    "B5_BENFORD_DEVIATION"           => "high",    # medium or high
-    "C1_MISSING_WINNER_NIF"          => "medium",
-    "C3_MISSING_MANDATORY_FIELDS"    => "low",
+    "A1_REPEAT_DIRECT_AWARD"           => "high",    # OECD bid rigging; TI: HIGH
+    "A2_PUBLICATION_AFTER_CELEBRATION" => "medium",  # TI/OLAF: process compliance failure; MEDIUM
+    "A5_THRESHOLD_SPLITTING"           => "high",    # TI/OLAF/ECA: deliberate circumvention; HIGH
+    "A7_ABNORMAL_DIRECT_AWARD_RATE"    => "high",    # DIGIWHIST: strongest corruption predictor; HIGH
+    "A9_PRICE_ANOMALY"                 => "high",    # OECD: price manipulation; worst case HIGH
+    "A9_PRICE_REDUCTION"               => "low",
+    "B2_SUPPLIER_CONCENTRATION"        => "high",    # OECD: market concentration = bid rigging risk
+    "B3_PRICE_HIGH"                    => "high",    # worst case (z≥3.5)
+    "B3_PRICE_LOW"                     => "high",    # worst case
+    "B5_BENFORD_DEVIATION"             => "medium",  # DIGIWHIST/Nigrini: supporting indicator only
+    "C1_MISSING_WINNER_NIF"            => "medium",  # OLAF: traceability failure; MEDIUM
+    "C3_MISSING_MANDATORY_FIELDS"      => "low",     # OLAF: compliance failure; LOW
   }.freeze
 
   def flag_type_severity(flag_type)

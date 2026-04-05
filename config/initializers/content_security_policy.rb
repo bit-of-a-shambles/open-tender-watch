@@ -12,9 +12,9 @@ Rails.application.configure do
     policy.img_src     :self, :data, :https                         # data: for inline SVG/base64 used by Tailwind
     policy.object_src  :none                                        # no Flash / plugins
     policy.style_src   :self, :unsafe_inline, "https://fonts.googleapis.com"  # Tailwind inline + Google Fonts CSS
-    policy.script_src  :self, :unsafe_inline                        # unsafe-inline needed for importmap/Hotwire inline scripts
-    policy.connect_src :self                                        # no external XHR/WebSocket
-    policy.frame_src   :none
+    policy.script_src  :self, :unsafe_inline, "https://www.googletagmanager.com"  # GTM
+    policy.connect_src :self, "https://www.google-analytics.com", "https://analytics.google.com", "https://region1.google-analytics.com"  # GA4 data collection
+    policy.frame_src   "https://www.googletagmanager.com"          # GTM noscript iframe
     policy.base_uri    :self
     policy.form_action :self
   end

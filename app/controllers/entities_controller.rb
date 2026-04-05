@@ -101,5 +101,8 @@ class EntitiesController < ApplicationController
       .offset((@page - 1) * PER_PAGE)
 
     @benford_analysis = BenfordAnalysis.find_by(entity_id: @entity.id)
+    @entity_risk_score = Flag.joins(:contract)
+                             .where(contracts: { contracting_entity_id: @entity.id })
+                             .sum(:score)
   end
 end

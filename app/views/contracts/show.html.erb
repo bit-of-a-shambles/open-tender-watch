@@ -164,7 +164,24 @@
   <%# Risk Flags — full width below the grid %>
   <% if @contract.flags.any? %>
     <div class="bg-white/[0.02] border border-white/[0.06] rounded-lg p-5 mt-6">
-      <div class="font-mono text-[10px] tracking-[2px] text-white/35 mb-4 uppercase"><%= t("contracts.show.flags.heading") %></div>
+      <% total_score = @contract.flags.sum(&:score) %>
+      <% risk_tier = case total_score
+         when 0      then nil
+         when 1..34  then "low"
+         when 35..69 then "medium"
+         when 70..109 then "high"
+         else             "critical"
+         end %>
+      <div class="flex items-center justify-between mb-4">
+        <div class="font-mono text-[10px] tracking-[2px] text-white/35 uppercase"><%= t("contracts.show.flags.heading") %></div>
+        <% if risk_tier %>
+          <% s = severity_styles(risk_tier) %>
+          <div class="flex items-center gap-2 font-mono text-[10px] px-2.5 py-1 rounded border <%= s[:border] %> <%= s[:bg] %>">
+            <span class="w-1.5 h-1.5 rounded-full <%= s[:dot] %>"></span>
+            <span class="<%= s[:text] %> uppercase tracking-[1px]"><%= t("contracts.show.flags.risk_score", score: total_score, tier: t("contracts.show.flags.risk_tier_#{risk_tier}")) %></span>
+          </div>
+        <% end %>
+      </div>
       <div class="space-y-3">
         <% @contract.flags.sort_by { |f| -f.score }.each do |flag| %>
           <% severity_color = flag.severity == "high" ? "text-[#ff4444] bg-[#ff44440d] border-[#ff444422]" :

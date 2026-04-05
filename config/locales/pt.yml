@@ -199,6 +199,11 @@ pt:
         severity_high: "ALTO"
         severity_medium: "MÉDIO"
         severity_low: "BAIXO"
+        risk_score: "Pontuação %{score} · %{tier}"
+        risk_tier_low: "RISCO BAIXO"
+        risk_tier_medium: "RISCO MÉDIO"
+        risk_tier_high: "RISCO ALTO"
+        risk_tier_critical: "RISCO CRÍTICO"
 
   locale:
     en: "EN"

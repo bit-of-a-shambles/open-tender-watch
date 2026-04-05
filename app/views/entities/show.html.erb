@@ -192,6 +192,19 @@
               <%= number_with_delimiter(@entity_contract_total) %>
             </div>
           </div>
+          <% if @entity_risk_score.to_i > 0 %>
+            <% risk_tier = case @entity_risk_score.to_i
+               when 1..34  then "low"
+               when 35..69 then "medium"
+               when 70..109 then "high"
+               else             "critical"
+               end %>
+            <% s = severity_styles(risk_tier) %>
+            <div class="flex items-center justify-between pt-2 border-t border-white/[0.06]">
+              <div class="font-mono text-[10px] text-white/30"><%= t("contracts.show.flags.risk_score", score: @entity_risk_score, tier: t("contracts.show.flags.risk_tier_#{risk_tier}")) %></div>
+              <span class="w-2 h-2 rounded-full <%= s[:dot] %>"></span>
+            </div>
+          <% end %>
         </div>
       </div>
 

@@ -55,6 +55,7 @@ class CompaniesController < ApplicationController
 
     # Flag stats across all won contracts
     won_contract_ids = ContractWinner.where(entity_id: @entity.id).select(:contract_id)
+    @company_risk_score = Flag.where(contract_id: won_contract_ids).sum(:score)
     @flag_stats = Flag
       .where(contract_id: won_contract_ids)
       .group(:flag_type, :severity)
