@@ -195,13 +195,12 @@
                 <% end %>
               </div>
               <%# Contracting authority — who hired this company %>
+              <%# Note: no nested link here — outer row is already a link_to (nested anchors are invalid HTML) %>
               <div class="hidden sm:block sm:pr-2">
                 <% if contract.contracting_entity %>
-                  <%= link_to entity_path(contract.contracting_entity),
-                      class: "font-mono text-[10px] text-white/50 hover:text-[#c8a84e] transition-colors leading-snug line-clamp-2",
-                      data: { turbo_frame: "_top" } do %>
+                  <span class="font-mono text-[10px] text-white/50 leading-snug line-clamp-2">
                     <%= contract.contracting_entity.name.truncate(30) %>
-                  <% end %>
+                  </span>
                   <div class="font-mono text-[9px] text-white/20 mt-0.5">
                     <%= t("companies.show.nif") %> <%= contract.contracting_entity.tax_identifier %>
                   </div>
