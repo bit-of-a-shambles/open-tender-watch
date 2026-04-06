@@ -6,50 +6,65 @@ module Flags
       FLAG_TYPE    = "A1_REPEAT_DIRECT_AWARD"
       SCORE        = 50
       SEVERITY     = "high"
-      MIN_AWARDS   = 3
-      WINDOW_DAYS  = 1096 # ~36 months
+
+      # CCP Art. 113 §2 thresholds for ajuste direto:
+      MIN_AWARDS          = 2          # at least 2 awards to constitute "repeat"
+      WORKS_CPV_PREFIX    = "45"       # CPV section 45 = empreitadas de obras públicas
+      WORKS_THRESHOLD     = 30_000.0   # Art. 19(d): ajuste direto for works < €30k
+      SERVICES_THRESHOLD  = 20_000.0   # Art. 20(1)(d): ajuste direto for goods/services < €20k
+
+      # Economic year window: current year + 2 preceding years (Art. 113 §2)
+      def self.window_start = Date.new(Date.current.year - 2, 1, 1)
 
       DIRECT_AWARD_PATTERN = "%ajuste%direto%"
 
       def call
-        flagged_contract_ids = qualifying_contract_ids
-        upsert_flags(flagged_contract_ids)
-        cleanup_stale_flags(flagged_contract_ids)
-        flagged_contract_ids.size
+        flagged_rows = qualifying_rows
+        upsert_flags(flagged_rows)
+        cleanup_stale_flags(flagged_rows)
+        flagged_rows.size
       end
 
       private
 
-      def qualifying_contract_ids
-        # Group direct awards by (authority, supplier), find groups with 3+
-        # awards whose publication dates all fall within a 36-month window.
+      def qualifying_rows
+        window = self.class.window_start
+
         groups = direct_awards
           .joins(:contract_winners)
           .where.not(publication_date: nil)
+          .where("contracts.publication_date >= ?", window)
           .group("contracts.contracting_entity_id, contract_winners.entity_id")
-          .having(Arel.sql("COUNT(*) >= #{MIN_AWARDS}"))
+          .having(Arel.sql(<<~SQL.squish))
+            COUNT(*) >= #{MIN_AWARDS}
+            AND (
+              SUM(CASE WHEN contracts.cpv_code LIKE '#{WORKS_CPV_PREFIX}%'
+                   THEN COALESCE(contracts.base_price, 0) ELSE 0 END) >= #{WORKS_THRESHOLD}
+              OR
+              SUM(CASE WHEN contracts.cpv_code NOT LIKE '#{WORKS_CPV_PREFIX}%'
+                        OR contracts.cpv_code IS NULL
+                   THEN COALESCE(contracts.base_price, 0) ELSE 0 END) >= #{SERVICES_THRESHOLD}
+            )
+          SQL
           .pluck(
             Arel.sql("contracts.contracting_entity_id"),
             Arel.sql("contract_winners.entity_id"),
-            Arel.sql("MIN(contracts.publication_date)"),
-            Arel.sql("MAX(contracts.publication_date)"),
-            Arel.sql("COUNT(*)")
+            Arel.sql("COUNT(*)"),
+            Arel.sql("SUM(COALESCE(contracts.base_price, 0))"),
+            Arel.sql("SUM(CASE WHEN contracts.cpv_code LIKE '#{WORKS_CPV_PREFIX}%' THEN COALESCE(contracts.base_price, 0) ELSE 0 END)"),
+            Arel.sql("SUM(CASE WHEN contracts.cpv_code NOT LIKE '#{WORKS_CPV_PREFIX}%' OR contracts.cpv_code IS NULL THEN COALESCE(contracts.base_price, 0) ELSE 0 END)")
           )
 
-        qualifying = groups.select do |_auth, _sup, min_date, max_date, _count|
-          (Date.parse(max_date.to_s) - Date.parse(min_date.to_s)).to_i <= WINDOW_DAYS
-        end
+        return [] if groups.empty?
 
-        return [] if qualifying.empty?
-
-        qualifying.flat_map do |auth_id, sup_id, _min, _max, count|
-          ids = direct_awards
+        groups.flat_map do |auth_id, sup_id, count, total_price, works_price, services_price|
+          direct_awards
             .joins(:contract_winners)
             .where.not(publication_date: nil)
+            .where("contracts.publication_date >= ?", window)
             .where(contracting_entity_id: auth_id, contract_winners: { entity_id: sup_id })
             .pluck(:id)
-          # Store group metadata for use when building flag rows
-          ids.map { |id| [ id, auth_id, sup_id, count ] }
+            .map { |id| [ id, auth_id, sup_id, count, total_price, works_price, services_price ] }
         end
       end
 
@@ -57,17 +72,20 @@ module Flags
         return if flagged_rows.empty?
 
         now = Time.current
-        rows = flagged_rows.map do |contract_id, auth_id, sup_id, award_count|
+        rows = flagged_rows.map do |contract_id, auth_id, sup_id, award_count, total_price, works_price, services_price|
           {
             contract_id: contract_id,
             flag_type: FLAG_TYPE,
             severity: SEVERITY,
             score: SCORE,
             details: {
-              "authority_id"  => auth_id,
-              "supplier_id"   => sup_id,
-              "award_count"   => award_count,
-              "rule"          => "A1 repeat direct award: #{award_count} awards within 36 months"
+              "authority_id"   => auth_id,
+              "supplier_id"    => sup_id,
+              "award_count"    => award_count,
+              "total_price"    => total_price.to_f,
+              "works_price"    => works_price.to_f,
+              "services_price" => services_price.to_f,
+              "rule"           => "A1: cumulative ajuste direto to same supplier exceeds CCP Art. 113 §2 threshold"
             },
             fired_at: now,
             created_at: now,
@@ -80,7 +98,7 @@ module Flags
 
       def cleanup_stale_flags(flagged_rows)
         contract_ids = flagged_rows.map(&:first)
-        stale_scope = Flag.where(flag_type: FLAG_TYPE)
+        stale_scope  = Flag.where(flag_type: FLAG_TYPE)
         if contract_ids.empty?
           stale_scope.delete_all
         else
