@@ -100,7 +100,7 @@ en:
       disclaimer: "Risk scores reflect structural anomalies in procurement data. Missing or inconsistent data is itself a risk signal — it can indicate evasion. Absence of a flag does not mean a contract is clean."
       flags:
         a1_title: "Repeat direct awards"
-        a1_desc: "Same authority repeatedly awards directly to the same supplier within 36 months"
+        a1_desc: "The authority uses direct award to the same supplier more than once within a 36-month window. Portuguese procurement law (CCP Art. 20) caps direct award at €75K per contract; systematic repetition with the same supplier may indicate deliberate contract splitting to bypass competitive tendering — one of the strongest OECD indicators of procurement corruption."
         a2_title: "Publication after celebration"
         a2_desc: "Contract published in BASE after the signing date"
         a3_title: "Execution before publication"

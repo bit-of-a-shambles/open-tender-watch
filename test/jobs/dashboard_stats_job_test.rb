@@ -90,4 +90,43 @@ class DashboardStatsJobTest < ActiveJob::TestCase
       assert_kind_of Integer, pages
     end
   end
+
+  # --- flag_type_severities cache warming ---
+
+  test "perform writes flag_type_severities cache key" do
+    DashboardStatsJob.new.perform
+
+    assert_not_nil Rails.cache.read("dashboard/flag_type_severities"),
+                   "flag_type_severities should be cached after job runs"
+  end
+
+  test "perform caches flag_type_severities as a hash" do
+    DashboardStatsJob.new.perform
+
+    cached = Rails.cache.read("dashboard/flag_type_severities")
+    assert_kind_of Hash, cached
+  end
+
+  test "perform caches flag_type_severities matching the live DB query" do
+    entity = entities(:one)
+    contract = Contract.create!(
+      external_id: "job-sev-test-1", country_code: "PT",
+      object: "Severity Cache Test", procedure_type: "Ajuste Direto",
+      base_price: 5000,
+      publication_date: Date.new(2025, 1, 10),
+      celebration_date: Date.new(2025, 1, 8),
+      contracting_entity: entity,
+      data_source: data_sources(:portal_base)
+    )
+    Flag.create!(
+      contract: contract, flag_type: "A2_PUBLICATION_AFTER_CELEBRATION",
+      severity: "high", score: 40, details: {}, fired_at: Time.current
+    )
+
+    DashboardStatsJob.new.perform
+
+    cached = Rails.cache.read("dashboard/flag_type_severities")
+    assert_equal "high", cached["A2_PUBLICATION_AFTER_CELEBRATION"],
+      "Cached severity for A2 must reflect the DB value 'high', not the static helper's 'low'"
+  end
 end

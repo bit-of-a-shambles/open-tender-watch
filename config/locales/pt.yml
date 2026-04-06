@@ -96,7 +96,7 @@ pt:
       disclaimer: "Os scores de risco refletem anomalias estruturais nos dados de contratação. Dados em falta ou inconsistentes são, por si só, um sinal de risco — podem indicar evasão. A ausência de um indicador não significa que o contrato seja irregular."
       flags:
         a1_title: "Ajuste direto repetido"
-        a1_desc: "A mesma entidade adjudica diretamente ao mesmo fornecedor em 36 meses"
+        a1_desc: "A entidade adjudica por ajuste direto ao mesmo fornecedor mais de uma vez em 36 meses. O CCP (Art. 20) limita o ajuste direto a €75K por contrato; a recorrência com o mesmo adjudicatário pode indicar fracionamento deliberado para contornar as regras do concurso público — um dos principais indicadores de corrupção na contratação pública identificados pela OCDE."
         a2_title: "Publicação posterior à celebração"
         a2_desc: "Contrato publicado no BASE após a data de assinatura"
         a3_title: "Execução antes da publicação"

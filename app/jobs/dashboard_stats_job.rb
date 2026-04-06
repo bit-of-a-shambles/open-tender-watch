@@ -28,6 +28,12 @@ class DashboardStatsJob < ApplicationJob
                       Flag.distinct.order(:flag_type).pluck(:flag_type),
                       expires_in: CACHE_TTL)
 
+    Rails.cache.write("dashboard/flag_type_severities",
+                      Flag.group(:flag_type)
+                          .select("flag_type, #{Flag.max_severity_sql} AS max_severity")
+                          .each_with_object({}) { |r, h| h[r.flag_type] = r.max_severity },
+                      expires_in: CACHE_TTL)
+
     Rails.cache.write("dashboard/active_sources_count",
                       DataSource.where(status: :active).count,
                       expires_in: CACHE_TTL)

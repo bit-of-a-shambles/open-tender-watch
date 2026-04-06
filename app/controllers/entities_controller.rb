@@ -37,9 +37,9 @@ class EntitiesController < ApplicationController
       .group(:flag_type)
       .select(
         "flag_type",
-        "SUM(total_exposure)  AS total_exposure",
-        "SUM(contract_count)  AS contract_count",
-        "MAX(severity)        AS severity"
+        "SUM(total_exposure) AS total_exposure",
+        "SUM(contract_count) AS contract_count",
+        "#{Flag.max_severity_sql} AS severity"
       )
       .order("total_exposure DESC")
 

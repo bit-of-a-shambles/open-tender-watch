@@ -40,6 +40,13 @@ class DashboardController < ApplicationController
       Flag.distinct.order(:flag_type).pluck(:flag_type)
     end
 
+    # Max severity per flag_type from the DB — canonical source used in insight cards.
+    @flag_type_severities = Rails.cache.fetch("dashboard/flag_type_severities", expires_in: STATS_CACHE_TTL) do
+      Flag.group(:flag_type)
+          .select("flag_type, #{Flag.max_severity_sql} AS max_severity")
+          .each_with_object({}) { |r, h| h[r.flag_type] = r.max_severity }
+    end
+
     # Flag count + per-type breakdown — fast indexed queries, cached.
     flags_scope      = @severity_filter ? Flag.where(severity: @severity_filter) : Flag.all
     @insights_count  = Rails.cache.fetch("dashboard/flags_count/sev:#{@severity_filter}", expires_in: STATS_CACHE_TTL) { flags_scope.count }

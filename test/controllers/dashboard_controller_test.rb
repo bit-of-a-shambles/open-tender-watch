@@ -272,4 +272,35 @@ class DashboardControllerTest < ActionDispatch::IntegrationTest
       )
     end
   end
+
+  # --- DB-driven severity on insight cards ---
+
+  test "insight card severity badge uses database value not static helper map" do
+    # The static FLAG_TYPE_SEVERITY map in ApplicationHelper maps A2 → "low".
+    # create_flagged_contract! always creates flags with severity: "high".
+    # After the fix, @flag_type_severities is built from the DB, so the badge
+    # must show "HIGH" (the DB value), not "LOW" (the stale static map).
+    create_flagged_contract!(
+      external_id: "db-sev-insight-1",
+      object: "DB Driven Severity Contract",
+      flag_type: "A2_PUBLICATION_AFTER_CELEBRATION"
+    )
+
+    get dashboard_index_url
+    assert_response :success
+    body = response.body
+
+    a2_pos = body.index("A2_PUBLICATION_AFTER_CELEBRATION")
+    assert_not_nil a2_pos, "A2 flag type should appear in the response body"
+
+    # Grab a window of HTML around the first occurrence of the flag type token.
+    a2_section = body[a2_pos, 1000]
+    high_label = I18n.t("dashboard.insights.severity_high", default: "HIGH")
+    low_label  = I18n.t("dashboard.insights.severity_low",  default: "LOW")
+
+    assert_includes a2_section, high_label,
+      "Expected DB severity label '#{high_label}' near A2 insight card"
+    assert_not_includes a2_section, low_label,
+      "Static-helper severity label '#{low_label}' must NOT appear near A2 insight card"
+  end
 end

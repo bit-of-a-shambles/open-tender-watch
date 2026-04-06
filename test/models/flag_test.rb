@@ -104,4 +104,50 @@ class FlagTest < ActiveSupport::TestCase
 
     assert other.valid?
   end
+
+  # --- max_severity_sql ---
+
+  test "max_severity_sql returns a non-empty SQL CASE string" do
+    sql = Flag.max_severity_sql
+    assert_kind_of String, sql
+    assert sql.present?
+    assert_match(/CASE/i, sql)
+  end
+
+  test "max_severity_sql picks the highest severity across mixed rows" do
+    Flag.create!(contract: contracts(:one), flag_type: "Z9_MAX_SEV_TEST",
+                 severity: "low",  score: 5,  fired_at: Time.current)
+    Flag.create!(contract: contracts(:two), flag_type: "Z9_MAX_SEV_TEST",
+                 severity: "high", score: 40, fired_at: Time.current)
+
+    result = Flag.where(flag_type: "Z9_MAX_SEV_TEST")
+                 .select("#{Flag.max_severity_sql} AS max_severity")
+                 .first
+
+    assert_equal "high", result.max_severity
+  end
+
+  test "max_severity_sql returns low when all flags are low severity" do
+    Flag.create!(contract: contracts(:one), flag_type: "Z9_ONLY_LOW_TEST",
+                 severity: "low", score: 5, fired_at: Time.current)
+
+    result = Flag.where(flag_type: "Z9_ONLY_LOW_TEST")
+                 .select("#{Flag.max_severity_sql} AS max_severity")
+                 .first
+
+    assert_equal "low", result.max_severity
+  end
+
+  test "max_severity_sql returns critical when a critical flag is present" do
+    Flag.create!(contract: contracts(:one), flag_type: "Z9_CRITICAL_TEST",
+                 severity: "medium",   score: 20, fired_at: Time.current)
+    Flag.create!(contract: contracts(:two), flag_type: "Z9_CRITICAL_TEST",
+                 severity: "critical", score: 80, fired_at: Time.current)
+
+    result = Flag.where(flag_type: "Z9_CRITICAL_TEST")
+                 .select("#{Flag.max_severity_sql} AS max_severity")
+                 .first
+
+    assert_equal "critical", result.max_severity
+  end
 end
