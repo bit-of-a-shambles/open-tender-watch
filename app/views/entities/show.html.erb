@@ -42,7 +42,10 @@
             <% s = severity_styles(stat.severity) %>
             <% code = stat.flag_type.split("_").first.downcase %>
             <% desc = t("dashboard.methodology.flags.#{code}_desc", default: "") %>
-            <div class="px-4 py-3 border-b border-white/[0.04] last:border-0">
+            <% active_flag = @flag_filter == stat.flag_type %>
+            <%= link_to entity_path(@entity, flag_type: stat.flag_type),
+                  data: { turbo_frame: "entity-contracts" },
+                  class: "block px-4 py-3 border-b border-white/[0.04] last:border-0 hover:bg-white/[0.03] transition-colors cursor-pointer #{active_flag ? 'bg-white/[0.04]' : ''}" do %>
               <div class="flex flex-wrap items-center gap-x-3 gap-y-1">
                 <span class="font-mono text-[11px] <%= s[:text] %> font-medium flex-1 min-w-0">
                   <%= flag_type_label(stat.flag_type) %>
@@ -62,7 +65,7 @@
                   <%= desc %>
                 </div>
               <% end %>
-            </div>
+            <% end %>
           <% end %>
         </div>
       <% end %>
@@ -248,30 +251,6 @@
         </div>
       </div>
 
-      <%# Flag stats %>
-      <% if @flag_stats.any? %>
-        <div class="bg-white/[0.02] border border-white/[0.06] rounded-lg p-5">
-          <div class="font-mono text-[10px] tracking-[2px] text-white/35 mb-4 uppercase"><%= t("entities.show.risk_flags") %></div>
-          <div class="space-y-3">
-            <% @flag_stats.each do |stat| %>
-              <% color = stat.severity == "high" ? "text-[#ff4444]" : stat.severity == "medium" ? "text-[#ff8844]" : "text-[#c8a84e]" %>
-              <div class="border-b border-white/5 pb-3 last:border-0 last:pb-0">
-                <div class="font-mono text-[10px] <%= color %> mb-1">
-                  <%= flag_type_label(stat.flag_type) %>
-                </div>
-                <div class="flex items-baseline justify-between">
-                  <span class="font-['Space_Grotesk'] text-sm font-bold text-[#e8e0d4]">
-                    <%= number_to_currency(stat.total_exposure.to_f, unit: "€", delimiter: ",", separator: ".", format: "%u%n", precision: 0) %>
-                  </span>
-                  <span class="font-mono text-[10px] text-white/35">
-                    <%= number_with_delimiter(stat.contract_count.to_i) %> <%= t("entities.show.contracts_short") %>
-                  </span>
-                </div>
-              </div>
-            <% end %>
-          </div>
-        </div>
-      <% end %>
 
       <%# Benford distribution data — rendered client-side into a chart by a future JS controller.
           The data-benford-* attributes carry everything needed: observed digit counts, Benford
