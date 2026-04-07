@@ -49,6 +49,10 @@ class Flags::Actions::RepeatDirectAwardActionTest < ActiveSupport::TestCase
       assert_equal "high", flag.severity
       assert_equal 3, flag.details["award_count"]
       assert_in_delta 24_000.0, flag.details["total_price"], 0.01
+      assert_equal "Fornecedor Teste Lda", flag.details["supplier_name"]
+      assert_equal Flags::Actions::RepeatDirectAwardAction.window_start.to_s, flag.details["window_from"]
+      assert_equal Date.new(Date.current.year, 12, 31).to_s, flag.details["window_to"]
+      assert_equal "a1_threshold_exceeded", flag.details["rule"]
     end
   end
 

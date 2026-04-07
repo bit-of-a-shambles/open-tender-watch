@@ -238,6 +238,21 @@ pt:
     rule:
       c1_blank_nif: "Pelo menos uma parte contratante não tem nenhum número de identificação fiscal"
       c1_no_winner: "Contrato adjudicado sem fornecedor identificado (preço efetivo > 0)"
+      a1_threshold_exceeded: "As adjudicações diretas acumuladas ao mesmo fornecedor ultrapassam o limiar do CCP Art. 113 §2 (€20k para bens/serviços, €30k para obras) dentro de uma janela económica de 3 anos. A recorrência de adjudicações diretas ao mesmo adjudicatário pode contornar as regras do concurso público."
+      a2_late_publication: "Contrato publicado no BASE mais de 10 dias após assinatura. A lei portuguesa de contratação pública exige a publicação num curto prazo após a assinatura; o registo tardio pode indicar documentação retroativa."
+    details:
+      labels:
+        supplier_name: "Fornecedor"
+        award_count: "Número de Adjudicações"
+        total_price: "Valor Acumulado Total"
+        works_price: "Valor de Obras (CPV 45)"
+        services_price: "Valor de Bens e Serviços"
+        window_from: "Início da Janela"
+        window_to: "Fim da Janela"
+        gap_days: "Dias de Atraso"
+        publication_date: "Data de Publicação"
+        celebration_date: "Data de Assinatura"
+        rule: "Regra"
 
   data_sources:
     status:

@@ -13,7 +13,7 @@ module Flags
     class DateSequenceAnomalyAction
       FLAG_TYPE = "A2_PUBLICATION_AFTER_CELEBRATION"
       SCORE = 40
-      SEVERITY = "high"
+      SEVERITY = "medium"
 
       # Minimum gap in days between signing and publication before a flag is raised.
       # Gaps at or below this value are normal administrative delays.
@@ -54,7 +54,7 @@ module Flags
               "publication_date" => publication_date.iso8601,
               "celebration_date" => celebration_date.iso8601,
               "gap_days"         => gap_days,
-              "rule"             => "A2/A3 late publication: #{gap_days} days after signing (threshold: #{MIN_PUBLICATION_DELAY_DAYS})"
+              "rule"             => "a2_late_publication"
             },
             fired_at: now,
             created_at: now,

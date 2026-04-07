@@ -242,6 +242,21 @@ en:
     rule:
       c1_blank_nif: "At least one contracting party has no tax identifier"
       c1_no_winner: "Awarded contract with no supplier identified (effective price > 0)"
+      a1_threshold_exceeded: "Cumulative direct awards to the same supplier exceed the CCP Art. 113 §2 threshold (€20k for goods/services, €30k for works) within a 3-year economic window. Repeated direct awards to the same supplier may circumvent competitive tendering rules."
+      a2_late_publication: "Contract published to BASE more than 10 days after signing. Portuguese public procurement law requires contracts to be published within a short window of signing; late filing may indicate retroactive documentation."
+    details:
+      labels:
+        supplier_name: "Supplier"
+        award_count: "Number of Awards"
+        total_price: "Total Cumulative Value"
+        works_price: "Works Value (CPV 45)"
+        services_price: "Goods & Services Value"
+        window_from: "Window Start"
+        window_to: "Window End"
+        gap_days: "Days Late"
+        publication_date: "Publication Date"
+        celebration_date: "Signing Date"
+        rule: "Rule"
 
   data_sources:
     status:

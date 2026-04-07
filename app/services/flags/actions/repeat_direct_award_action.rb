@@ -71,6 +71,12 @@ module Flags
       def upsert_flags(flagged_rows)
         return if flagged_rows.empty?
 
+        supplier_ids   = flagged_rows.map { |_, _, sup_id, *| sup_id }.uniq
+        supplier_names = Entity.where(id: supplier_ids).pluck(:id, :name).to_h
+
+        window_from = self.class.window_start.to_s
+        window_to   = Date.new(Date.current.year, 12, 31).to_s
+
         now = Time.current
         rows = flagged_rows.map do |contract_id, auth_id, sup_id, award_count, total_price, works_price, services_price|
           {
@@ -79,13 +85,14 @@ module Flags
             severity: SEVERITY,
             score: SCORE,
             details: {
-              "authority_id"   => auth_id,
-              "supplier_id"    => sup_id,
+              "supplier_name"  => supplier_names[sup_id],
               "award_count"    => award_count,
               "total_price"    => total_price.to_f,
               "works_price"    => works_price.to_f,
               "services_price" => services_price.to_f,
-              "rule"           => "A1: cumulative ajuste direto to same supplier exceeds CCP Art. 113 §2 threshold"
+              "window_from"    => window_from,
+              "window_to"      => window_to,
+              "rule"           => "a1_threshold_exceeded"
             },
             fired_at: now,
             created_at: now,

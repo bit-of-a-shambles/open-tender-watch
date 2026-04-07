@@ -198,11 +198,23 @@
               </span>
             </div>
             <% if flag.details.present? %>
+              <% price_keys = %w[total_price works_price services_price] %>
+              <% date_keys  = %w[window_from window_to publication_date celebration_date] %>
               <dl class="space-y-1">
                 <% flag.details.each do |key, value| %>
                   <div class="grid grid-cols-[100px_1fr] sm:grid-cols-[160px_1fr] gap-2">
-                    <dt class="font-mono text-[10px] text-white/30"><%= key %></dt>
-                    <dd class="font-mono text-[10px] text-white/60 break-all"><%= value.is_a?(Hash) ? value.map { |k,v| "#{k}: #{v}" }.join(", ") : (key == "rule" ? t("flags.rule.#{value}", default: value.to_s) : value) %></dd>
+                    <dt class="font-mono text-[10px] text-white/30"><%= t("flags.details.labels.#{key}", default: key.humanize) %></dt>
+                    <dd class="font-mono text-[10px] text-white/60 break-all">
+                      <% if key == "rule" %>
+                        <%= t("flags.rule.#{value}", default: value.to_s) %>
+                      <% elsif price_keys.include?(key) %>
+                        <%= number_to_currency(value.to_f, unit: "€", delimiter: ",", separator: ".", format: "%u%n", precision: 0) %>
+                      <% elsif date_keys.include?(key) && value.present? %>
+                        <%= Date.parse(value.to_s).strftime("%d %b %Y") rescue value %>
+                      <% else %>
+                        <%= value %>
+                      <% end %>
+                    </dd>
                   </div>
                 <% end %>
               </dl>

@@ -34,13 +34,12 @@ class Flags::Actions::DateSequenceAnomalyActionTest < ActiveSupport::TestCase
     end
 
     flag = Flag.find_by!(contract_id: anomalous.id, flag_type: "A2_PUBLICATION_AFTER_CELEBRATION")
-    assert_equal "high", flag.severity
+    assert_equal "medium", flag.severity
     assert_equal 40, flag.score
     assert_equal "2025-01-10", flag.details["publication_date"]
     assert_equal "2024-12-25", flag.details["celebration_date"]
     assert_equal 16, flag.details["gap_days"]
-    assert_match(/A2\/A3/, flag.details["rule"])
-    assert_match(/16 days/, flag.details["rule"])
+    assert_equal "a2_late_publication", flag.details["rule"]
   end
 
   test "is idempotent for the same anomalous contract" do
