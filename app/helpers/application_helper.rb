@@ -41,4 +41,19 @@ module ApplicationHelper
   def severity_styles(severity)
     SEVERITY_STYLES.fetch(severity.to_s, SEVERITY_STYLES["medium"])
   end
+
+  # Renders a clickable table-header sort link for Turbo Frame navigation.
+  # +url+ must already include the correct sort column and next direction.
+  def sort_header_link(label, column:, url:, sort_col:, sort_dir:, align_right: false)
+    active = sort_col == column
+    arrow  = active ? (sort_dir == "asc" ? " ↑" : " ↓") : ""
+    css    = "hover:text-[#c8a84e] transition-colors"
+    css   += " text-[#c8a84e]" if active
+    css   += " text-right" if align_right
+    link_to("#{h(label)}#{arrow}".html_safe, url, class: css)
+  end
+
+  def next_sort_dir(column, sort_col, sort_dir)
+    (sort_col == column && sort_dir == "desc") ? "asc" : "desc"
+  end
 end

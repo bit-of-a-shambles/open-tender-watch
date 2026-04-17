@@ -147,6 +147,21 @@ class CompaniesControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
   end
 
+  test "show pivot sorts by authority_name" do
+    get company_url(entities(:two), pivot_sort: "authority_name", pivot_dir: "asc")
+    assert_response :success
+  end
+
+  test "show pivot sorts by contract_count" do
+    get company_url(entities(:two), pivot_sort: "contract_count", pivot_dir: "desc")
+    assert_response :success
+  end
+
+  test "show pivot rejects invalid sort column and falls back to total_value" do
+    get company_url(entities(:two), pivot_sort: "injected_col", pivot_dir: "sideways")
+    assert_response :success
+  end
+
   test "show renders directors when present" do
     get company_url(entities(:two))
     assert_response :success
@@ -198,5 +213,62 @@ class CompaniesControllerTest < ActionDispatch::IntegrationTest
     entities(:two).update!(won_contract_count: 101)
     get company_url(entities(:two))
     assert_response :success
+  end
+
+  # ---------------------------------------------------------------
+  # CSV export
+  # ---------------------------------------------------------------
+
+  test "show CSV export returns CSV with correct headers" do
+    get company_url(entities(:two), format: :csv)
+    assert_response :success
+    assert_equal "text/csv", response.media_type
+    lines = response.body.lines
+    assert_equal Contract::CSV_COLUMNS.join(",") + "\n", lines.first
+  end
+
+  test "show CSV export includes company won contracts" do
+    get company_url(entities(:two), format: :csv)
+    assert_response :success
+    assert_includes response.body, contracts(:two).external_id
+  end
+
+  test "show CSV export sets filename with company NIF" do
+    get company_url(entities(:two), format: :csv)
+    assert_response :success
+    assert_match(/company-#{entities(:two).tax_identifier}/, response.headers["Content-Disposition"])
+  end
+
+  # ---------------------------------------------------------------
+  # JSON export
+  # ---------------------------------------------------------------
+
+  test "show JSON export returns company profile" do
+    get company_url(entities(:two), format: :json)
+    assert_response :success
+    assert_equal "application/json", response.media_type
+    data = JSON.parse(response.body)
+    assert data.key?("company")
+    assert_equal entities(:two).name, data["company"]["name"]
+    assert_equal entities(:two).tax_identifier, data["company"]["tax_identifier"]
+    assert data.key?("flag_stats")
+    assert data.key?("exported_at")
+  end
+
+  test "show JSON export includes flag stats when company has flagged contracts" do
+    Flag.create!(
+      contract: contracts(:two),
+      flag_type: "A2_PUBLICATION_AFTER_CELEBRATION",
+      severity: "high",
+      score: 40,
+      details: { "rule" => "test" },
+      fired_at: Time.current
+    )
+
+    get company_url(entities(:two), format: :json)
+    assert_response :success
+    data = JSON.parse(response.body)
+    assert_equal 1, data["flag_stats"].size
+    assert_equal "A2_PUBLICATION_AFTER_CELEBRATION", data["flag_stats"].first["flag_type"]
   end
 end

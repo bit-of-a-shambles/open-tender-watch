@@ -55,6 +55,22 @@ class Rack::Attack
     Rack::Attack.real_ip(req) if req.path.start_with?("/contracts") && req.get?
   end
 
+  # CSV / JSON exports — expensive queries that stream large result sets.
+  # 5 exports per minute per IP is generous for investigative use; prevents
+  # automated scraping of the full dataset via repeated .csv/.json downloads.
+  throttle("exports/ip/1m", limit: 5, period: 1.minute) do |req|
+    if req.get? && req.path.match?(/\.(csv|json)\z/)
+      Rack::Attack.real_ip(req)
+    end
+  end
+
+  # Sustained export limit — 20 exports per hour per IP.
+  throttle("exports/ip/1h", limit: 20, period: 1.hour) do |req|
+    if req.get? && req.path.match?(/\.(csv|json)\z/)
+      Rack::Attack.real_ip(req)
+    end
+  end
+
   # ---------------------------------------------------------------------------
   # Blocklists — permanently block known bad actors.
   # Add IPs via BLOCKED_IPS env var: BLOCKED_IPS="1.2.3.4,5.6.7.8"

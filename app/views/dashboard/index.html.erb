@@ -278,7 +278,6 @@
           <%# A1 — active, expanded %>
           <% a1_key = "A1_REPEAT_DIRECT_AWARD"
              a1_sev  = @flag_type_severities[a1_key] || "high"
-             a1_cnt  = @flags_by_type[a1_key].to_i
              a1_sty  = severity_styles(a1_sev) %>
           <div class="bg-white/[0.02] border <%= a1_sty[:border] %> rounded-lg p-4">
             <div class="flex items-start gap-3 mb-3">
@@ -287,12 +286,7 @@
                 <span class="font-mono text-xs font-semibold text-[#e8e0d4]"><%= t("dashboard.methodology.flags.a1_title") %></span>
                 <span class="font-mono text-xs text-white/40 ml-2"><%= t("dashboard.methodology.flags.a1_desc") %></span>
               </div>
-              <div class="flex items-center gap-2 shrink-0">
-                <% if a1_cnt > 0 %>
-                  <span class="font-mono text-[10px] text-white/30"><%= t("dashboard.methodology.contracts_affected", count: a1_cnt) %></span>
-                <% end %>
-                <span class="font-mono text-[9px] font-bold px-1.5 py-0.5 rounded border <%= a1_sty[:bg] %> <%= a1_sty[:text] %> <%= a1_sty[:border] %>"><%= t("contracts.show.flags.severity_#{a1_sev}") %></span>
-              </div>
+              <span class="font-mono text-[9px] font-bold px-1.5 py-0.5 rounded border shrink-0 <%= a1_sty[:bg] %> <%= a1_sty[:text] %> <%= a1_sty[:border] %>"><%= t("contracts.show.flags.severity_#{a1_sev}") %></span>
             </div>
             <div class="ml-9 space-y-2">
               <p class="font-mono text-[11px] text-white/55 leading-relaxed"><%= t("dashboard.methodology.flags.a1_detail") %></p>
@@ -302,7 +296,6 @@
           <%# A2 — active, expanded %>
           <% a2_key = "A2_PUBLICATION_AFTER_CELEBRATION"
              a2_sev  = @flag_type_severities[a2_key] || "medium"
-             a2_cnt  = @flags_by_type[a2_key].to_i
              a2_sty  = severity_styles(a2_sev) %>
           <div class="bg-white/[0.02] border <%= a2_sty[:border] %> rounded-lg p-4">
             <div class="flex items-start gap-3 mb-3">
@@ -311,27 +304,17 @@
                 <span class="font-mono text-xs font-semibold text-[#e8e0d4]"><%= t("dashboard.methodology.flags.a2_title") %></span>
                 <span class="font-mono text-xs text-white/40 ml-2"><%= t("dashboard.methodology.flags.a2_desc") %></span>
               </div>
-              <div class="flex items-center gap-2 shrink-0">
-                <% if a2_cnt > 0 %>
-                  <span class="font-mono text-[10px] text-white/30"><%= t("dashboard.methodology.contracts_affected", count: a2_cnt) %></span>
-                <% end %>
-                <span class="font-mono text-[9px] font-bold px-1.5 py-0.5 rounded border <%= a2_sty[:bg] %> <%= a2_sty[:text] %> <%= a2_sty[:border] %>"><%= t("contracts.show.flags.severity_#{a2_sev}") %></span>
-              </div>
+              <span class="font-mono text-[9px] font-bold px-1.5 py-0.5 rounded border shrink-0 <%= a2_sty[:bg] %> <%= a2_sty[:text] %> <%= a2_sty[:border] %>"><%= t("contracts.show.flags.severity_#{a2_sev}") %></span>
             </div>
             <div class="ml-9 space-y-2">
               <p class="font-mono text-[11px] text-white/55 leading-relaxed"><%= t("dashboard.methodology.flags.a2_detail") %></p>
               <p class="font-mono text-[11px] text-white/35 leading-relaxed"><%= t("dashboard.methodology.flags.a2_how") %></p>
             </div>
           </div>
-          <%# A3–A9 — planned, simple rows with expected severity %>
+          <%# A3, A4 — compact, not yet active %>
           <% [
             ["A3", t("dashboard.methodology.flags.a3_title"), t("dashboard.methodology.flags.a3_desc"), "high"],
             ["A4", t("dashboard.methodology.flags.a4_title"), t("dashboard.methodology.flags.a4_desc"), "medium"],
-            ["A5", t("dashboard.methodology.flags.a5_title"), t("dashboard.methodology.flags.a5_desc"), "high"],
-            ["A6", t("dashboard.methodology.flags.a6_title"), t("dashboard.methodology.flags.a6_desc"), "medium"],
-            ["A7", t("dashboard.methodology.flags.a7_title"), t("dashboard.methodology.flags.a7_desc"), "high"],
-            ["A8", t("dashboard.methodology.flags.a8_title"), t("dashboard.methodology.flags.a8_desc"), "low"],
-            ["A9", t("dashboard.methodology.flags.a9_title"), t("dashboard.methodology.flags.a9_desc"), "medium"]
           ].each do |code, title, desc, sev| %>
             <% sty = severity_styles(sev) %>
             <div class="flex items-center gap-3 bg-white/[0.02] border border-white/[0.06] rounded-lg p-3.5">
@@ -343,6 +326,80 @@
               <span class="font-mono text-[9px] font-bold px-1.5 py-0.5 rounded border shrink-0 <%= sty[:bg] %> <%= sty[:text] %> <%= sty[:border] %>"><%= t("contracts.show.flags.severity_#{sev}") %></span>
             </div>
           <% end %>
+          <%# A5 — active, expanded %>
+          <% a5_key = "A5_THRESHOLD_SPLITTING"
+             a5_sev  = @flag_type_severities[a5_key] || "medium"
+             a5_sty  = severity_styles(a5_sev) %>
+          <div class="bg-white/[0.02] border <%= a5_sty[:border] %> rounded-lg p-4">
+            <div class="flex items-start gap-3 mb-3">
+              <span class="font-mono text-[10px] font-bold text-[#ff4444] w-6 shrink-0 pt-0.5">A5</span>
+              <div class="flex-1 min-w-0">
+                <span class="font-mono text-xs font-semibold text-[#e8e0d4]"><%= t("dashboard.methodology.flags.a5_title") %></span>
+                <span class="font-mono text-xs text-white/40 ml-2"><%= t("dashboard.methodology.flags.a5_desc") %></span>
+              </div>
+              <span class="font-mono text-[9px] font-bold px-1.5 py-0.5 rounded border shrink-0 <%= a5_sty[:bg] %> <%= a5_sty[:text] %> <%= a5_sty[:border] %>"><%= t("contracts.show.flags.severity_#{a5_sev}") %></span>
+            </div>
+            <div class="ml-9 space-y-2">
+              <p class="font-mono text-[11px] text-white/55 leading-relaxed"><%= t("dashboard.methodology.flags.a5_detail") %></p>
+              <p class="font-mono text-[11px] text-white/35 leading-relaxed"><%= t("dashboard.methodology.flags.a5_how") %></p>
+            </div>
+          </div>
+          <%# A6 — compact %>
+          <% a6_sty = severity_styles("medium") %>
+          <div class="flex items-center gap-3 bg-white/[0.02] border border-white/[0.06] rounded-lg p-3.5">
+            <span class="font-mono text-[10px] font-bold text-[#ff4444] w-6 shrink-0">A6</span>
+            <div class="flex-1 min-w-0">
+              <span class="font-mono text-xs font-semibold text-[#e8e0d4]"><%= t("dashboard.methodology.flags.a6_title") %></span>
+              <span class="font-mono text-xs text-white/40 ml-2"><%= t("dashboard.methodology.flags.a6_desc") %></span>
+            </div>
+            <span class="font-mono text-[9px] font-bold px-1.5 py-0.5 rounded border shrink-0 <%= a6_sty[:bg] %> <%= a6_sty[:text] %> <%= a6_sty[:border] %>"><%= t("contracts.show.flags.severity_medium") %></span>
+          </div>
+          <%# A7 — active, expanded %>
+          <% a7_key = "A7_ABNORMAL_DIRECT_AWARD_RATE"
+             a7_sev  = @flag_type_severities[a7_key] || "medium"
+             a7_sty  = severity_styles(a7_sev) %>
+          <div class="bg-white/[0.02] border <%= a7_sty[:border] %> rounded-lg p-4">
+            <div class="flex items-start gap-3 mb-3">
+              <span class="font-mono text-[10px] font-bold text-[#ff4444] w-6 shrink-0 pt-0.5">A7</span>
+              <div class="flex-1 min-w-0">
+                <span class="font-mono text-xs font-semibold text-[#e8e0d4]"><%= t("dashboard.methodology.flags.a7_title") %></span>
+                <span class="font-mono text-xs text-white/40 ml-2"><%= t("dashboard.methodology.flags.a7_desc") %></span>
+              </div>
+              <span class="font-mono text-[9px] font-bold px-1.5 py-0.5 rounded border shrink-0 <%= a7_sty[:bg] %> <%= a7_sty[:text] %> <%= a7_sty[:border] %>"><%= t("contracts.show.flags.severity_#{a7_sev}") %></span>
+            </div>
+            <div class="ml-9 space-y-2">
+              <p class="font-mono text-[11px] text-white/55 leading-relaxed"><%= t("dashboard.methodology.flags.a7_detail") %></p>
+              <p class="font-mono text-[11px] text-white/35 leading-relaxed"><%= t("dashboard.methodology.flags.a7_how") %></p>
+            </div>
+          </div>
+          <%# A8 — compact %>
+          <% a8_sty = severity_styles("low") %>
+          <div class="flex items-center gap-3 bg-white/[0.02] border border-white/[0.06] rounded-lg p-3.5">
+            <span class="font-mono text-[10px] font-bold text-[#ff4444] w-6 shrink-0">A8</span>
+            <div class="flex-1 min-w-0">
+              <span class="font-mono text-xs font-semibold text-[#e8e0d4]"><%= t("dashboard.methodology.flags.a8_title") %></span>
+              <span class="font-mono text-xs text-white/40 ml-2"><%= t("dashboard.methodology.flags.a8_desc") %></span>
+            </div>
+            <span class="font-mono text-[9px] font-bold px-1.5 py-0.5 rounded border shrink-0 <%= a8_sty[:bg] %> <%= a8_sty[:text] %> <%= a8_sty[:border] %>"><%= t("contracts.show.flags.severity_low") %></span>
+          </div>
+          <%# A9 — active, expanded %>
+          <% a9_key = "A9_PRICE_ANOMALY"
+             a9_sev  = @flag_type_severities[a9_key] || "medium"
+             a9_sty  = severity_styles(a9_sev) %>
+          <div class="bg-white/[0.02] border <%= a9_sty[:border] %> rounded-lg p-4">
+            <div class="flex items-start gap-3 mb-3">
+              <span class="font-mono text-[10px] font-bold text-[#ff4444] w-6 shrink-0 pt-0.5">A9</span>
+              <div class="flex-1 min-w-0">
+                <span class="font-mono text-xs font-semibold text-[#e8e0d4]"><%= t("dashboard.methodology.flags.a9_title") %></span>
+                <span class="font-mono text-xs text-white/40 ml-2"><%= t("dashboard.methodology.flags.a9_desc") %></span>
+              </div>
+              <span class="font-mono text-[9px] font-bold px-1.5 py-0.5 rounded border shrink-0 <%= a9_sty[:bg] %> <%= a9_sty[:text] %> <%= a9_sty[:border] %>"><%= t("contracts.show.flags.severity_#{a9_sev}") %></span>
+            </div>
+            <div class="ml-9 space-y-2">
+              <p class="font-mono text-[11px] text-white/55 leading-relaxed"><%= t("dashboard.methodology.flags.a9_detail") %></p>
+              <p class="font-mono text-[11px] text-white/35 leading-relaxed"><%= t("dashboard.methodology.flags.a9_how") %></p>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -367,21 +424,42 @@
                 <p class="font-mono text-[11px] text-white/35 leading-relaxed"><%= t("dashboard.methodology.flags.b5_how") %></p>
               </div>
             </div>
-          <%# B2, B3 active %>
-          <% [
-            ["B2", t("dashboard.methodology.flags.b2_title"), t("dashboard.methodology.flags.b2_desc"), "high"],
-            ["B3", t("dashboard.methodology.flags.b3_title"), t("dashboard.methodology.flags.b3_desc"), "medium"]
-          ].each do |code, title, desc, sev| %>
-            <% sty = severity_styles(sev) %>
-            <div class="flex items-center gap-3 bg-white/[0.02] border border-white/[0.06] rounded-lg p-3.5">
-              <span class="font-mono text-[10px] font-bold text-[#c8a84e] w-6 shrink-0"><%= code %></span>
+          <%# B2 — active, expanded %>
+          <% b2_key = "B2_SUPPLIER_CONCENTRATION"
+             b2_sev  = @flag_type_severities[b2_key] || "high"
+             b2_sty  = severity_styles(b2_sev) %>
+          <div class="bg-white/[0.02] border border-[#c8a84e33] rounded-lg p-4">
+            <div class="flex items-start gap-3 mb-3">
+              <span class="font-mono text-[10px] font-bold text-[#c8a84e] w-6 shrink-0 pt-0.5">B2</span>
               <div class="flex-1 min-w-0">
-                <span class="font-mono text-xs font-semibold text-[#e8e0d4]"><%= title %></span>
-                <span class="font-mono text-xs text-white/40 ml-2"><%= desc %></span>
+                <span class="font-mono text-xs font-semibold text-[#e8e0d4]"><%= t("dashboard.methodology.flags.b2_title") %></span>
+                <span class="font-mono text-xs text-white/40 ml-2"><%= t("dashboard.methodology.flags.b2_desc") %></span>
               </div>
-              <span class="font-mono text-[9px] font-bold px-1.5 py-0.5 rounded border shrink-0 <%= sty[:bg] %> <%= sty[:text] %> <%= sty[:border] %>"><%= t("contracts.show.flags.severity_#{sev}") %></span>
+              <span class="font-mono text-[9px] font-bold px-1.5 py-0.5 rounded border shrink-0 <%= b2_sty[:bg] %> <%= b2_sty[:text] %> <%= b2_sty[:border] %>"><%= t("contracts.show.flags.severity_#{b2_sev}") %></span>
             </div>
-          <% end %>
+            <div class="ml-9 space-y-2">
+              <p class="font-mono text-[11px] text-white/55 leading-relaxed"><%= t("dashboard.methodology.flags.b2_detail") %></p>
+              <p class="font-mono text-[11px] text-white/35 leading-relaxed"><%= t("dashboard.methodology.flags.b2_how") %></p>
+            </div>
+          </div>
+          <%# B3 — active, expanded %>
+          <% b3_key = "B3_PRICE_HIGH"
+             b3_sev  = @flag_type_severities[b3_key] || "medium"
+             b3_sty  = severity_styles(b3_sev) %>
+          <div class="bg-white/[0.02] border border-[#c8a84e33] rounded-lg p-4">
+            <div class="flex items-start gap-3 mb-3">
+              <span class="font-mono text-[10px] font-bold text-[#c8a84e] w-6 shrink-0 pt-0.5">B3</span>
+              <div class="flex-1 min-w-0">
+                <span class="font-mono text-xs font-semibold text-[#e8e0d4]"><%= t("dashboard.methodology.flags.b3_title") %></span>
+                <span class="font-mono text-xs text-white/40 ml-2"><%= t("dashboard.methodology.flags.b3_desc") %></span>
+              </div>
+              <span class="font-mono text-[9px] font-bold px-1.5 py-0.5 rounded border shrink-0 <%= b3_sty[:bg] %> <%= b3_sty[:text] %> <%= b3_sty[:border] %>"><%= t("contracts.show.flags.severity_#{b3_sev}") %></span>
+            </div>
+            <div class="ml-9 space-y-2">
+              <p class="font-mono text-[11px] text-white/55 leading-relaxed"><%= t("dashboard.methodology.flags.b3_detail") %></p>
+              <p class="font-mono text-[11px] text-white/35 leading-relaxed"><%= t("dashboard.methodology.flags.b3_how") %></p>
+            </div>
+          </div>
           <%# B1, B4 pending sufficient data volume %>
           <% [
             ["B1", t("dashboard.methodology.flags.b1_title"), t("dashboard.methodology.flags.b1_desc"), "high"],
@@ -452,6 +530,34 @@
           </div>
         </div>
         <p class="font-mono text-[10px] text-white/25 mt-4 leading-relaxed"><%= t("dashboard.methodology.risk_scoring.degradation") %></p>
+        <div class="mt-5 pt-4 border-t border-white/[0.06]">
+          <div class="font-mono text-[10px] tracking-[2px] text-white/30 mb-3"><%= t("dashboard.methodology.risk_scoring.flag_scores_heading") %></div>
+          <div class="space-y-1">
+            <% [
+              ["A1", "A1_REPEAT_DIRECT_AWARD",               50, "high"],
+              ["A2", "A2_PUBLICATION_AFTER_CELEBRATION",      40, "medium"],
+              ["A5", "A5_THRESHOLD_SPLITTING",                35, "medium"],
+              ["A7", "A7_ABNORMAL_DIRECT_AWARD_RATE",         35, "medium"],
+              ["A9", "A9_PRICE_ANOMALY (ratio 1.5–2.0)",      30, "medium"],
+              ["A9", "A9_PRICE_ANOMALY (ratio ≥ 2.0)",        55, "high"],
+              ["A9", "A9_PRICE_REDUCTION (ratio < 0.5)",      10, "low"],
+              ["B2", "B2_SUPPLIER_CONCENTRATION",             45, "high"],
+              ["B3", "B3_PRICE_HIGH / B3_PRICE_LOW (|z|≥2.5)", 25, "medium"],
+              ["B3", "B3_PRICE_HIGH / B3_PRICE_LOW (|z|≥3.5)", 45, "high"],
+              ["B5", "B5_BENFORD_DEVIATION (medium)",         35, "medium"],
+              ["B5", "B5_BENFORD_DEVIATION (high)",           55, "high"],
+              ["C1", "C1_MISSING_CPV_CODE",                   25, "medium"],
+              ["C3", "C3_SHORT_CONTRACT_DURATION",            20, "low"],
+            ].each do |track, flag, score, sev| %>
+              <% row_sty = severity_styles(sev) %>
+              <div class="flex items-center gap-2">
+                <span class="font-mono text-[9px] font-bold text-white/30 w-4 shrink-0"><%= track %></span>
+                <span class="font-mono text-[9px] text-white/40 flex-1"><%= flag %></span>
+                <span class="font-mono text-[9px] font-bold px-1.5 py-0.5 rounded border shrink-0 <%= row_sty[:bg] %> <%= row_sty[:text] %> <%= row_sty[:border] %>"><%= score %></span>
+              </div>
+            <% end %>
+          </div>
+        </div>
       </div>
 
       <%# Sources %>

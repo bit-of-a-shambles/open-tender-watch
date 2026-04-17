@@ -145,4 +145,16 @@ class ContractTest < ActiveSupport::TestCase
     assert framework.valid?,
            "base_price > EUR 1B must be accepted; framework agreements can have large ceilings"
   end
+
+  test "to_evidence_hash returns nil for data_source when absent" do
+    contract = Contract.create!(
+      external_id: "no-ds-001",
+      object: "Test without data source",
+      country_code: "PT",
+      contracting_entity: entities(:one)
+    )
+    evidence = contract.to_evidence_hash
+    assert_nil evidence[:data_source]
+    assert evidence.key?(:exported_at)
+  end
 end
