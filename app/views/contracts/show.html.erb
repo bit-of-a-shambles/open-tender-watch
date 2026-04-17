@@ -20,6 +20,11 @@
         · <%= @contract.data_source.name %>
       <% end %>
     </div>
+    <div class="flex items-center gap-2 mt-3">
+      <%= link_to t("exports.download_json"), contract_path(@contract, format: :json),
+          class: "border border-white/10 text-white/30 font-mono text-[10px] tracking-widest px-3 py-1.5 rounded hover:border-[#c8a84e44] hover:text-[#c8a84e] transition-all",
+          data: { turbo: false } %>
+    </div>
   </header>
 
   <div class="grid grid-cols-1 lg:grid-cols-[1fr_280px] gap-6 mt-6">

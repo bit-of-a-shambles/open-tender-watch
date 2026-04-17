@@ -35,6 +35,14 @@
         <span class="<%= s[:text] %> uppercase tracking-[1px]"><%= t("contracts.show.flags.risk_score", score: @company_risk_score, tier: t("contracts.show.flags.risk_tier_#{risk_tier}")) %></span>
       </div>
     <% end %>
+    <div class="flex items-center gap-2 mt-3">
+      <%= link_to t("exports.download_csv"), company_path(@entity, format: :csv),
+          class: "border border-white/10 text-white/30 font-mono text-[10px] tracking-widest px-3 py-1.5 rounded hover:border-[#c8a84e44] hover:text-[#c8a84e] transition-all",
+          data: { turbo: false } %>
+      <%= link_to t("exports.download_json"), company_path(@entity, format: :json),
+          class: "border border-white/10 text-white/30 font-mono text-[10px] tracking-widest px-3 py-1.5 rounded hover:border-[#c8a84e44] hover:text-[#c8a84e] transition-all",
+          data: { turbo: false } %>
+    </div>
   </header>
 
   <div class="flex flex-col-reverse lg:grid lg:grid-cols-[1fr_280px] gap-6 mt-6">
@@ -48,10 +56,14 @@
           <h2 class="font-['Space_Grotesk'] text-base font-semibold text-[#e8e0d4] mb-4"><%= t("companies.show.pivot_heading") %></h2>
 
           <div class="border border-white/[0.08] rounded-lg overflow-hidden">
+            <%# Sortable header row %>
             <div class="hidden sm:grid grid-cols-[1fr_100px_130px] bg-white/[0.03] px-4 py-3 border-b border-white/[0.08] font-mono text-[10px] tracking-[2px] text-white/35 uppercase">
-              <span><%= t("companies.show.pivot_col_authority") %></span>
-              <span class="text-right"><%= t("companies.show.pivot_col_contracts") %></span>
-              <span class="text-right"><%= t("companies.show.pivot_col_value") %></span>
+              <%= sort_header_link t("companies.show.pivot_col_authority"), column: "authority_name", sort_col: @pivot_sort_col, sort_dir: @pivot_sort_dir,
+                    url: company_path(@entity, pivot_sort: "authority_name", pivot_dir: next_sort_dir("authority_name", @pivot_sort_col, @pivot_sort_dir), pivot_page: 1, page: @page, sort: @sort_col, dir: @sort_dir, flag_type: @flag_filter, date_from: @date_from, date_to: @date_to) %>
+              <%= sort_header_link t("companies.show.pivot_col_contracts"), column: "contract_count", sort_col: @pivot_sort_col, sort_dir: @pivot_sort_dir, align_right: true,
+                    url: company_path(@entity, pivot_sort: "contract_count", pivot_dir: next_sort_dir("contract_count", @pivot_sort_col, @pivot_sort_dir), pivot_page: 1, page: @page, sort: @sort_col, dir: @sort_dir, flag_type: @flag_filter, date_from: @date_from, date_to: @date_to) %>
+              <%= sort_header_link t("companies.show.pivot_col_value"), column: "total_value", sort_col: @pivot_sort_col, sort_dir: @pivot_sort_dir, align_right: true,
+                    url: company_path(@entity, pivot_sort: "total_value", pivot_dir: next_sort_dir("total_value", @pivot_sort_col, @pivot_sort_dir), pivot_page: 1, page: @page, sort: @sort_col, dir: @sort_dir, flag_type: @flag_filter, date_from: @date_from, date_to: @date_to) %>
             </div>
 
             <% if @authority_pivot.empty? %>
@@ -89,12 +101,12 @@
               <div class="flex gap-2">
                 <% if @pivot_page > 1 %>
                   <%= link_to t("companies.show.pagination_prev"),
-                        company_path(@entity, pivot_page: @pivot_page - 1, page: @page, sort: @sort_col, dir: @sort_dir, flag_type: @flag_filter, date_from: @date_from, date_to: @date_to),
+                        company_path(@entity, pivot_page: @pivot_page - 1, pivot_sort: @pivot_sort_col, pivot_dir: @pivot_sort_dir, page: @page, sort: @sort_col, dir: @sort_dir, flag_type: @flag_filter, date_from: @date_from, date_to: @date_to),
                         class: "border border-white/10 px-3 py-1.5 rounded hover:border-[#c8a84e44] hover:text-[#c8a84e] transition-all" %>
                 <% end %>
                 <% if @pivot_page < @pivot_total_pages %>
                   <%= link_to t("companies.show.pagination_next"),
-                        company_path(@entity, pivot_page: @pivot_page + 1, page: @page, sort: @sort_col, dir: @sort_dir, flag_type: @flag_filter, date_from: @date_from, date_to: @date_to),
+                        company_path(@entity, pivot_page: @pivot_page + 1, pivot_sort: @pivot_sort_col, pivot_dir: @pivot_sort_dir, page: @page, sort: @sort_col, dir: @sort_dir, flag_type: @flag_filter, date_from: @date_from, date_to: @date_to),
                         class: "border border-white/10 px-3 py-1.5 rounded hover:border-[#c8a84e44] hover:text-[#c8a84e] transition-all" %>
                 <% end %>
               </div>
@@ -145,24 +157,6 @@
         <% end %>
       <% end %>
 
-      <%# Sort controls %>
-      <div class="flex items-center gap-3 mb-4">
-        <span class="font-mono text-[10px] tracking-[2px] text-white/35 uppercase"><%= t("companies.show.sort_by") %>:</span>
-        <% [
-          ["celebration_date", t("companies.show.sort_date")],
-          ["base_price",       t("companies.show.sort_price")],
-          ["object",           t("companies.show.sort_object")]
-        ].each do |col, label| %>
-          <% active = @sort_col == col %>
-          <% next_dir = (active && @sort_dir == "desc") ? "asc" : "desc" %>
-          <%= link_to company_path(@entity, sort: col, dir: next_dir, flag_type: @flag_filter, date_from: @date_from, date_to: @date_to, page: 1, pivot_page: @pivot_page),
-              class: "font-mono text-[10px] tracking-[1px] px-2.5 py-1 rounded border transition-all #{active ? 'border-[#c8a84e66] text-[#c8a84e] bg-[#c8a84e0d]' : 'border-white/10 text-white/35 hover:text-white/60 hover:border-white/20'}" do %>
-            <%= label %>
-            <% if active %><%= @sort_dir == "asc" ? " ↑" : " ↓" %><% end %>
-          <% end %>
-        <% end %>
-      </div>
-
       <%# Count %>
       <% if @total > 0 %>
         <p class="font-mono text-[11px] text-white/30 mb-3">
@@ -172,11 +166,15 @@
 
       <%# Contracts won table %>
       <div class="border border-white/[0.08] rounded-lg overflow-hidden">
+        <%# Sortable header row %>
         <div class="hidden sm:grid grid-cols-[1fr_150px_110px_90px] bg-white/[0.03] px-4 py-3 border-b border-white/[0.08] font-mono text-[10px] tracking-[2px] text-white/35 uppercase">
-          <span><%= t("companies.show.col_contract") %></span>
+          <%= sort_header_link t("companies.show.col_contract"), column: "object", sort_col: @sort_col, sort_dir: @sort_dir,
+                url: company_path(@entity, sort: "object", dir: next_sort_dir("object", @sort_col, @sort_dir), flag_type: @flag_filter, date_from: @date_from, date_to: @date_to, page: 1, pivot_page: @pivot_page) %>
           <span><%= t("companies.show.col_authority") %></span>
-          <span class="text-right"><%= t("companies.show.col_price") %></span>
-          <span class="text-right"><%= t("companies.show.col_date") %></span>
+          <%= sort_header_link t("companies.show.col_price"), column: "base_price", sort_col: @sort_col, sort_dir: @sort_dir, align_right: true,
+                url: company_path(@entity, sort: "base_price", dir: next_sort_dir("base_price", @sort_col, @sort_dir), flag_type: @flag_filter, date_from: @date_from, date_to: @date_to, page: 1, pivot_page: @pivot_page) %>
+          <%= sort_header_link t("companies.show.col_date"), column: "celebration_date", sort_col: @sort_col, sort_dir: @sort_dir, align_right: true,
+                url: company_path(@entity, sort: "celebration_date", dir: next_sort_dir("celebration_date", @sort_col, @sort_dir), flag_type: @flag_filter, date_from: @date_from, date_to: @date_to, page: 1, pivot_page: @pivot_page) %>
         </div>
 
         <% if @contracts.empty? %>

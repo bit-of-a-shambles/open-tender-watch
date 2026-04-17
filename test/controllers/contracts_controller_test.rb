@@ -199,4 +199,99 @@ class ContractsControllerTest < ActionDispatch::IntegrationTest
     assert_not_includes response.body, contracts(:one).object
     assert_includes response.body, contracts(:two).object
   end
+
+  # ---------------------------------------------------------------
+  # CSV export
+  # ---------------------------------------------------------------
+
+  test "index CSV export returns CSV with correct headers" do
+    get contracts_url(format: :csv)
+    assert_response :success
+    assert_equal "text/csv", response.media_type
+    lines = response.body.lines
+    assert_equal Contract::CSV_COLUMNS.join(",") + "\n", lines.first
+  end
+
+  test "index CSV export includes contract data" do
+    get contracts_url(format: :csv)
+    assert_response :success
+    assert_includes response.body, contracts(:one).external_id
+    assert_includes response.body, contracts(:one).object
+  end
+
+  test "index CSV export respects filters" do
+    contracts(:one).update!(procedure_type: "Concurso Público")
+    contracts(:two).update!(procedure_type: "Ajuste Direto")
+
+    get contracts_url(format: :csv, procedure_type: "Concurso Público")
+    assert_response :success
+    assert_includes response.body, contracts(:one).external_id
+    assert_not_includes response.body, contracts(:two).external_id
+  end
+
+  test "index CSV export includes flag information" do
+    Flag.create!(
+      contract: contracts(:one),
+      flag_type: "A2_PUBLICATION_AFTER_CELEBRATION",
+      severity: "high",
+      score: 40,
+      fired_at: Time.current
+    )
+
+    get contracts_url(format: :csv, flagged: "only")
+    assert_response :success
+    assert_includes response.body, "A2_PUBLICATION_AFTER_CELEBRATION"
+  end
+
+  test "index CSV sets content-disposition with filename" do
+    get contracts_url(format: :csv)
+    assert_response :success
+    assert_match(/open-tender-watch-contracts-.*\.csv/, response.headers["Content-Disposition"])
+  end
+
+  test "index JSON export returns JSON array of contracts" do
+    get contracts_url(format: :json)
+    assert_response :success
+    assert_equal "application/json", response.media_type
+    data = JSON.parse(response.body)
+    assert data.key?("contracts")
+    assert data.key?("count")
+    assert data.key?("exported_at")
+  end
+
+  # ---------------------------------------------------------------
+  # JSON export (show)
+  # ---------------------------------------------------------------
+
+  test "show JSON export returns full evidence hash" do
+    Flag.create!(
+      contract: contracts(:one),
+      flag_type: "A2_PUBLICATION_AFTER_CELEBRATION",
+      severity: "high",
+      score: 40,
+      details: { "rule" => "A2/A3 date sequence anomaly" },
+      fired_at: Time.current
+    )
+
+    get contract_url(contracts(:one), format: :json)
+    assert_response :success
+    assert_equal "application/json", response.media_type
+    data = JSON.parse(response.body)
+    assert_equal contracts(:one).external_id, data["external_id"]
+    assert data.key?("contracting_entity")
+    assert data.key?("winners")
+    assert data.key?("flags")
+    assert_equal 1, data["flags"].size
+    assert_equal "A2_PUBLICATION_AFTER_CELEBRATION", data["flags"].first["flag_type"]
+    assert data.key?("risk_score")
+    assert data.key?("exported_at")
+  end
+
+  test "show JSON export works without flags" do
+    get contract_url(contracts(:two), format: :json)
+    assert_response :success
+    data = JSON.parse(response.body)
+    assert_equal [], data["flags"]
+    assert_equal 0, data["risk_score"]
+  end
 end

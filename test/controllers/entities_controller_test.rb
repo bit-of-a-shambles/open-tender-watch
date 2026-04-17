@@ -119,4 +119,95 @@ class EntitiesControllerTest < ActionDispatch::IntegrationTest
     assert_not_includes response.body, contracts(:one).object
     assert_includes response.body, contracts(:two).object
   end
+
+  # ---------------------------------------------------------------
+  # CSV export
+  # ---------------------------------------------------------------
+
+  test "show CSV export returns CSV with correct headers" do
+    get entity_url(entities(:one), format: :csv)
+    assert_response :success
+    assert_equal "text/csv", response.media_type
+    lines = response.body.lines
+    assert_equal Contract::CSV_COLUMNS.join(",") + "\n", lines.first
+  end
+
+  test "show CSV export includes entity contracts" do
+    get entity_url(entities(:one), format: :csv)
+    assert_response :success
+    assert_includes response.body, contracts(:one).external_id
+  end
+
+  test "show CSV export sets filename with entity NIF" do
+    get entity_url(entities(:one), format: :csv)
+    assert_response :success
+    assert_match(/entity-#{entities(:one).tax_identifier}/, response.headers["Content-Disposition"])
+  end
+
+  test "show CSV export respects flag filter" do
+    Flag.create!(
+      contract: contracts(:one),
+      flag_type: "A2_PUBLICATION_AFTER_CELEBRATION",
+      severity: "high",
+      score: 40,
+      fired_at: Time.current
+    )
+
+    get entity_url(entities(:one), format: :csv, flag_type: "A2_PUBLICATION_AFTER_CELEBRATION")
+    assert_response :success
+    assert_includes response.body, contracts(:one).external_id
+    assert_not_includes response.body, contracts(:two).external_id
+  end
+
+  # ---------------------------------------------------------------
+  # JSON export
+  # ---------------------------------------------------------------
+
+  test "show JSON export returns entity profile" do
+    get entity_url(entities(:one), format: :json)
+    assert_response :success
+    assert_equal "application/json", response.media_type
+    data = JSON.parse(response.body)
+    assert data.key?("entity")
+    assert_equal entities(:one).name, data["entity"]["name"]
+    assert_equal entities(:one).tax_identifier, data["entity"]["tax_identifier"]
+    assert data.key?("flag_stats")
+    assert data.key?("exported_at")
+  end
+
+  test "show JSON export includes benford analysis when present" do
+    BenfordAnalysis.create!(
+      entity: entities(:one),
+      sample_size: 100,
+      chi_square: 20.5,
+      flagged: true,
+      digit_distribution: { "1" => 35, "2" => 15, "3" => 10, "4" => 8, "5" => 7, "6" => 6, "7" => 6, "8" => 7, "9" => 6 },
+      computed_at: Time.current
+    )
+
+    get entity_url(entities(:one), format: :json)
+    assert_response :success
+    data = JSON.parse(response.body)
+    assert data.key?("benford_analysis")
+    assert_equal 100, data["benford_analysis"]["sample_size"]
+    assert_equal true, data["benford_analysis"]["flagged"]
+  end
+
+  test "show JSON export includes flag stats when entity has flagged contracts" do
+    FlagEntityStat.create!(
+      entity: entities(:one),
+      flag_type: "A2_PUBLICATION_AFTER_CELEBRATION",
+      severity: "high",
+      contract_count: 5,
+      total_exposure: 100_000.0,
+      computed_at: Time.current
+    )
+
+    get entity_url(entities(:one), format: :json)
+    assert_response :success
+    data = JSON.parse(response.body)
+    assert_equal 1, data["flag_stats"].size
+    assert_equal "A2_PUBLICATION_AFTER_CELEBRATION", data["flag_stats"].first["flag_type"]
+    assert_equal "high", data["flag_stats"].first["severity"]
+  end
 end

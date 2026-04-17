@@ -82,6 +82,9 @@
       <%= link_to t("contracts.index.clear"), contracts_path,
           class: "border border-white/10 text-white/30 font-mono text-xs tracking-widest px-4 py-2 rounded hover:text-white/50 transition-all" %>
     <% end %>
+    <%= link_to t("exports.download_csv"), contracts_path(request.query_parameters.merge(format: :csv)),
+        class: "border border-white/10 text-white/30 font-mono text-xs tracking-widest px-4 py-2 rounded hover:border-[#c8a84e44] hover:text-[#c8a84e] transition-all inline-flex items-center gap-1.5",
+        data: { turbo: false } %>
   <% end %>
 
   <%# Table %>
