@@ -68,6 +68,10 @@ class ContractTest < ActiveSupport::TestCase
     assert_respond_to contracts(:one), :contract_winners
   end
 
+  test "has many contract_bidders" do
+    assert_respond_to contracts(:one), :contract_bidders
+  end
+
   test "has many winners through contract_winners" do
     assert_respond_to contracts(:one), :winners
   end
@@ -97,6 +101,15 @@ class ContractTest < ActiveSupport::TestCase
     assert_equal 1, Flag.where(contract_id: contract.id).count
     contract.destroy
     assert_equal 0, Flag.where(contract_id: contract.id).count
+  end
+
+  test "contract_bidders destroyed with contract" do
+    contract = contracts(:one)
+    ContractBidder.create!(contract: contract, raw_label: "509000001 - Bidder Test")
+
+    assert_equal 1, ContractBidder.where(contract_id: contract.id).count
+    contract.destroy
+    assert_equal 0, ContractBidder.where(contract_id: contract.id).count
   end
 
   # ---------------------------------------------------------------------------
@@ -156,5 +169,19 @@ class ContractTest < ActiveSupport::TestCase
     evidence = contract.to_evidence_hash
     assert_nil evidence[:data_source]
     assert evidence.key?(:exported_at)
+  end
+
+  test "to_evidence_hash includes bidder evidence" do
+    contract = contracts(:one)
+    bidder = Entity.create!(name: "Bidder Entity", tax_identifier: "509100100", country_code: "PT", is_company: true)
+    contract.update!(bidder_count: 2)
+    ContractBidder.create!(contract: contract, entity: bidder, raw_label: "509100100 - Bidder Entity")
+    ContractBidder.create!(contract: contract, raw_label: "--Anonymous Bidder")
+
+    evidence = contract.to_evidence_hash
+    assert_equal 2, evidence[:bidder_count]
+    assert_equal 2, evidence[:bidders].size
+    assert_equal "509100100", evidence[:bidders].first[:tax_identifier]
+    assert_equal "--Anonymous Bidder", evidence[:bidders].last[:raw_label]
   end
 end

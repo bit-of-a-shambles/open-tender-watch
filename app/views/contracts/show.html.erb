@@ -76,6 +76,7 @@
             t("contracts.show.details.procedure")     => @contract.procedure_type,
             t("contracts.show.details.cpv_code")      => @contract.cpv_code,
             t("contracts.show.details.location")      => @contract.location,
+            t("contracts.show.details.bidder_count")  => @contract.bidder_count,
           }.each do |label, value| %>
             <div class="grid grid-cols-[100px_1fr] sm:grid-cols-[160px_1fr] gap-2 sm:gap-3 items-baseline">
               <dt class="font-mono text-[11px] text-white/30"><%= label %></dt>
@@ -104,6 +105,48 @@
               </div>
             <% end %>
           </div>
+        </div>
+      <% end %>
+
+      <% if @contract.bidder_count.present? || @contract.contract_bidders.any? %>
+        <div class="bg-white/[0.02] border border-white/[0.06] rounded-lg p-5">
+          <div class="flex items-center justify-between gap-3 mb-4">
+            <div class="font-mono text-[10px] tracking-[2px] text-white/35 uppercase">
+              <%= t("contracts.show.competition.heading") %>
+            </div>
+            <% if @contract.bidder_count.present? %>
+              <span class="font-mono text-[10px] text-[#c8a84e] bg-[#c8a84e0d] border border-[#c8a84e22] px-2 py-0.5 rounded">
+                <%= t("contracts.show.competition.bidder_count", count: @contract.bidder_count) %>
+              </span>
+            <% end %>
+          </div>
+          <% if @contract.contract_bidders.any? %>
+            <div class="space-y-2">
+              <% @contract.contract_bidders.each do |bidder| %>
+                <div class="flex items-center justify-between py-2.5 px-3 bg-white/[0.02] border border-white/[0.05] rounded gap-3">
+                  <div>
+                    <div class="text-sm text-[#e8e0d4] font-medium"><%= bidder.entity&.name || bidder.raw_label %></div>
+                    <div class="font-mono text-[10px] text-white/30 mt-0.5">
+                      <% if bidder.entity&.tax_identifier.present? %>
+                        <%= t("contracts.show.winners.nif", id: bidder.entity.tax_identifier) %>
+                      <% else %>
+                        <%= t("contracts.show.competition.unparsed_bidder") %>
+                      <% end %>
+                    </div>
+                  </div>
+                  <% if bidder.entity_id.nil? %>
+                    <span class="font-mono text-[10px] text-white/30 bg-white/[0.04] px-2 py-0.5 rounded border border-white/[0.06]">
+                      <%= t("contracts.show.competition.raw_label") %>
+                    </span>
+                  <% end %>
+                </div>
+              <% end %>
+            </div>
+          <% elsif @contract.bidder_count.present? %>
+            <div class="font-mono text-[11px] text-white/35">
+              <%= t("contracts.show.competition.count_only") %>
+            </div>
+          <% end %>
         </div>
       <% end %>
 

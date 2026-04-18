@@ -52,7 +52,15 @@ class EntityTest < ActiveSupport::TestCase
     assert_respond_to entities(:one), :contract_winners
   end
 
+  test "has many contract_bidders" do
+    assert_respond_to entities(:one), :contract_bidders
+  end
+
   test "has many contracts_won through contract_winners" do
     assert_respond_to entities(:one), :contracts_won
+  end
+
+  test "has many contracts_bid_on through contract_bidders" do
+    assert_respond_to entities(:one), :contracts_bid_on
   end
 end

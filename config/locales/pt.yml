@@ -195,6 +195,9 @@ pt:
       col_procedure: "Procedimento"
       col_price: "Preço Base"
       col_date: "Data"
+      bidder_count:
+        one: "1 concorrente"
+        other: "%{count} concorrentes"
       empty: "Nenhum contrato encontrado."
       pagination:
         info: "Página %{page} de %{total_pages} · %{total} resultados"
@@ -212,6 +215,15 @@ pt:
         procedure: "Procedimento"
         cpv_code: "Código CPV"
         location: "Localização"
+        bidder_count: "Número de Concorrentes"
+      competition:
+        heading: "Concorrência"
+        bidder_count:
+          one: "1 concorrente registado"
+          other: "%{count} concorrentes registados"
+        count_only: "Por agora, este contrato só tem disponível o número de concorrentes."
+        raw_label: "Rótulo bruto"
+        unparsed_bidder: "Identidade ainda não normalizada"
       winners:
         heading:
           one: "Adjudicatário"

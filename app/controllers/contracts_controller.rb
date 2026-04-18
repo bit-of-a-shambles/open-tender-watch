@@ -45,7 +45,7 @@ class ContractsController < ApplicationController
 
       format.csv do
         csv_scope = scope
-          .includes(:contracting_entity, :winners, :flags)
+          .includes(:contracting_entity, :winners, :flags, contract_bidders: :entity)
           .order(Arel.sql("celebration_date DESC, contracts.id DESC"))
           .limit(CSV_LIMIT)
 
@@ -57,7 +57,7 @@ class ContractsController < ApplicationController
 
       format.json do
         json_scope = scope
-          .includes(:contracting_entity, :winners, :flags)
+          .includes(:contracting_entity, :winners, :flags, contract_bidders: :entity)
           .order(Arel.sql("celebration_date DESC, contracts.id DESC"))
           .limit(CSV_LIMIT)
 
@@ -69,7 +69,7 @@ class ContractsController < ApplicationController
   end
 
   def show
-    @contract = Contract.includes(:contracting_entity, :winners, :data_source, :flags).find(params[:id])
+    @contract = Contract.includes(:contracting_entity, :winners, :data_source, :flags, contract_bidders: :entity).find(params[:id])
 
     respond_to do |format|
       format.html

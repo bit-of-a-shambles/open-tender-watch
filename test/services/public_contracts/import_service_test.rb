@@ -14,11 +14,16 @@ class PublicContracts::ImportServiceTest < ActiveSupport::TestCase
       "total_effective_price" => 14500.0,
       "cpv_code"      => "72224000",
       "location"      => "Lisboa",
+      "bidder_count"  => 2,
       "contracting_entity" => {
         "tax_identifier" => "500000001",
         "name"           => "Câmara Municipal Teste",
         "is_public_body" => true
       },
+      "bidders" => [
+        { "tax_identifier" => "509777001", "name" => "Empresa Concorrente A", "is_company" => true, "raw_label" => "509777001 - Empresa Concorrente A" },
+        { "tax_identifier" => "509777002", "name" => "Empresa Concorrente B", "is_company" => true, "raw_label" => "509777002 - Empresa Concorrente B" }
+      ],
       "winners" => [
         { "tax_identifier" => "509888001", "name" => "Empresa Vencedora Lda", "is_company" => true }
       ]
@@ -47,7 +52,7 @@ class PublicContracts::ImportServiceTest < ActiveSupport::TestCase
   end
 
   test "call creates the contracting entity" do
-    attrs = build_contract_attrs
+    attrs = build_contract_attrs("bidders" => [])
     with_mocked_adapter([ attrs ]) do |ds, _|
       assert_difference "Entity.count", 2 do
         PublicContracts::ImportService.new(ds).call
@@ -79,7 +84,37 @@ class PublicContracts::ImportServiceTest < ActiveSupport::TestCase
       assert_equal BigDecimal("14500.0"), contract.total_effective_price
       assert_equal attrs["cpv_code"], contract.cpv_code
       assert_equal attrs["location"], contract.location
+      assert_equal attrs["bidder_count"], contract.bidder_count
     end
+  end
+
+  test "call creates bidder entities and contract_bidders" do
+    attrs = build_contract_attrs
+    with_mocked_adapter([ attrs ]) do |ds, _|
+      assert_difference "ContractBidder.count", 2 do
+        PublicContracts::ImportService.new(ds).call
+      end
+    end
+
+    contract = Contract.find_by!(external_id: attrs["external_id"], country_code: "PT")
+    assert_equal 2, contract.contract_bidders.count
+    assert_equal [ "509777001", "509777002" ], contract.bidders.order(:tax_identifier).pluck(:tax_identifier)
+  end
+
+  test "call preserves bidder raw labels when tax id is missing" do
+    attrs = build_contract_attrs(
+      "bidder_count" => nil,
+      "bidders" => [ { "name" => "Sem NIF", "raw_label" => "--Sem NIF", "is_company" => true } ]
+    )
+
+    with_mocked_adapter([ attrs ]) do |ds, _|
+      PublicContracts::ImportService.new(ds).call
+    end
+
+    contract = Contract.find_by!(external_id: attrs["external_id"], country_code: "PT")
+    assert_equal 1, contract.bidder_count
+    assert_equal "--Sem NIF", contract.contract_bidders.first.raw_label
+    assert_nil contract.contract_bidders.first.entity_id
   end
 
   test "call sets data_source on contract" do
@@ -487,11 +522,13 @@ class PublicContracts::ImportServiceTest < ActiveSupport::TestCase
     shared_nif = "500099001"
     attrs1 = build_contract_attrs(
       "contracting_entity" => { "tax_identifier" => shared_nif, "name" => "Entidade Cache Teste", "is_public_body" => true },
-      "winners" => []
+      "winners" => [],
+      "bidders" => []
     )
     attrs2 = build_contract_attrs(
       "contracting_entity" => { "tax_identifier" => shared_nif, "name" => "Entidade Cache Teste", "is_public_body" => true },
-      "winners" => []
+      "winners" => [],
+      "bidders" => []
     )
     adapter = Object.new
     adapter.define_singleton_method(:each_contract) { |&blk| [ attrs1, attrs2 ].each { |a| blk.call(a) } }
@@ -601,6 +638,68 @@ class PublicContracts::ImportServiceTest < ActiveSupport::TestCase
         end
       end
     end
+  end
+
+  test "call_streaming inserts bidder rows with and without resolvable entities" do
+    attrs = build_contract_attrs(
+      "bidders" => [
+        { "tax_identifier" => "509777001", "name" => "Empresa Concorrente A", "is_company" => true, "raw_label" => "509777001 - Empresa Concorrente A" },
+        { "name" => "Sem NIF", "is_company" => true, "raw_label" => "--Sem NIF" }
+      ]
+    )
+    adapter = Object.new
+    adapter.define_singleton_method(:each_contract) { |&blk| blk.call(attrs) }
+    ds = data_sources(:portal_base)
+    ds.stub(:adapter, adapter) do
+      assert_difference "ContractBidder.count", 2 do
+        PublicContracts::ImportService.new(ds).call_streaming(progress: nil)
+      end
+    end
+
+    contract = Contract.find_by!(external_id: attrs["external_id"], country_code: "PT")
+    assert_equal 2, contract.contract_bidders.count
+    assert_equal 1, contract.contract_bidders.where.not(entity_id: nil).count
+  end
+
+  test "call_streaming backfills bidder data for existing contracts" do
+    attrs = build_contract_attrs(
+      "external_id" => "existing-bidder-backfill",
+      "bidder_count" => 3,
+      "bidders" => [
+        { "tax_identifier" => "509777001", "name" => "Empresa Concorrente A", "is_company" => true, "raw_label" => "509777001 - Empresa Concorrente A" },
+        { "tax_identifier" => "509777002", "name" => "Empresa Concorrente B", "is_company" => true, "raw_label" => "509777002 - Empresa Concorrente B" },
+        { "name" => "Sem NIF", "is_company" => true, "raw_label" => "--Sem NIF" }
+      ]
+    )
+
+    contract = Contract.create!(
+      external_id: attrs["external_id"],
+      country_code: "PT",
+      object: attrs["object"],
+      procedure_type: attrs["procedure_type"],
+      contract_type: attrs["contract_type"],
+      publication_date: attrs["publication_date"],
+      celebration_date: attrs["celebration_date"],
+      base_price: attrs["base_price"],
+      total_effective_price: attrs["total_effective_price"],
+      cpv_code: attrs["cpv_code"],
+      location: attrs["location"],
+      contracting_entity: entities(:one),
+      data_source: data_sources(:portal_base)
+    )
+
+    adapter = Object.new
+    adapter.define_singleton_method(:each_contract) { |&blk| blk.call(attrs) }
+    ds = data_sources(:portal_base)
+    ds.stub(:adapter, adapter) do
+      assert_difference "ContractBidder.count", 3 do
+        PublicContracts::ImportService.new(ds).call_streaming(progress: nil)
+      end
+    end
+
+    contract.reload
+    assert_equal 3, contract.bidder_count
+    assert_equal 3, contract.contract_bidders.count
   end
 
   test "call_streaming prints progress including skipped count" do

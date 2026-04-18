@@ -52,10 +52,6 @@ en:
         info: "Page %{page} of %{total_pages} · %{total} entities"
         prev: "← Prev"
         next: "Next →"
-      pagination:
-        info: "Page %{page} of %{total_pages} · %{total} entities"
-        prev: "← Prev"
-        next: "Next →"
     severity_filter:
       all: "All"
       high: "High"
@@ -199,6 +195,9 @@ en:
       col_procedure: "Procedure"
       col_price: "Base Price"
       col_date: "Date"
+      bidder_count:
+        one: "1 bidder"
+        other: "%{count} bidders"
       empty: "No contracts found."
       pagination:
         info: "Page %{page} of %{total_pages} · %{total} results"
@@ -216,6 +215,15 @@ en:
         procedure: "Procedure"
         cpv_code: "CPV Code"
         location: "Location"
+        bidder_count: "Bidder Count"
+      competition:
+        heading: "Competition"
+        bidder_count:
+          one: "1 bidder recorded"
+          other: "%{count} bidders recorded"
+        count_only: "Only the bidder count is currently available for this contract."
+        raw_label: "Raw label"
+        unparsed_bidder: "Identity not normalized"
       winners:
         heading:
           one: "Winner"

@@ -171,6 +171,28 @@ class ContractsControllerTest < ActionDispatch::IntegrationTest
     assert_includes response.body, "2025-06-01"
   end
 
+  test "show displays bidder competition section when bidder data exists" do
+    contract = contracts(:one)
+    contract.update!(bidder_count: 2)
+    bidder = Entity.create!(name: "Bidder Evidence", tax_identifier: "509300300", country_code: "PT", is_company: true)
+    ContractBidder.create!(contract: contract, entity: bidder, raw_label: "509300300 - Bidder Evidence")
+    ContractBidder.create!(contract: contract, raw_label: "--Unparsed Bidder")
+
+    get contract_url(contract)
+    assert_response :success
+    assert_includes response.body, I18n.t("contracts.show.competition.heading")
+    assert_includes response.body, "Bidder Evidence"
+    assert_includes response.body, I18n.t("contracts.show.competition.unparsed_bidder")
+  end
+
+  test "index displays bidder count badge when present" do
+    contracts(:one).update!(bidder_count: 3)
+
+    get contracts_url
+    assert_response :success
+    assert_includes response.body, I18n.t("contracts.index.bidder_count", count: 3)
+  end
+
   test "show does not display flags section when contract has no flags" do
     contract = contracts(:two)
     Flag.where(contract: contract).delete_all

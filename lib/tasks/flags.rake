@@ -58,6 +58,12 @@ namespace :flags do
     puts "A7 abnormal direct award rates flagged: #{flagged}"
   end
 
+  desc "Run A6 low-competition scoring (single bidder tenders)"
+  task run_a6: :environment do
+    flagged = Flags::Actions::LowCompetitionAction.new.call
+    puts "A6 low competition flagged: #{flagged}"
+  end
+
   desc "Run B3 pricing z-score anomaly scoring (unusual base_price relative to CPV-division × year peers)"
   task run_b3: :environment do
     flagged = Flags::Actions::PricingZScoreAction.new.call

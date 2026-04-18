@@ -117,6 +117,22 @@ class CompaniesControllerTest < ActionDispatch::IntegrationTest
     assert_includes response.body, contracts(:two).object
   end
 
+  test "show renders entity-style risk flag summary with severity" do
+    Flag.create!(
+      contract: contracts(:two),
+      flag_type: "A2_PUBLICATION_AFTER_CELEBRATION",
+      severity: "high",
+      score: 40,
+      details: { rule: "A2/A3 date sequence anomaly" },
+      fired_at: Time.current
+    )
+
+    get company_url(entities(:two))
+    assert_response :success
+    assert_includes response.body, "A2 ·"
+    assert_includes response.body, I18n.t("dashboard.insights.severity_high")
+  end
+
   test "show filters contracts by date_from" do
     contracts(:two).update!(publication_date: Date.new(2025, 6, 1))
 
@@ -140,6 +156,22 @@ class CompaniesControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
     # The pivot table header should be present
     assert_includes response.body, I18n.t("companies.show.pivot_heading")
+  end
+
+  test "show renders benford analysis when present" do
+    BenfordAnalysis.create!(
+      entity: entities(:two),
+      sample_size: 100,
+      chi_square: 20.5,
+      flagged: true,
+      digit_distribution: { "1" => 35, "2" => 15, "3" => 10, "4" => 8, "5" => 7, "6" => 6, "7" => 6, "8" => 7, "9" => 6 },
+      computed_at: Time.current
+    )
+
+    get company_url(entities(:two))
+    assert_response :success
+    assert_includes response.body, I18n.t("entities.show.benford_distribution")
+    assert_includes response.body, "χ² = 20.5"
   end
 
   test "show pivot paginates with pivot_page param" do
@@ -270,5 +302,25 @@ class CompaniesControllerTest < ActionDispatch::IntegrationTest
     data = JSON.parse(response.body)
     assert_equal 1, data["flag_stats"].size
     assert_equal "A2_PUBLICATION_AFTER_CELEBRATION", data["flag_stats"].first["flag_type"]
+    assert_equal "high", data["flag_stats"].first["severity"]
+    assert_equal contracts(:two).base_price.to_f, data["flag_stats"].first["total_exposure"]
+  end
+
+  test "show JSON export includes benford analysis when present" do
+    BenfordAnalysis.create!(
+      entity: entities(:two),
+      sample_size: 100,
+      chi_square: 20.5,
+      flagged: true,
+      digit_distribution: { "1" => 35, "2" => 15, "3" => 10, "4" => 8, "5" => 7, "6" => 6, "7" => 6, "8" => 7, "9" => 6 },
+      computed_at: Time.current
+    )
+
+    get company_url(entities(:two), format: :json)
+    assert_response :success
+    data = JSON.parse(response.body)
+    assert data.key?("benford_analysis")
+    assert_equal 100, data["benford_analysis"]["sample_size"]
+    assert_equal true, data["benford_analysis"]["flagged"]
   end
 end

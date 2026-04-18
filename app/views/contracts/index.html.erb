@@ -130,6 +130,13 @@
               <div class="font-mono text-[10px] text-white/25 mt-1">
                 <%= contract.country_code %> · <%= contract.external_id %>
               </div>
+              <% if contract.bidder_count.present? %>
+                <div class="mt-1.5">
+                  <span class="font-mono text-[9px] tracking-wide text-[#c8a84e] bg-[#c8a84e12] border border-[#c8a84e33] px-1.5 py-0.5 rounded">
+                    <%= t("contracts.index.bidder_count", count: contract.bidder_count) %>
+                  </span>
+                </div>
+              <% end %>
               <% if contract.flags.any? %>
                 <div class="mt-1.5 flex flex-wrap gap-1">
                   <% contract.flags.first(2).each do |flag| %>
