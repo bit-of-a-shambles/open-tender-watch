@@ -100,6 +100,51 @@ class EntitiesControllerTest < ActionDispatch::IntegrationTest
     assert_not_includes response.body, contracts(:two).object
   end
 
+  test "show filters flagged contracts by severity inside the turbo frame" do
+    Flag.create!(
+      contract: contracts(:one),
+      flag_type: "A9_PRICE_ANOMALY",
+      severity: "medium",
+      score: 20,
+      details: { rule: "A9 medium" },
+      fired_at: Time.current
+    )
+
+    Flag.create!(
+      contract: contracts(:two),
+      flag_type: "A9_PRICE_ANOMALY",
+      severity: "high",
+      score: 40,
+      details: { rule: "A9 high" },
+      fired_at: Time.current
+    )
+
+    FlagEntityStat.create!(
+      entity: entities(:one),
+      flag_type: "A9_PRICE_ANOMALY",
+      severity: "medium",
+      total_exposure: contracts(:one).base_price,
+      contract_count: 1,
+      computed_at: Time.current
+    )
+
+    FlagEntityStat.create!(
+      entity: entities(:one),
+      flag_type: "A9_PRICE_ANOMALY",
+      severity: "high",
+      total_exposure: contracts(:two).base_price,
+      contract_count: 1,
+      computed_at: Time.current
+    )
+
+    get entity_url(entities(:one), flag_type: "A9_PRICE_ANOMALY", severity: "medium"),
+        headers: { "Turbo-Frame" => "entity-contracts" }
+
+    assert_response :success
+    assert_includes response.body, contracts(:one).object
+    assert_not_includes response.body, contracts(:two).object
+  end
+
   test "show filters contracts by date_from" do
     contracts(:one).update!(publication_date: Date.new(2025, 6, 1))
     contracts(:two).update!(publication_date: Date.new(2025, 1, 1))
@@ -209,5 +254,47 @@ class EntitiesControllerTest < ActionDispatch::IntegrationTest
     assert_equal 1, data["flag_stats"].size
     assert_equal "A2_PUBLICATION_AFTER_CELEBRATION", data["flag_stats"].first["flag_type"]
     assert_equal "high", data["flag_stats"].first["severity"]
+  end
+
+  test "show keeps mixed severities as separate summary rows" do
+    FlagEntityStat.create!(
+      entity: entities(:one),
+      flag_type: "A9_PRICE_ANOMALY",
+      severity: "medium",
+      contract_count: 1,
+      total_exposure: 25_000,
+      computed_at: Time.current
+    )
+
+    FlagEntityStat.create!(
+      entity: entities(:one),
+      flag_type: "A9_PRICE_ANOMALY",
+      severity: "high",
+      contract_count: 2,
+      total_exposure: 60_000,
+      computed_at: Time.current
+    )
+
+    get entity_url(entities(:one), format: :json)
+    assert_response :success
+
+    data = JSON.parse(response.body)
+    a9_rows = data["flag_stats"].select { |row| row["flag_type"] == "A9_PRICE_ANOMALY" }
+    assert_equal [ "high", "medium" ], a9_rows.map { |row| row["severity"] }.sort
+  end
+
+  test "show renders low severity for late publication when that is what the db stores" do
+    FlagEntityStat.create!(
+      entity: entities(:one),
+      flag_type: "A2_PUBLICATION_AFTER_CELEBRATION",
+      severity: "low",
+      contract_count: 1,
+      total_exposure: contracts(:one).base_price,
+      computed_at: Time.current
+    )
+
+    get entity_url(entities(:one))
+    assert_response :success
+    assert_includes response.body, I18n.t("dashboard.insights.severity_low")
   end
 end

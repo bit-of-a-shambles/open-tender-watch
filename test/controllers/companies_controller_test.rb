@@ -117,6 +117,48 @@ class CompaniesControllerTest < ActionDispatch::IntegrationTest
     assert_includes response.body, contracts(:two).object
   end
 
+  test "show filters contracts by flag_type and severity" do
+    Flag.create!(
+      contract: contracts(:two),
+      flag_type: "A9_PRICE_ANOMALY",
+      severity: "medium",
+      score: 20,
+      details: { rule: "A9 medium" },
+      fired_at: Time.current
+    )
+
+    other_contract = Contract.create!(
+      external_id: "contract-004",
+      contracting_entity: entities(:one),
+      data_source: data_sources(:portal_base),
+      country_code: "PT",
+      object: "Contrato A9 high",
+      contract_type: "Aquisição de Serviços",
+      procedure_type: "Ajuste Direto",
+      publication_date: Date.new(2026, 2, 21),
+      celebration_date: Date.new(2026, 2, 19),
+      base_price: 40_000,
+      total_effective_price: 85_000,
+      cpv_code: "90911000",
+      location: "Porto"
+    )
+    ContractWinner.create!(contract: other_contract, entity: entities(:two), price_share: 85_000)
+    Flag.create!(
+      contract: other_contract,
+      flag_type: "A9_PRICE_ANOMALY",
+      severity: "high",
+      score: 40,
+      details: { rule: "A9 high" },
+      fired_at: Time.current
+    )
+
+    get company_url(entities(:two), flag_type: "A9_PRICE_ANOMALY", severity: "medium"),
+        headers: { "Turbo-Frame" => "company-contracts" }
+    assert_response :success
+    assert_includes response.body, contracts(:two).object
+    assert_not_includes response.body, other_contract.object
+  end
+
   test "show renders entity-style risk flag summary with severity" do
     Flag.create!(
       contract: contracts(:two),
@@ -131,6 +173,65 @@ class CompaniesControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_includes response.body, "A2 ·"
     assert_includes response.body, I18n.t("dashboard.insights.severity_high")
+  end
+
+  test "show keeps mixed severities as separate summary rows" do
+    Flag.create!(
+      contract: contracts(:two),
+      flag_type: "A9_PRICE_ANOMALY",
+      severity: "medium",
+      score: 20,
+      details: { rule: "A9 medium" },
+      fired_at: Time.current
+    )
+
+    other_contract = Contract.create!(
+      external_id: "contract-003",
+      contracting_entity: entities(:one),
+      data_source: data_sources(:portal_base),
+      country_code: "PT",
+      object: "Outro contrato com anomalia",
+      contract_type: "Aquisição de Serviços",
+      procedure_type: "Ajuste Direto",
+      publication_date: Date.new(2026, 2, 20),
+      celebration_date: Date.new(2026, 2, 18),
+      base_price: 30_000,
+      total_effective_price: 65_000,
+      cpv_code: "90911000",
+      location: "Porto"
+    )
+    ContractWinner.create!(contract: other_contract, entity: entities(:two), price_share: 65_000)
+
+    Flag.create!(
+      contract: other_contract,
+      flag_type: "A9_PRICE_ANOMALY",
+      severity: "high",
+      score: 40,
+      details: { rule: "A9 high" },
+      fired_at: Time.current
+    )
+
+    get company_url(entities(:two), format: :json)
+    assert_response :success
+
+    data = JSON.parse(response.body)
+    a9_rows = data["flag_stats"].select { |row| row["flag_type"] == "A9_PRICE_ANOMALY" }
+    assert_equal [ "high", "medium" ], a9_rows.map { |row| row["severity"] }.sort
+  end
+
+  test "show renders low severity for late publication when that is what the db stores" do
+    Flag.create!(
+      contract: contracts(:two),
+      flag_type: "A2_PUBLICATION_AFTER_CELEBRATION",
+      severity: "low",
+      score: 10,
+      details: { rule: "A2 low" },
+      fired_at: Time.current
+    )
+
+    get company_url(entities(:two))
+    assert_response :success
+    assert_includes response.body, I18n.t("dashboard.insights.severity_low")
   end
 
   test "show filters contracts by date_from" do
