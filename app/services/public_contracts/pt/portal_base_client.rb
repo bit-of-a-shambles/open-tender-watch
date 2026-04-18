@@ -16,6 +16,8 @@ module PublicContracts
       require "roo"
       require "bigdecimal"
       require "fileutils"
+      require "json"
+      require "zip"
 
       SOURCE_NAME   = "Portal BASE"
       COUNTRY_CODE  = "PT"
@@ -23,14 +25,13 @@ module PublicContracts
       DADOS_GOV_API = "https://dados.gov.pt/api/1"
       DATASET_ID    = "66d72d488ca4b7cb2de28712"
 
-      # Batch size for streaming rows out of the spreadsheet.
-      # Keeps memory usage bounded — each batch is GC-able after processing.
+      # Batch size for paginated fetch_contracts.
       BATCH_SIZE = 500
 
-      # Rough estimate of compressed bytes per XLSX row (derived from 2026 sample:
-      # 6.6 MB file → 27,484 rows ≈ 250 bytes/row). Used in total_count to avoid
+      # Rough estimate of compressed bytes per JSON ZIP row (derived from 2026 sample:
+      # 11.3 MB zip → 57,170 rows ≈ 200 bytes/row). Used in total_count to avoid
       # downloading all files just to count rows.
-      BYTES_PER_ROW_ESTIMATE = 250
+      BYTES_PER_ROW_ESTIMATE = 200
 
       def initialize(config = {})
         super(DADOS_GOV_API)
@@ -52,7 +53,7 @@ module PublicContracts
         end
       end
 
-      # Downloads all configured year XLSX files to the disk cache without
+      # Downloads all configured year files to the disk cache without
       # processing any rows. Safe to call multiple times — already-cached files
       # are skipped. Yields progress lines if a block is given.
       def prefetch_files
@@ -61,8 +62,8 @@ module PublicContracts
         FileUtils.mkdir_p(CACHE_DIR)
         resources.each do |res|
           year   = resource_year(res)
-          cached = cached_xlsx_path(res["url"])
-          if cached_xlsx_valid?(cached)
+          cached = cached_resource_path(res["url"])
+          if cached_resource_valid?(cached)
             size = (File.size(cached) / 1_048_576.0).round(1)
             yield "  #{year}: already cached (#{size} MB)" if block_given?
           else
@@ -89,8 +90,8 @@ module PublicContracts
           next unless @years.include?(resource_year(res))
 
           year = resource_year(res)
-          Rails.logger.info "[PortalBaseClient] Streaming #{year} XLSX from #{res['url']}"
-          stream_xlsx_resource(res["url"]) { |row| yield row }
+          Rails.logger.info "[PortalBaseClient] Streaming #{year} #{res['format'].upcase} from #{res['url']}"
+          stream_resource(res) { |row| yield row }
         end
       end
 
@@ -104,11 +105,11 @@ module PublicContracts
         @years.each do |year|
           res = resources.find { |r| resource_year(r) == year }
           unless res
-            Rails.logger.warn "[PortalBaseClient] No XLSX resource found for year #{year}"
+            Rails.logger.warn "[PortalBaseClient] No resource found for year #{year}"
             next
           end
 
-          stream_xlsx_resource(res["url"]) do |row|
+          stream_resource(res) do |row|
             offset > 0 ? (offset -= 1) : (batch << row)
             return batch if batch.size >= limit
           end
@@ -120,51 +121,69 @@ module PublicContracts
       private
 
       def resource_year(res)
-        m = res["title"]&.downcase&.match(/contratos(\d{4})\.xlsx/)
+        m = res["title"]&.downcase&.match(/contratos(\d{4})\.(?:xlsx|zip)/)
         m ? m[1].to_i : nil
       end
 
       def fetch_resources
         @resources ||= begin
           result = get("/datasets/#{DATASET_ID}/")
-          Array(result&.dig("resources")).select { |r| r["format"]&.downcase == "xlsx" }
+          Array(result&.dig("resources"))
+            .select { |r| %w[xlsx zip].include?(r["format"]&.downcase) }
+            .group_by { |r| resource_year(r) }
+            .values
+            .filter_map { |resources| preferred_resource(resources) }
         end
       end
 
-      def count_rows_in_resource(url)
-        cached = cached_xlsx_path(url)
+      def preferred_resource(resources)
+        resources.find { |r| r["format"]&.downcase == "zip" } ||
+          resources.find { |r| r["format"]&.downcase == "xlsx" }
+      end
+
+      def count_rows_in_resource(res)
+        cached = cached_resource_path(res["url"])
         FileUtils.mkdir_p(CACHE_DIR)
-        unless cached_xlsx_valid?(cached)
+        unless cached_resource_valid?(cached)
           File.delete(cached) if File.exist?(cached)
-          download_with_retry(url, cached)
+          download_with_retry(res["url"], cached)
         end
-        xlsx = Roo::Spreadsheet.open(cached)
-        [ xlsx.sheet(0).last_row - 1, 0 ].max
+        if res["format"]&.downcase == "zip"
+          count_json_rows_in_zip(cached)
+        else
+          xlsx = Roo::Spreadsheet.open(cached)
+          [ xlsx.sheet(0).last_row - 1, 0 ].max
+        end
       end
 
-      # Streams rows one at a time from an XLSX resource, yielding each
+      # Streams rows one at a time from a dataset resource, yielding each
       # normalised contract hash without accumulating all rows in memory.
-      # Downloaded files are cached in tmp/cache/portal_base/ so that
-      # subsequent runs (or restarts) skip the network download entirely.
-      def stream_xlsx_resource(url)
-        cached = cached_xlsx_path(url)
+      def stream_resource(resource)
+        format = resource["format"]&.downcase
+        url = resource["url"]
+        cached = cached_resource_path(url)
         FileUtils.mkdir_p(CACHE_DIR)
-        unless cached_xlsx_valid?(cached)
+        unless cached_resource_valid?(cached)
           File.delete(cached) if File.exist?(cached) # remove any partial/0-byte file
           Rails.logger.info "[PortalBaseClient] Downloading #{url}"
           download_with_retry(url, cached)
         else
           Rails.logger.info "[PortalBaseClient] Cache hit: #{cached}"
         end
-        stream_spreadsheet(cached.to_s) { |row| yield row }
+
+        if format == "zip"
+          stream_json_zip_resource(cached.to_s) { |row| yield row }
+        else
+          stream_spreadsheet(cached.to_s) { |row| yield row }
+        end
       end
 
-      def cached_xlsx_path(url)
+      def cached_resource_path(url)
         filename = URI.parse(url).path.split("/").last
         CACHE_DIR.join(filename)
       end
 
-      def cached_xlsx_valid?(path)
+      def cached_resource_valid?(path)
         File.exist?(path) && File.size(path) > 0
       end
 
@@ -173,7 +192,7 @@ module PublicContracts
       def download_with_retry(url, dest, attempts: 3)
         attempts.times do |i|
           File.open(dest, "wb") { |f| download_file(url, f) }
-          return if cached_xlsx_valid?(dest)
+          return if cached_resource_valid?(dest)
 
           File.delete(dest) if File.exist?(dest)
           raise "Empty file after download: #{url}" if i == attempts - 1
@@ -215,30 +234,111 @@ module PublicContracts
         rows
       end
 
+      def stream_json_zip_resource(path)
+        Zip::File.open(path) do |zip_file|
+          entry = zip_file.glob("*.json").first || zip_file.first
+          raise "No JSON entry found in #{path}" unless entry
+
+          each_json_object(entry.get_input_stream) do |payload|
+            row = normalize_json_row(payload)
+            yield row if row
+          end
+        end
+      end
+
+      def count_json_rows_in_zip(path)
+        count = 0
+        stream_json_zip_resource(path) { |_row| count += 1 }
+        count
+      end
+
+      def each_json_object(io)
+        saw_array = false
+        buffer = +""
+        depth = 0
+        in_string = false
+        escaping = false
+
+        while (chunk = io.read(4096))
+          chunk.each_char do |char|
+            if depth.zero?
+              saw_array = true if char == "["
+              next if !saw_array || char =~ /\s|,|\]/
+              next unless char == "{"
+            end
+
+            buffer << char
+
+            if in_string
+              if escaping
+                escaping = false
+              elsif char == "\\"
+                escaping = true
+              elsif char == '"'
+                in_string = false
+              end
+              next
+            end
+
+            case char
+            when '"'
+              in_string = true
+            when "{"
+              depth += 1
+            when "}"
+              depth -= 1
+              if depth.zero?
+                yield JSON.parse(buffer)
+                buffer.clear
+              end
+            end
+          end
+        end
+      end
+
       def normalize_row(headers, values)
         h = headers.zip(values).to_h
-        contracting = parse_entity(h["adjudicante"])
+        normalize_contract_hash(h)
+      end
+
+      def normalize_json_row(payload)
+        normalize_contract_hash(payload)
+      end
+
+      def normalize_contract_hash(h)
+        contracting = parse_entity(scalar_value(h["adjudicante"]))
         return nil unless contracting
 
-        effective = parse_decimal(h["PrecoTotalEfetivo"])
+        effective = parse_decimal(scalar_value(h["PrecoTotalEfetivo"] || h["precoTotalEfetivo"]))
         # Fall back to contractual price when effective is zero (contract still running)
-        effective = parse_decimal(h["precoContratual"]) if effective.nil? || effective.zero?
+        effective = parse_decimal(scalar_value(h["precoContratual"])) if effective.nil? || effective.zero?
 
         {
-          "external_id"           => h["idcontrato"]&.to_s,
+          "external_id"           => scalar_value(h["idcontrato"])&.to_s,
           "country_code"          => COUNTRY_CODE,
-          "object"                => h["objectoContrato"]&.to_s&.strip,
-          "procedure_type"        => h["tipoprocedimento"]&.to_s,
-          "contract_type"         => h["tipoContrato"]&.to_s,
-          "publication_date"      => parse_date(h["dataPublicacao"]),
-          "celebration_date"      => parse_date(h["dataCelebracaoContrato"]),
-          "base_price"            => parse_decimal(h["precoBaseProcedimento"]),
+          "object"                => scalar_value(h["objectoContrato"])&.to_s&.strip,
+          "procedure_type"        => scalar_value(h["tipoprocedimento"])&.to_s,
+          "contract_type"         => scalar_value(h["tipoContrato"])&.to_s,
+          "publication_date"      => parse_date(scalar_value(h["dataPublicacao"])),
+          "celebration_date"      => parse_date(scalar_value(h["dataCelebracaoContrato"])),
+          "base_price"            => parse_decimal(scalar_value(h["precoBaseProcedimento"])),
           "total_effective_price" => effective,
-          "cpv_code"              => parse_cpv(h["CPV"]),
-          "location"              => h["LocalExecucao"]&.to_s,
+          "cpv_code"              => parse_cpv(scalar_value(h["CPV"] || h["cpv"])),
+          "location"              => scalar_value(h["LocalExecucao"] || h["localExecucao"])&.to_s,
+          "bidder_count"          => parse_bidder_count(h["concorrentes"]),
           "contracting_entity"    => contracting,
-          "winners"               => parse_winners(h["adjudicatarios"])
+          "winners"               => parse_winners(h["adjudicatarios"]),
+          "bidders"               => parse_bidders(h["concorrentes"])
         }
+      end
+
+      def scalar_value(value)
+        case value
+        when Array
+          value.find { |item| item.present? }
+        else
+          value
+        end
       end
 
       # Parse "504595067 - Entidade Pública, L.da"
@@ -260,6 +360,48 @@ module PublicContracts
           # Strip optional leading position counter "1 - " from the name
           name = m[2].strip.sub(/\A\d+\s*[-–]\s*/, "")
           { "tax_identifier" => m[1], "name" => name, "is_company" => true }
+        end
+      end
+
+      def parse_bidders(raw)
+        normalize_list_field(raw).filter_map do |entry|
+          parsed = parse_party_label(entry)
+          next unless parsed
+
+          parsed.merge("is_company" => true)
+        end
+      end
+
+      def parse_bidder_count(raw)
+        bidders = normalize_list_field(raw)
+        bidders.any? ? bidders.size : nil
+      end
+
+      def normalize_list_field(raw)
+        case raw
+        when Array
+          raw.filter_map { |item| item.to_s.strip.presence }
+        else
+          raw.to_s.split(/\r?\n/).filter_map(&:presence)
+        end
+      end
+
+      def parse_party_label(raw)
+        entry = raw.to_s.strip
+        return nil if entry.blank?
+
+        if (match = entry.match(/\A(\d{6,11})(?:\s*[-–]\s*\d+)?\s*[-–]\s*(.+)\z/))
+          {
+            "raw_label" => entry,
+            "tax_identifier" => match[1],
+            "name" => match[2].strip.presence
+          }
+        else
+          {
+            "raw_label" => entry,
+            "tax_identifier" => nil,
+            "name" => entry.sub(/\A[-–\s]+/, "").strip.presence
+          }
         end
       end
 

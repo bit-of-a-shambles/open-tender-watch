@@ -1,7 +1,9 @@
 class Contract < ApplicationRecord
   belongs_to :contracting_entity, class_name: "Entity"
   belongs_to :data_source, optional: true
+  has_many :contract_bidders, dependent: :destroy
   has_many :contract_winners, dependent: :destroy
+  has_many :bidders, through: :contract_bidders, source: :entity
   has_many :winners, through: :contract_winners, source: :entity
   has_many :flags, dependent: :destroy
 
@@ -11,7 +13,7 @@ class Contract < ApplicationRecord
   CSV_COLUMNS = %w[
     external_id country_code object procedure_type contract_type cpv_code
     base_price total_effective_price publication_date celebration_date
-    location contracting_entity_name contracting_entity_nif
+    location bidder_count bidder_names bidder_nifs contracting_entity_name contracting_entity_nif
     winner_names winner_nifs flag_types max_severity risk_score
   ].freeze
 
@@ -28,6 +30,9 @@ class Contract < ApplicationRecord
       publication_date&.iso8601,
       celebration_date&.iso8601,
       location,
+      bidder_count,
+      bidders.map(&:name).join("; "),
+      bidders.map(&:tax_identifier).join("; "),
       contracting_entity&.name,
       contracting_entity&.tax_identifier,
       winners.map(&:name).join("; "),
@@ -52,11 +57,20 @@ class Contract < ApplicationRecord
       publication_date: publication_date&.iso8601,
       celebration_date: celebration_date&.iso8601,
       location: location,
+      bidder_count: bidder_count,
       contracting_entity: {
         name: contracting_entity.name,
         tax_identifier: contracting_entity.tax_identifier,
         country_code: contracting_entity.country_code,
         is_public_body: contracting_entity.is_public_body
+      },
+      bidders: contract_bidders.map { |bidder|
+        {
+          raw_label: bidder.raw_label,
+          name: bidder.entity&.name,
+          tax_identifier: bidder.entity&.tax_identifier,
+          is_company: bidder.entity&.is_company
+        }
       },
       winners: winners.map { |w|
         {

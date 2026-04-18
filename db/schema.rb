@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_04_04_203011) do
+ActiveRecord::Schema[8.0].define(version: 2026_04_17_113000) do
   create_table "benford_analyses", force: :cascade do |t|
     t.integer "entity_id", null: false
     t.integer "representative_contract_id"
@@ -37,6 +37,17 @@ ActiveRecord::Schema[8.0].define(version: 2026_04_04_203011) do
     t.datetime "updated_at", null: false
     t.index ["entity_id", "tax_identifier"], name: "index_company_directors_entity_nif", unique: true, where: "tax_identifier IS NOT NULL"
     t.index ["entity_id"], name: "index_company_directors_on_entity_id"
+  end
+
+  create_table "contract_bidders", force: :cascade do |t|
+    t.integer "contract_id", null: false
+    t.integer "entity_id"
+    t.string "raw_label", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["contract_id", "raw_label"], name: "index_contract_bidders_on_contract_id_and_raw_label", unique: true
+    t.index ["contract_id"], name: "index_contract_bidders_on_contract_id"
+    t.index ["entity_id"], name: "index_contract_bidders_on_entity_id"
   end
 
   create_table "contract_winners", force: :cascade do |t|
@@ -66,8 +77,10 @@ ActiveRecord::Schema[8.0].define(version: 2026_04_04_203011) do
     t.datetime "updated_at", null: false
     t.string "country_code", default: "PT", null: false
     t.integer "data_source_id"
+    t.integer "bidder_count"
     t.index ["base_price", "id"], name: "index_contracts_on_base_price_and_id"
     t.index ["base_price"], name: "index_contracts_on_base_price"
+    t.index ["bidder_count"], name: "index_contracts_on_bidder_count"
     t.index ["celebration_date", "id"], name: "index_contracts_on_celebration_date_and_id", order: :desc
     t.index ["celebration_date"], name: "index_contracts_on_celebration_date"
     t.index ["contracting_entity_id", "base_price", "id"], name: "idx_contracts_entity_base_price_id"
@@ -169,6 +182,8 @@ ActiveRecord::Schema[8.0].define(version: 2026_04_04_203011) do
   add_foreign_key "benford_analyses", "contracts", column: "representative_contract_id", on_delete: :nullify
   add_foreign_key "benford_analyses", "entities"
   add_foreign_key "company_directors", "entities"
+  add_foreign_key "contract_bidders", "contracts"
+  add_foreign_key "contract_bidders", "entities"
   add_foreign_key "contract_winners", "contracts"
   add_foreign_key "contract_winners", "entities"
   add_foreign_key "contracts", "data_sources"

@@ -20,6 +20,7 @@ class PublicContracts::PT::PortalBaseClientTest < ActiveSupport::TestCase
     "tipoContrato"           => "Prestação de Serviços",
     "adjudicante"            => "504595067 - Câmara Municipal de Lisboa",
     "adjudicatarios"         => "123456789 - Empresa ABC, Lda",
+    "concorrentes"           => [ "123456789 - Empresa ABC, Lda", "987654321 - Empresa XYZ, SA" ],
     "dataPublicacao"         => Date.new(2024, 3, 15),
     "dataCelebracaoContrato" => Date.new(2024, 3, 10),
     "precoBaseProcedimento"  => 5000.0,
@@ -131,6 +132,26 @@ class PublicContracts::PT::PortalBaseClientTest < ActiveSupport::TestCase
     assert_equal [], @client.send(:parse_winners, "")
   end
 
+  test "parse_bidders parses bidders with tax identifiers" do
+    result = @client.send(:parse_bidders, [ "123456789 - Empresa ABC, Lda", "987654321 - Empresa XYZ, SA" ])
+    assert_equal 2, result.size
+    assert_equal "123456789", result.first["tax_identifier"]
+    assert_equal "Empresa XYZ, SA", result.last["name"]
+  end
+
+  test "parse_bidders keeps raw label when tax identifier is missing" do
+    result = @client.send(:parse_bidders, [ "--EBSCO Information Services S.L.U." ])
+    assert_equal 1, result.size
+    assert_nil result.first["tax_identifier"]
+    assert_equal "EBSCO Information Services S.L.U.", result.first["name"]
+    assert_equal "--EBSCO Information Services S.L.U.", result.first["raw_label"]
+  end
+
+  test "parse_bidder_count returns number of bidder entries" do
+    assert_equal 2, @client.send(:parse_bidder_count, [ "A", "B" ])
+    assert_nil @client.send(:parse_bidder_count, nil)
+  end
+
   # ---------------------------------------------------------------------------
   # parse_cpv
   # ---------------------------------------------------------------------------
@@ -203,6 +224,8 @@ class PublicContracts::PT::PortalBaseClientTest < ActiveSupport::TestCase
     assert_equal "Ajuste Direto", result["procedure_type"]
     assert_equal "504595067",   result["contracting_entity"]["tax_identifier"]
     assert_equal 1,             result["winners"].size
+    assert_equal 2,             result["bidder_count"]
+    assert_equal 2,             result["bidders"].size
     assert_equal "90910000",    result["cpv_code"]
   end
 
@@ -218,21 +241,62 @@ class PublicContracts::PT::PortalBaseClientTest < ActiveSupport::TestCase
     assert_equal BigDecimal("4800"), result["total_effective_price"]
   end
 
+  test "normalize_json_row unwraps scalar arrays from BASE JSON export" do
+    payload = {
+      "idcontrato" => "12345",
+      "objectoContrato" => "Contrato JSON",
+      "tipoprocedimento" => "Concurso público",
+      "tipoContrato" => [ "Aquisição de bens móveis" ],
+      "adjudicante" => [ "504595067 - Câmara Municipal de Lisboa" ],
+      "adjudicatarios" => [ "123456789 - Empresa ABC, Lda" ],
+      "concorrentes" => [ "123456789 - Empresa ABC, Lda", "987654321 - Empresa XYZ, SA" ],
+      "dataPublicacao" => "2024-03-15",
+      "dataCelebracaoContrato" => "2024-03-10",
+      "precoBaseProcedimento" => "5000.0",
+      "precoContratual" => "4800.0",
+      "PrecoTotalEfetivo" => "4900.0",
+      "cpv" => [ "90910000-9 - Serviços de limpeza" ],
+      "localExecucao" => [ "PT170" ]
+    }
+
+    result = @client.send(:normalize_json_row, payload)
+
+    assert_equal "12345", result["external_id"]
+    assert_equal "Aquisição de bens móveis", result["contract_type"]
+    assert_equal "504595067", result["contracting_entity"]["tax_identifier"]
+    assert_equal "90910000", result["cpv_code"]
+    assert_equal "PT170", result["location"]
+    assert_equal 2, result["bidder_count"]
+  end
+
   # ---------------------------------------------------------------------------
   # fetch_resources
   # ---------------------------------------------------------------------------
 
-  test "fetch_resources returns only xlsx resources" do
+  test "fetch_resources returns xlsx resources when no zip variant exists" do
     Net::HTTP.stub(:get_response, fake_http_success(SAMPLE_DATASET_RESPONSE)) do
       resources = @client.send(:fetch_resources)
       assert_equal 2, resources.size
-      resources.each { |r| assert_equal "xlsx", r["format"].downcase }
+      assert_equal [ "xlsx", "xlsx" ], resources.map { |r| r["format"].downcase }
     end
   end
 
   test "fetch_resources returns empty array when API fails" do
     Net::HTTP.stub(:get_response, fake_http_error) do
       assert_equal [], @client.send(:fetch_resources)
+    end
+  end
+
+  test "fetch_resources prefers zip when both zip and xlsx exist for a year" do
+    resources = [
+      { "title" => "contratos2024.xlsx", "format" => "xlsx", "url" => "https://example.com/contratos2024.xlsx" },
+      { "title" => "contratos2024.zip", "format" => "zip", "url" => "https://example.com/contratos2024.zip" }
+    ]
+
+    @client.stub(:get, { "resources" => resources }) do
+      fetched = @client.send(:fetch_resources)
+      assert_equal 1, fetched.size
+      assert_equal "zip", fetched.first["format"]
     end
   end
 
@@ -259,7 +323,7 @@ class PublicContracts::PT::PortalBaseClientTest < ActiveSupport::TestCase
     rows = (1..10).map { |i| { "external_id" => i.to_s } }
 
     @client.stub(:fetch_resources, resources) do
-      @client.stub(:stream_xlsx_resource, ->(url, &blk) { rows.each { |r| blk.call(r) } }) do
+      @client.stub(:stream_resource, ->(res, &blk) { rows.each { |r| blk.call(r) } }) do
         result = @client.fetch_contracts(page: 1, limit: 4)
         assert_equal 4, result.size
         assert_equal "1", result.first["external_id"]
@@ -273,7 +337,7 @@ class PublicContracts::PT::PortalBaseClientTest < ActiveSupport::TestCase
     rows = (1..10).map { |i| { "external_id" => i.to_s } }
 
     @client.stub(:fetch_resources, resources) do
-      @client.stub(:stream_xlsx_resource, ->(url, &blk) { rows.each { |r| blk.call(r) } }) do
+      @client.stub(:stream_resource, ->(res, &blk) { rows.each { |r| blk.call(r) } }) do
         page2 = @client.fetch_contracts(page: 2, limit: 4)
         assert_equal 4, page2.size
         assert_equal "5", page2.first["external_id"]
@@ -293,7 +357,7 @@ class PublicContracts::PT::PortalBaseClientTest < ActiveSupport::TestCase
 
   test "prefetch_files downloads missing files and skips cached ones" do
     resources = [
-      { "title" => "contratos2023.xlsx", "format" => "xlsx", "url" => "https://example.com/contratos2023.xlsx",
+      { "title" => "contratos2023.zip", "format" => "zip", "url" => "https://example.com/contratos2023.zip",
         "filesize" => 5_242_880 },
       { "title" => "contratos2024.xlsx", "format" => "xlsx", "url" => "https://example.com/contratos2024.xlsx",
         "filesize" => 3_145_728 }
@@ -306,7 +370,7 @@ class PublicContracts::PT::PortalBaseClientTest < ActiveSupport::TestCase
 
     client.stub(:fetch_resources, resources) do
       client.stub(:download_with_retry, nil) do
-        client.stub(:cached_xlsx_valid?, valid_stub) do
+        client.stub(:cached_resource_valid?, valid_stub) do
           File.stub(:size, 5_242_880) do
             client.prefetch_files { |msg| messages << msg }
           end
@@ -320,7 +384,7 @@ class PublicContracts::PT::PortalBaseClientTest < ActiveSupport::TestCase
 
   test "prefetch_files deletes 0-byte file before re-downloading" do
     resources = [
-      { "title" => "contratos2023.xlsx", "format" => "xlsx", "url" => "https://example.com/contratos2023.xlsx",
+      { "title" => "contratos2023.zip", "format" => "zip", "url" => "https://example.com/contratos2023.zip",
         "filesize" => 0 }
     ]
     client   = PublicContracts::PT::PortalBaseClient.new("years" => [ 2023 ])
@@ -329,7 +393,7 @@ class PublicContracts::PT::PortalBaseClientTest < ActiveSupport::TestCase
 
     client.stub(:fetch_resources, resources) do
       client.stub(:download_with_retry, nil) do
-        client.stub(:cached_xlsx_valid?, false) do
+        client.stub(:cached_resource_valid?, false) do
           File.stub(:exist?, true) do
             File.stub(:delete, ->(p) { deleted << p }) do
               File.stub(:size, 0) do
@@ -359,8 +423,8 @@ class PublicContracts::PT::PortalBaseClientTest < ActiveSupport::TestCase
 
     client = PublicContracts::PT::PortalBaseClient.new("years" => [ 2024, 2025 ])
     client.stub(:fetch_resources, resources) do
-      client.stub(:stream_xlsx_resource, ->(url, &blk) {
-        data = url.include?("2024") ? rows_2024 : rows_2025
+      client.stub(:stream_resource, ->(res, &blk) {
+        data = res["url"].include?("2024") ? rows_2024 : rows_2025
         data.each { |r| blk.call(r) }
       }) do
         collected = []
@@ -380,8 +444,8 @@ class PublicContracts::PT::PortalBaseClientTest < ActiveSupport::TestCase
 
     # @client is configured for 2024 only
     @client.stub(:fetch_resources, resources) do
-      @client.stub(:stream_xlsx_resource, ->(url, &blk) {
-        rows_2024.each { |r| blk.call(r) } if url.include?("2024")
+      @client.stub(:stream_resource, ->(res, &blk) {
+        rows_2024.each { |r| blk.call(r) } if res["url"].include?("2024")
       }) do
         collected = []
         @client.each_contract { |row| collected << row }
@@ -405,8 +469,8 @@ class PublicContracts::PT::PortalBaseClientTest < ActiveSupport::TestCase
     order = []
     client = PublicContracts::PT::PortalBaseClient.new("years" => [ 2024, 2025 ])
     client.stub(:fetch_resources, resources) do
-      client.stub(:stream_xlsx_resource, ->(url, &blk) {
-        year = url[/\d{4}/].to_i
+      client.stub(:stream_resource, ->(res, &blk) {
+        year = res["url"][/\d{4}/].to_i
         blk.call({ "external_id" => year.to_s })
         order << year
       }) do
@@ -421,12 +485,12 @@ class PublicContracts::PT::PortalBaseClientTest < ActiveSupport::TestCase
   # ---------------------------------------------------------------------------
 
   test "total_count estimates rows from filesize without downloading" do
-    # BYTES_PER_ROW_ESTIMATE = 250; filesize 25_000 → 100 rows
+    # BYTES_PER_ROW_ESTIMATE = 200; filesize 25_000 → 125 rows
     resources = [ { "title" => "contratos2024.xlsx", "format" => "xlsx",
                     "url"   => "https://example.com/contratos2024.xlsx",
                     "filesize" => 25_000 } ]
     @client.stub(:fetch_resources, resources) do
-      assert_equal 100, @client.total_count
+      assert_equal 125, @client.total_count
     end
   end
 
@@ -439,7 +503,7 @@ class PublicContracts::PT::PortalBaseClientTest < ActiveSupport::TestCase
     ]
     @client.stub(:fetch_resources, resources) do
       # @client is configured for 2024 only, so 2023 should not be counted
-      assert_equal 100, @client.total_count
+      assert_equal 125, @client.total_count
     end
   end
 
@@ -450,27 +514,27 @@ class PublicContracts::PT::PortalBaseClientTest < ActiveSupport::TestCase
   end
 
   # ---------------------------------------------------------------------------
-  # cached_xlsx_valid?
+  # cached_resource_valid?
   # ---------------------------------------------------------------------------
 
-  test "cached_xlsx_valid? returns false when file does not exist" do
+  test "cached_resource_valid? returns false when file does not exist" do
     File.stub(:exist?, false) do
-      refute @client.send(:cached_xlsx_valid?, "/tmp/missing.xlsx")
+      refute @client.send(:cached_resource_valid?, "/tmp/missing.zip")
     end
   end
 
-  test "cached_xlsx_valid? returns false when file is 0 bytes" do
+  test "cached_resource_valid? returns false when file is 0 bytes" do
     File.stub(:exist?, true) do
       File.stub(:size, 0) do
-        refute @client.send(:cached_xlsx_valid?, "/tmp/empty.xlsx")
+        refute @client.send(:cached_resource_valid?, "/tmp/empty.zip")
       end
     end
   end
 
-  test "cached_xlsx_valid? returns true when file exists and non-zero" do
+  test "cached_resource_valid? returns true when file exists and non-zero" do
     File.stub(:exist?, true) do
       File.stub(:size, 1024) do
-        assert @client.send(:cached_xlsx_valid?, "/tmp/good.xlsx")
+        assert @client.send(:cached_resource_valid?, "/tmp/good.zip")
       end
     end
   end
@@ -483,7 +547,7 @@ class PublicContracts::PT::PortalBaseClientTest < ActiveSupport::TestCase
     dest = Tempfile.new([ "test", ".xlsx" ])
     dest.write("data"); dest.flush
     @client.stub(:download_file, nil) do
-      @client.stub(:cached_xlsx_valid?, true) do
+      @client.stub(:cached_resource_valid?, true) do
         assert_nothing_raised { @client.send(:download_with_retry, "https://example.com/x.xlsx", dest.path) }
       end
     end
@@ -502,7 +566,7 @@ class PublicContracts::PT::PortalBaseClientTest < ActiveSupport::TestCase
     end
 
     @client.stub(:download_file, flaky_download) do
-      @client.stub(:cached_xlsx_valid?, ->(path) { call_count >= 2 }) do
+      @client.stub(:cached_resource_valid?, ->(path) { call_count >= 2 }) do
         @client.send(:download_with_retry, "https://example.com/x.xlsx", dest)
       end
     end
@@ -516,7 +580,7 @@ class PublicContracts::PT::PortalBaseClientTest < ActiveSupport::TestCase
     always_reset = ->(_url, _file) { raise Errno::ECONNRESET, "reset" }
 
     @client.stub(:download_file, always_reset) do
-      @client.stub(:cached_xlsx_valid?, false) do
+      @client.stub(:cached_resource_valid?, false) do
         File.stub(:exist?, false) do
           assert_raises(Errno::ECONNRESET) do
             @client.send(:download_with_retry, "https://example.com/x.xlsx", "/tmp/never.xlsx", attempts: 3)
@@ -529,7 +593,7 @@ class PublicContracts::PT::PortalBaseClientTest < ActiveSupport::TestCase
   test "download_with_retry raises RuntimeError when download succeeds but file is empty" do
     # download_file completes without error but writes nothing (e.g. server returns empty body)
     @client.stub(:download_file, nil) do
-      @client.stub(:cached_xlsx_valid?, false) do
+      @client.stub(:cached_resource_valid?, false) do
         File.stub(:exist?, true) do
           File.stub(:delete, nil) do
             err = assert_raises(RuntimeError) do
@@ -583,18 +647,77 @@ class PublicContracts::PT::PortalBaseClientTest < ActiveSupport::TestCase
     end
   end
 
+  test "each_json_object parses objects from read-only io chunks" do
+    read_only_io = Class.new do
+      def initialize(payload)
+        @payload = payload
+        @offset = 0
+      end
+
+      def read(length)
+        return nil if @offset >= @payload.length
+
+        chunk = @payload[@offset, length]
+        @offset += chunk.length
+        chunk
+      end
+    end.new(%([
+      {"idcontrato":"1","adjudicante":"504595067 - Câmara Municipal de Lisboa","objectoContrato":"A"},
+      {"idcontrato":"2","adjudicante":"504595067 - Câmara Municipal de Lisboa","objectoContrato":"B"}
+    ]))
+
+    payloads = []
+    @client.send(:each_json_object, read_only_io) { |payload| payloads << payload }
+
+    assert_equal 2, payloads.size
+    assert_equal "1", payloads.first["idcontrato"]
+    assert_equal "2", payloads.last["idcontrato"]
+  end
+
+  test "each_json_object handles escaped quotes and backslashes inside strings" do
+    payload = [
+      {
+        "idcontrato" => "1",
+        "adjudicante" => "504595067 - Câmara Municipal de Lisboa",
+        "objectoContrato" => "Caminho \\ rede e \"aspas\""
+      }
+    ].to_json
+
+    read_only_io = Class.new do
+      def initialize(payload)
+        @payload = payload
+        @offset = 0
+      end
+
+      def read(length)
+        return nil if @offset >= @payload.length
+
+        chunk = @payload[@offset, length]
+        @offset += chunk.length
+        chunk
+      end
+    end.new(payload)
+
+    payloads = []
+    @client.send(:each_json_object, read_only_io) { |payload| payloads << payload }
+
+    assert_equal 1, payloads.size
+    assert_equal "Caminho \\ rede e \"aspas\"", payloads.first["objectoContrato"]
+  end
+
   # ---------------------------------------------------------------------------
-  # stream_xlsx_resource
+  # stream_resource
   # ---------------------------------------------------------------------------
 
-  test "stream_xlsx_resource yields rows from downloaded file" do
+  test "stream_resource yields rows from downloaded xlsx file" do
     fake_rows = [ { "external_id" => "1" }, { "external_id" => "2" } ]
     collected = []
+    resource = { "format" => "xlsx", "url" => "https://example.com/test.xlsx" }
 
-    @client.stub(:cached_xlsx_valid?, false) do
+    @client.stub(:cached_resource_valid?, false) do
       @client.stub(:download_with_retry, nil) do
         @client.stub(:stream_spreadsheet, ->(path, &blk) { fake_rows.each { |r| blk.call(r) } }) do
-          @client.send(:stream_xlsx_resource, "https://example.com/test.xlsx") { |r| collected << r }
+          @client.send(:stream_resource, resource) { |r| collected << r }
         end
       end
     end
@@ -602,13 +725,28 @@ class PublicContracts::PT::PortalBaseClientTest < ActiveSupport::TestCase
     assert_equal fake_rows, collected
   end
 
-  test "stream_xlsx_resource uses cached file and skips download when cache exists" do
+  test "stream_resource uses cached xlsx file and skips download when cache exists" do
     fake_rows = [ { "external_id" => "3" } ]
     collected = []
+    resource = { "format" => "xlsx", "url" => "https://example.com/contratos2020.xlsx" }
 
-    @client.stub(:cached_xlsx_valid?, true) do
+    @client.stub(:cached_resource_valid?, true) do
       @client.stub(:stream_spreadsheet, ->(path, &blk) { fake_rows.each { |r| blk.call(r) } }) do
-        @client.send(:stream_xlsx_resource, "https://example.com/contratos2020.xlsx") { |r| collected << r }
+        @client.send(:stream_resource, resource) { |r| collected << r }
+      end
+    end
+
+    assert_equal fake_rows, collected
+  end
+
+  test "stream_resource yields rows from cached zip resource" do
+    fake_rows = [ { "external_id" => "zip-1" } ]
+    collected = []
+    resource = { "format" => "zip", "url" => "https://example.com/contratos2024.zip" }
+
+    @client.stub(:cached_resource_valid?, true) do
+      @client.stub(:stream_json_zip_resource, ->(_path, &blk) { fake_rows.each { |row| blk.call(row) } }) do
+        @client.send(:stream_resource, resource) { |row| collected << row }
       end
     end
 
@@ -625,11 +763,12 @@ class PublicContracts::PT::PortalBaseClientTest < ActiveSupport::TestCase
 
     xlsx_mock = Minitest::Mock.new
     xlsx_mock.expect(:sheet, sheet_mock, [ 0 ])
+    resource = { "format" => "xlsx", "url" => "https://example.com/test.xlsx" }
 
-    @client.stub(:cached_xlsx_valid?, false) do
+    @client.stub(:cached_resource_valid?, false) do
       @client.stub(:download_with_retry, nil) do
         Roo::Spreadsheet.stub(:open, xlsx_mock) do
-          count = @client.send(:count_rows_in_resource, "https://example.com/test.xlsx")
+          count = @client.send(:count_rows_in_resource, resource)
           assert_equal 50, count
         end
       end
@@ -637,5 +776,40 @@ class PublicContracts::PT::PortalBaseClientTest < ActiveSupport::TestCase
 
     assert_mock sheet_mock
     assert_mock xlsx_mock
+  end
+
+  test "count_rows_in_resource delegates zip files to json row counter" do
+    resource = { "format" => "zip", "url" => "https://example.com/test.zip" }
+
+    @client.stub(:cached_resource_valid?, true) do
+      @client.stub(:count_json_rows_in_zip, 7) do
+        assert_equal 7, @client.send(:count_rows_in_resource, resource)
+      end
+    end
+  end
+
+  test "stream_json_zip_resource yields normalized rows from first json entry" do
+    payload = %([{"idcontrato":"12345","adjudicante":"504595067 - Câmara Municipal de Lisboa","objectoContrato":"Contrato ZIP","tipoprocedimento":"Ajuste Direto","tipoContrato":"Prestação de Serviços","dataPublicacao":"2024-03-15","dataCelebracaoContrato":"2024-03-10","precoBaseProcedimento":"5000.0","precoContratual":"4800.0","PrecoTotalEfetivo":"4900.0","cpv":"90910000-9 - Serviços de limpeza","localExecucao":"PT170","adjudicatarios":"123456789 - Empresa ABC, Lda","concorrentes":["123456789 - Empresa ABC, Lda"]}])
+    entry = Object.new
+    entry.define_singleton_method(:get_input_stream) { StringIO.new(payload) }
+
+    zip_file = Object.new
+    zip_file.define_singleton_method(:glob) { |_pattern| [ entry ] }
+    zip_file.define_singleton_method(:first) { nil }
+
+    rows = []
+    Zip::File.stub(:open, ->(_path, &blk) { blk.call(zip_file) }) do
+      @client.send(:stream_json_zip_resource, "/tmp/contracts.zip") { |row| rows << row }
+    end
+
+    assert_equal 1, rows.size
+    assert_equal "12345", rows.first["external_id"]
+    assert_equal 1, rows.first["bidder_count"]
+  end
+
+  test "count_json_rows_in_zip counts streamed rows" do
+    @client.stub(:stream_json_zip_resource, ->(_path, &blk) { 3.times { blk.call({}) } }) do
+      assert_equal 3, @client.send(:count_json_rows_in_zip, "/tmp/contracts.zip")
+    end
   end
 end

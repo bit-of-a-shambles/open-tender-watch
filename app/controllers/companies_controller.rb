@@ -55,17 +55,24 @@ class CompaniesController < ApplicationController
     @total_won_value  = @entity.won_value
     @entity_won_total = @entity.won_contract_count
 
-    # Flag stats across all won contracts
+    # Flag stats across all won contracts, reshaped to match the entity view.
     won_contract_ids = ContractWinner.where(entity_id: @entity.id).select(:contract_id)
     @company_risk_score = Flag.where(contract_id: won_contract_ids).sum(:score)
     @flag_stats = Flag
+      .joins(:contract)
       .where(contract_id: won_contract_ids)
-      .group(:flag_type, :severity)
-      .select("flag_type, severity, COUNT(*) AS contract_count")
-      .order("contract_count DESC")
+      .group(:flag_type)
+      .select(
+        "flags.flag_type",
+        "COALESCE(SUM(contracts.base_price), 0) AS total_exposure",
+        "COUNT(*) AS contract_count",
+        "#{Flag.max_severity_sql} AS severity"
+      )
+      .order("total_exposure DESC")
 
-    @flag_types  = @flag_stats.map(&:flag_type).uniq
+    @flag_types  = @flag_stats.map(&:flag_type)
     @flag_filter = params[:flag_type].presence
+    @benford_analysis = BenfordAnalysis.find_by(entity_id: @entity.id)
 
     base_scope = @entity.contracts_won
 
@@ -86,9 +93,12 @@ class CompaniesController < ApplicationController
 
     respond_to do |format|
       format.html do
-        # Use pre-computed count when no filters active (mirrors EntitiesController#show).
+        # Use aggregated stats when a flag filter is active to avoid recounting the
+        # same won-contract subset on every request.
         @total = if @flag_filter.blank? && @date_from.blank? && @date_to.blank?
           @entity.won_contract_count
+        elsif @flag_filter.present? && @date_from.blank? && @date_to.blank?
+          @flag_stats.find { |stat| stat.flag_type == @flag_filter }&.contract_count.to_i
         else
           base_scope.count
         end
@@ -102,8 +112,6 @@ class CompaniesController < ApplicationController
           .order(Arel.sql(order_sql))
           .limit(PER_PAGE)
           .offset((@page - 1) * PER_PAGE)
-
-        @benford_analysis = BenfordAnalysis.find_by(entity_id: @entity.id)
 
         # Directors & officers
         @directors = @entity.company_directors.order(:role, :name)
@@ -163,8 +171,19 @@ class CompaniesController < ApplicationController
             risk_score: @company_risk_score
           },
           flag_stats: @flag_stats.map { |s|
-            { flag_type: s.flag_type, severity: s.severity, contract_count: s.contract_count.to_i }
+            {
+              flag_type: s.flag_type,
+              severity: s.severity,
+              total_exposure: s.total_exposure.to_f,
+              contract_count: s.contract_count.to_i
+            }
           },
+          benford_analysis: @benford_analysis ? {
+            sample_size: @benford_analysis.sample_size,
+            chi_square: @benford_analysis.chi_square,
+            flagged: @benford_analysis.flagged,
+            digit_distribution: @benford_analysis.digit_distribution
+          } : nil,
           exported_at: Time.current.iso8601
         }
         send_data entity_json.to_json,

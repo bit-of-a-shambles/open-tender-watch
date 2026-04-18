@@ -92,17 +92,12 @@ module PublicContracts
       skipped      = 0
       entity_cache = {}
       queue        = []
-
-      # Pre-load all external_ids already persisted for this data source so we
-      # can skip already-imported rows in O(1) without any DB round-trip.
-      # For a re-import of 2M rows this turns ~2M SELECTs into a single bulk
-      # pluck + in-memory Set lookup — typically a 100-200× speedup.
-      existing_ids = Contract.where(data_source: @ds).pluck(:external_id).to_set
+      seen_ids     = Set.new
 
       flush = lambda do
         return if queue.empty?
 
-        batch_imported, batch_skipped = flush_bulk(queue, entity_cache, existing_ids)
+        batch_imported, batch_skipped = flush_bulk(queue, entity_cache)
         imported += batch_imported
         skipped  += batch_skipped
         queue.clear
@@ -116,8 +111,9 @@ module PublicContracts
 
       adapter.each_contract do |raw|
         ext_id = raw["external_id"].to_s.strip
-        next if existing_ids.include?(ext_id)
+        next if ext_id.blank? || seen_ids.include?(ext_id)
 
+        seen_ids << ext_id
         queue << raw
         flush.call if queue.size >= batch_size
       end
@@ -142,7 +138,8 @@ module PublicContracts
       base_price: "base_price",
       total_effective_price: "total_effective_price",
       cpv_code: "cpv_code",
-      location: "location"
+      location: "location",
+      bidder_count: "bidder_count"
     }.freeze
 
     # Memoized adapter — critical for stateful adapters (TedClient scroll token,
@@ -180,6 +177,20 @@ module PublicContracts
         )
         next unless winner
         ContractWinner.find_or_create_by!(contract: contract, entity: winner)
+      end
+
+      Array(attrs["bidders"]).each do |bidder_attrs|
+        bidder = if bidder_attrs["tax_identifier"].present? && bidder_attrs["name"].present?
+          find_or_create_entity(
+            bidder_attrs["tax_identifier"],
+            bidder_attrs["name"],
+            is_company: bidder_attrs["is_company"] || false
+          )
+        end
+
+        ContractBidder.find_or_create_by!(contract: contract, raw_label: bidder_attrs["raw_label"]) do |record|
+          record.entity = bidder
+        end
       end
     end
 
@@ -229,9 +240,19 @@ module PublicContracts
         "total_effective_price" => plausible_price(attrs["total_effective_price"]),
         "cpv_code" => normalize_optional_text(attrs["cpv_code"]),
         "location" => normalize_optional_text(attrs["location"]),
+        "bidder_count" => normalize_bidder_count(attrs["bidder_count"], attrs["bidders"]),
         "contracting_entity" => normalize_entity(attrs["contracting_entity"]),
-        "winners" => Array(attrs["winners"]).map { |winner| normalize_entity(winner) }
+        "winners" => Array(attrs["winners"]).map { |winner| normalize_entity(winner) },
+        "bidders" => Array(attrs["bidders"]).map { |bidder| normalize_bidder(bidder) }
       }
+    end
+
+    def normalize_bidder(attrs)
+      attrs ||= {}
+      raw_label = normalize_optional_text(attrs["raw_label"] || attrs["name"])
+      entity = normalize_entity(attrs)
+
+      entity.merge("raw_label" => raw_label)
     end
 
     def normalize_entity(attrs)
@@ -250,6 +271,18 @@ module PublicContracts
 
     def normalize_optional_text(value)
       value.is_a?(String) ? value.strip.presence : value
+    end
+
+    def normalize_bidder_count(value, bidders)
+      explicit = begin
+        Integer(value)
+      rescue ArgumentError, TypeError
+        nil
+      end
+
+      inferred = Array(bidders).count
+      return explicit if explicit && explicit >= 0
+      inferred.positive? ? inferred : nil
     end
 
     # Returns nil for prices above MAX_PLAUSIBLE_PRICE (data entry errors such as
@@ -287,8 +320,8 @@ module PublicContracts
     # through the shared entity_cache. Duplicate rows (same external_id /
     # country_code) are silently ignored by the DB-level unique constraint.
     #
-    # Returns [imported_count, skipped_count].
-    def flush_bulk(queue, entity_cache, existing_ids)
+    # Returns [processed_count, skipped_count].
+    def flush_bulk(queue, entity_cache)
       cc  = @ds.country_code
       now = Time.current
 
@@ -314,10 +347,24 @@ module PublicContracts
                                        is_company: w["is_company"] || false,
                                        cache: entity_cache)
         end
+
+        Array(attrs["bidders"]).each do |bidder|
+          next unless bidder["tax_identifier"].present? && bidder["name"].present?
+
+          find_or_create_entity_cached(bidder["tax_identifier"], bidder["name"],
+                                       is_company: bidder["is_company"] || false,
+                                       cache: entity_cache)
+        end
       end
+
+      ext_ids = valid_rows.map { |attrs| attrs["external_id"] }
+      existing_contracts = Contract.where(external_id: ext_ids, country_code: cc)
+                                   .index_by(&:external_id)
 
       # Build attribute hashes for bulk INSERT
       contract_rows = valid_rows.filter_map do |attrs|
+        next if existing_contracts.key?(attrs["external_id"])
+
         ce_key      = "#{attrs.dig('contracting_entity', 'tax_identifier')}:#{cc}"
         contracting = entity_cache[ce_key]
         next unless contracting
@@ -334,6 +381,7 @@ module PublicContracts
           total_effective_price: attrs["total_effective_price"],
           cpv_code:              attrs["cpv_code"],
           location:              attrs["location"],
+          bidder_count:          attrs["bidder_count"],
           contracting_entity_id: contracting.id,
           data_source_id:        @ds.id,
           created_at:            now,
@@ -341,19 +389,30 @@ module PublicContracts
         }
       end
 
-      return [ 0, queue.size ] if contract_rows.empty?
+      updated_count = 0
+      valid_rows.each do |attrs|
+        contract = existing_contracts[attrs["external_id"]]
+        next unless contract
+
+        ce_key      = "#{attrs.dig('contracting_entity', 'tax_identifier')}:#{cc}"
+        contracting = entity_cache[ce_key]
+        next unless contracting
+
+        merge_contract_attributes!(contract, attrs, contracting)
+        next unless contract.changed?
+
+        contract.updated_at = now
+        contract.save!
+        updated_count += 1
+      end
 
       # INSERT OR IGNORE — the unique index on (external_id, country_code)
       # silently discards in-batch duplicates and any row that was inserted
-      # since the existing_ids set was built.
-      Contract.insert_all(contract_rows, unique_by: %i[external_id country_code])
-
-      # Mark attempted external_ids as known so subsequent batches skip them.
-      contract_rows.each { |r| existing_ids << r[:external_id] }
+      # since the batch started.
+      Contract.insert_all(contract_rows, unique_by: %i[external_id country_code]) if contract_rows.any?
 
       # Bulk-fetch the DB ids we just inserted (and any pre-existing rows in
       # the batch) so we can attach winners without a per-row SELECT.
-      ext_ids      = contract_rows.map { |r| r[:external_id] }
       ext_id_to_id = Contract.where(external_id: ext_ids, country_code: cc)
                               .pluck(:external_id, :id).to_h
 
@@ -376,7 +435,30 @@ module PublicContracts
 
       ContractWinner.insert_all(winner_rows, unique_by: %i[contract_id entity_id]) if winner_rows.any?
 
-      [ contract_rows.size, queue.size - contract_rows.size ]
+      bidder_rows = valid_rows.flat_map do |attrs|
+        contract_id = ext_id_to_id[attrs["external_id"]]
+        next [] unless contract_id
+
+        Array(attrs["bidders"]).filter_map do |bidder|
+          next if bidder["raw_label"].blank?
+
+          bidder_key = "#{bidder['tax_identifier']}:#{cc}" if bidder["tax_identifier"].present?
+          entity = bidder_key ? entity_cache[bidder_key] : nil
+
+          {
+            contract_id: contract_id,
+            entity_id: entity&.id,
+            raw_label: bidder["raw_label"],
+            created_at: now,
+            updated_at: now
+          }
+        end
+      end
+
+      ContractBidder.insert_all(bidder_rows, unique_by: %i[contract_id raw_label]) if bidder_rows.any?
+
+      processed_count = contract_rows.size + updated_count
+      [ processed_count, queue.size - processed_count ]
     end
 
     def find_existing_contract(attrs, contracting, winner_tax_ids)
