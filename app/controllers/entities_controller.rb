@@ -32,19 +32,21 @@ class EntitiesController < ApplicationController
   def show
     @entity = Entity.find(params[:id])
 
-    # Aggregate flag stats first (always unfiltered — drives sidebar and filter chips)
+    # Aggregate flag stats first (drives sidebar and filter chips). Preserve the
+    # DB's per-severity rows instead of collapsing to a synthetic max severity.
+    @flag_severity = params[:severity].presence
     @flag_stats = FlagEntityStat
       .where(entity_id: @entity.id)
-      .group(:flag_type)
+      .group(:flag_type, :severity)
       .select(
         "flag_type",
+        "severity",
         "SUM(total_exposure) AS total_exposure",
-        "SUM(contract_count) AS contract_count",
-        "#{Flag.max_severity_sql} AS severity"
+        "SUM(contract_count) AS contract_count"
       )
-      .order("total_exposure DESC")
+      .order("flag_type ASC, severity ASC, total_exposure DESC")
 
-    @flag_types  = @flag_stats.map(&:flag_type)
+    @flag_types  = @flag_stats.map(&:flag_type).uniq
     @flag_filter = params[:flag_type].presence
 
     base_scope = @entity.contracts_as_contracting_entity
@@ -57,8 +59,12 @@ class EntitiesController < ApplicationController
     # index: O(entity_contracts) vs O(total_flagged_contracts).
     if @flag_filter.present?
       base_scope = base_scope.where(
-        "EXISTS (SELECT 1 FROM flags f WHERE f.contract_id = contracts.id AND f.flag_type = ?)",
-        @flag_filter
+        if @flag_severity.present?
+          "EXISTS (SELECT 1 FROM flags f WHERE f.contract_id = contracts.id AND f.flag_type = ? AND f.severity = ?)"
+        else
+          "EXISTS (SELECT 1 FROM flags f WHERE f.contract_id = contracts.id AND f.flag_type = ?)"
+        end,
+        *@flag_severity.present? ? [ @flag_filter, @flag_severity ] : [ @flag_filter ]
       )
     end
 
@@ -83,7 +89,9 @@ class EntitiesController < ApplicationController
         # use the pre-computed contract_count from flag_entity_stats instead.
         # Date filters still fall back to a real count (rare + bounded).
         @total = if @flag_filter.present? && @date_from.blank? && @date_to.blank?
-          @flag_stats.find { |s| s.flag_type == @flag_filter }&.contract_count.to_i
+          @flag_stats
+            .select { |s| s.flag_type == @flag_filter && (@flag_severity.blank? || s.severity == @flag_severity) }
+            .sum { |s| s.contract_count.to_i }
         elsif @date_from.blank? && @date_to.blank?
           @entity.contract_count
         else

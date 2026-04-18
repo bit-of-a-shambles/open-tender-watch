@@ -33,7 +33,7 @@
   </header>
 
   <% if @flag_stats.any? %>
-    <% sorted_stats = @flag_stats.sort_by { |s| c = s.flag_type.split("_").first; [c[0], c[1..].to_i] } %>
+    <% sorted_stats = @flag_stats.sort_by { |s| c = s.flag_type.split("_").first; [c[0], c[1..].to_i, s.severity.to_s] } %>
     <div class="border border-white/[0.08] rounded-lg overflow-hidden mt-6">
       <div class="px-4 py-3 bg-white/[0.02] border-b border-white/[0.06]">
         <span class="font-mono text-[10px] tracking-[2px] text-white/35 uppercase"><%= t("entities.show.risk_flags") %></span>
@@ -42,8 +42,8 @@
         <% s = severity_styles(stat.severity) %>
         <% code = stat.flag_type.split("_").first.downcase %>
         <% desc = t("dashboard.methodology.flags.#{code}_desc", default: "") %>
-        <% active_flag = @flag_filter == stat.flag_type %>
-        <%= link_to entity_path(@entity, flag_type: stat.flag_type),
+          <% active_flag = @flag_filter == stat.flag_type && @flag_severity == stat.severity %>
+          <%= link_to entity_path(@entity, flag_type: stat.flag_type, severity: stat.severity),
               data: { turbo_frame: "entity-contracts" },
               class: "block px-4 py-3 border-b border-white/[0.04] last:border-0 hover:bg-white/[0.03] transition-colors cursor-pointer #{active_flag ? 'bg-white/[0.04]' : ''}" do %>
           <div class="flex flex-wrap items-center gap-x-3 gap-y-1">
@@ -99,6 +99,7 @@
           <%= hidden_field_tag :sort, @sort_col %>
           <%= hidden_field_tag :dir, @sort_dir %>
           <%= hidden_field_tag :flag_type, @flag_filter %>
+          <%= hidden_field_tag :severity, @flag_severity %>
           <label class="font-mono text-[10px] text-white/35 shrink-0"><%= t("contracts.index.date_from") %></label>
           <%= f.date_field :date_from, value: @date_from,
               class: "bg-white/[0.04] border border-white/[0.1] rounded px-2 py-1.5 font-mono text-xs text-[#e8e0d4] focus:outline-none focus:border-[#c8a84e55] transition-all" %>
@@ -108,7 +109,7 @@
           <%= f.submit t("contracts.index.filter"),
               class: "bg-[#c8a84e1a] border border-[#c8a84e44] text-[#c8a84e] font-mono text-[10px] tracking-widest px-3 py-1.5 rounded hover:bg-[#c8a84e33] transition-all cursor-pointer" %>
           <% if @date_from.present? || @date_to.present? %>
-            <%= link_to t("contracts.index.clear"), entity_path(@entity, sort: @sort_col, dir: @sort_dir, flag_type: @flag_filter),
+            <%= link_to t("contracts.index.clear"), entity_path(@entity, sort: @sort_col, dir: @sort_dir, flag_type: @flag_filter, severity: @flag_severity),
                 class: "font-mono text-[10px] text-white/30 hover:text-white/50 transition-all" %>
           <% end %>
         <% end %>
@@ -200,12 +201,12 @@
           <div class="flex items-center justify-end mt-4 font-mono text-xs text-white/35 gap-2">
             <% if @page > 1 %>
               <%= link_to t("contracts.index.pagination.prev"),
-                    entity_path(@entity, sort: @sort_col, dir: @sort_dir, flag_type: @flag_filter, date_from: @date_from, date_to: @date_to, page: @page - 1),
+                    entity_path(@entity, sort: @sort_col, dir: @sort_dir, flag_type: @flag_filter, severity: @flag_severity, date_from: @date_from, date_to: @date_to, page: @page - 1),
                     class: "border border-white/10 px-3 py-1.5 rounded hover:border-[#c8a84e44] hover:text-[#c8a84e] transition-all" %>
             <% end %>
             <% if @page < @total_pages %>
               <%= link_to t("contracts.index.pagination.next"),
-                    entity_path(@entity, sort: @sort_col, dir: @sort_dir, flag_type: @flag_filter, date_from: @date_from, date_to: @date_to, page: @page + 1),
+                    entity_path(@entity, sort: @sort_col, dir: @sort_dir, flag_type: @flag_filter, severity: @flag_severity, date_from: @date_from, date_to: @date_to, page: @page + 1),
                     class: "border border-white/10 px-3 py-1.5 rounded hover:border-[#c8a84e44] hover:text-[#c8a84e] transition-all" %>
             <% end %>
           </div>

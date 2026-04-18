@@ -55,22 +55,24 @@ class CompaniesController < ApplicationController
     @total_won_value  = @entity.won_value
     @entity_won_total = @entity.won_contract_count
 
-    # Flag stats across all won contracts, reshaped to match the entity view.
+    # Flag stats across all won contracts. Preserve severity variants from the
+    # DB instead of collapsing them into a synthetic max severity.
     won_contract_ids = ContractWinner.where(entity_id: @entity.id).select(:contract_id)
     @company_risk_score = Flag.where(contract_id: won_contract_ids).sum(:score)
+    @flag_severity = params[:severity].presence
     @flag_stats = Flag
       .joins(:contract)
       .where(contract_id: won_contract_ids)
-      .group(:flag_type)
+      .group(:flag_type, :severity)
       .select(
         "flags.flag_type",
+        "flags.severity",
         "COALESCE(SUM(contracts.base_price), 0) AS total_exposure",
-        "COUNT(*) AS contract_count",
-        "#{Flag.max_severity_sql} AS severity"
+        "COUNT(*) AS contract_count"
       )
-      .order("total_exposure DESC")
+      .order("flags.flag_type ASC, flags.severity ASC, total_exposure DESC")
 
-    @flag_types  = @flag_stats.map(&:flag_type)
+    @flag_types  = @flag_stats.map(&:flag_type).uniq
     @flag_filter = params[:flag_type].presence
     @benford_analysis = BenfordAnalysis.find_by(entity_id: @entity.id)
 
@@ -78,8 +80,12 @@ class CompaniesController < ApplicationController
 
     if @flag_filter.present?
       base_scope = base_scope.where(
-        "EXISTS (SELECT 1 FROM flags f WHERE f.contract_id = contracts.id AND f.flag_type = ?)",
-        @flag_filter
+        if @flag_severity.present?
+          "EXISTS (SELECT 1 FROM flags f WHERE f.contract_id = contracts.id AND f.flag_type = ? AND f.severity = ?)"
+        else
+          "EXISTS (SELECT 1 FROM flags f WHERE f.contract_id = contracts.id AND f.flag_type = ?)"
+        end,
+        *@flag_severity.present? ? [ @flag_filter, @flag_severity ] : [ @flag_filter ]
       )
     end
 
@@ -98,7 +104,9 @@ class CompaniesController < ApplicationController
         @total = if @flag_filter.blank? && @date_from.blank? && @date_to.blank?
           @entity.won_contract_count
         elsif @flag_filter.present? && @date_from.blank? && @date_to.blank?
-          @flag_stats.find { |stat| stat.flag_type == @flag_filter }&.contract_count.to_i
+          @flag_stats
+            .select { |stat| stat.flag_type == @flag_filter && (@flag_severity.blank? || stat.severity == @flag_severity) }
+            .sum { |stat| stat.contract_count.to_i }
         else
           base_scope.count
         end
