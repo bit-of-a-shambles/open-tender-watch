@@ -107,6 +107,12 @@ class PublicContracts::PT::RegistoComercialTest < ActiveSupport::TestCase
     assert_includes detalhe[:gerentes], "Maria Silva"
   end
 
+  test "extrair_detalhe builds structured people entries" do
+    detalhe = @rc.send(:extrair_detalhe, DETAIL_HTML)
+    assert_includes detalhe[:people], { name: "Maria Silva", role_type: "manager", role_label: "Gerente", tax_identifier: nil }
+    assert_includes detalhe[:people], { name: "João Ferreira", role_type: "partner_shareholder", role_label: "Sócio", tax_identifier: nil }
+  end
+
   test "extrair_detalhe uses fallback for corpo" do
     detalhe = @rc.send(:extrair_detalhe, CORPO_FALLBACK_HTML)
     refute_nil detalhe[:corpo]
@@ -164,6 +170,13 @@ class PublicContracts::PT::RegistoComercialTest < ActiveSupport::TestCase
     texto = "Gerentes: Rui Alves. Gerentes: Rui Alves."
     nomes = @rc.send(:extrair_gerentes, texto)
     assert_equal 1, nomes.count { |n| n == "Rui Alves" }
+  end
+
+  test "extrair_pessoas returns structured gerente and socio entries" do
+    pessoas = @rc.send(:extrair_pessoas, "Sócios: João Ferreira, NIF 123456789. Gerentes: Maria Silva, residente em Porto.")
+
+    assert_includes pessoas, { name: "João Ferreira", role_type: "partner_shareholder", role_label: "Sócio", tax_identifier: nil }
+    assert_includes pessoas, { name: "Maria Silva", role_type: "manager", role_label: "Gerente", tax_identifier: nil }
   end
 
   # ── obter_detalhe guards ───────────────────────────────────────────────────

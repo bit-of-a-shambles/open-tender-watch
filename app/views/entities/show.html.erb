@@ -32,52 +32,48 @@
     </div>
   </header>
 
+  <% if @flag_stats.any? %>
+    <% sorted_stats = @flag_stats.sort_by { |s| c = s.flag_type.split("_").first; [c[0], c[1..].to_i] } %>
+    <div class="border border-white/[0.08] rounded-lg overflow-hidden mt-6">
+      <div class="px-4 py-3 bg-white/[0.02] border-b border-white/[0.06]">
+        <span class="font-mono text-[10px] tracking-[2px] text-white/35 uppercase"><%= t("entities.show.risk_flags") %></span>
+      </div>
+      <% sorted_stats.each do |stat| %>
+        <% s = severity_styles(stat.severity) %>
+        <% code = stat.flag_type.split("_").first.downcase %>
+        <% desc = t("dashboard.methodology.flags.#{code}_desc", default: "") %>
+        <% active_flag = @flag_filter == stat.flag_type %>
+        <%= link_to entity_path(@entity, flag_type: stat.flag_type),
+              data: { turbo_frame: "entity-contracts" },
+              class: "block px-4 py-3 border-b border-white/[0.04] last:border-0 hover:bg-white/[0.03] transition-colors cursor-pointer #{active_flag ? 'bg-white/[0.04]' : ''}" do %>
+          <div class="flex flex-wrap items-center gap-x-3 gap-y-1">
+            <span class="font-mono text-[11px] <%= s[:text] %> font-medium flex-1 min-w-0">
+              <%= flag_type_label(stat.flag_type) %>
+            </span>
+            <span class="font-mono text-[9px] tracking-wide px-1.5 py-0.5 rounded border <%= s[:bg] %> <%= s[:text] %> <%= s[:border] %>">
+              <%= t("dashboard.insights.severity_#{stat.severity}") %>
+            </span>
+            <span class="font-['Space_Grotesk'] text-sm font-bold text-[#e8e0d4]">
+              <%= number_to_currency(stat.total_exposure.to_f, unit: "€", delimiter: ",", separator: ".", format: "%u%n", precision: 0) %>
+            </span>
+            <span class="font-mono text-[10px] text-white/35">
+              <%= number_with_delimiter(stat.contract_count.to_i) %> <%= t("entities.show.contracts_short") %>
+            </span>
+          </div>
+          <% if desc.present? %>
+            <div class="font-mono text-[10px] text-white/30 mt-1.5 leading-relaxed">
+              <%= desc %>
+            </div>
+          <% end %>
+        <% end %>
+      <% end %>
+    </div>
+  <% end %>
+
   <div class="flex flex-col-reverse lg:grid lg:grid-cols-[1fr_280px] gap-6 mt-6">
 
     <%# Contract list %>
     <div>
-
-      <%# Flag summary — ordered by flag code (A1, A2 … B1, B2 … C1, C2 …)
-          Placed outside the Turbo Frame so it always reflects the full entity stats,
-          independent of any active flag/date filter. %>
-      <% if @flag_stats.any? %>
-        <% sorted_stats = @flag_stats.sort_by { |s| c = s.flag_type.split("_").first; [c[0], c[1..].to_i] } %>
-        <div class="border border-white/[0.08] rounded-lg overflow-hidden mb-5">
-          <div class="px-4 py-3 bg-white/[0.02] border-b border-white/[0.06]">
-            <span class="font-mono text-[10px] tracking-[2px] text-white/35 uppercase"><%= t("entities.show.risk_flags") %></span>
-          </div>
-          <% sorted_stats.each do |stat| %>
-            <% s = severity_styles(stat.severity) %>
-            <% code = stat.flag_type.split("_").first.downcase %>
-            <% desc = t("dashboard.methodology.flags.#{code}_desc", default: "") %>
-            <% active_flag = @flag_filter == stat.flag_type %>
-            <%= link_to entity_path(@entity, flag_type: stat.flag_type),
-                  data: { turbo_frame: "entity-contracts" },
-                  class: "block px-4 py-3 border-b border-white/[0.04] last:border-0 hover:bg-white/[0.03] transition-colors cursor-pointer #{active_flag ? 'bg-white/[0.04]' : ''}" do %>
-              <div class="flex flex-wrap items-center gap-x-3 gap-y-1">
-                <span class="font-mono text-[11px] <%= s[:text] %> font-medium flex-1 min-w-0">
-                  <%= flag_type_label(stat.flag_type) %>
-                </span>
-                <span class="font-mono text-[9px] tracking-wide px-1.5 py-0.5 rounded border <%= s[:bg] %> <%= s[:text] %> <%= s[:border] %>">
-                  <%= t("dashboard.insights.severity_#{stat.severity}") %>
-                </span>
-                <span class="font-['Space_Grotesk'] text-sm font-bold text-[#e8e0d4]">
-                  <%= number_to_currency(stat.total_exposure.to_f, unit: "€", delimiter: ",", separator: ".", format: "%u%n", precision: 0) %>
-                </span>
-                <span class="font-mono text-[10px] text-white/35">
-                  <%= number_with_delimiter(stat.contract_count.to_i) %> <%= t("entities.show.contracts_short") %>
-                </span>
-              </div>
-              <% if desc.present? %>
-                <div class="font-mono text-[10px] text-white/30 mt-1.5 leading-relaxed">
-                  <%= desc %>
-                </div>
-              <% end %>
-            <% end %>
-          <% end %>
-        </div>
-      <% end %>
-
       <%= turbo_frame_tag "entity-contracts", data: { controller: "entity-contracts" } do %>
         <%# Flag filter chips %>
         <% if @flag_types.any? %>

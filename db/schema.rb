@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_04_17_113000) do
+ActiveRecord::Schema[8.0].define(version: 2026_04_18_172000) do
   create_table "benford_analyses", force: :cascade do |t|
     t.integer "entity_id", null: false
     t.integer "representative_contract_id"
@@ -135,6 +135,25 @@ ActiveRecord::Schema[8.0].define(version: 2026_04_17_113000) do
     t.index ["tax_identifier", "country_code"], name: "index_entities_on_tax_identifier_and_country_code", unique: true
   end
 
+  create_table "entity_person_roles", force: :cascade do |t|
+    t.integer "entity_id", null: false
+    t.integer "person_id", null: false
+    t.string "role_type", null: false
+    t.string "role_label"
+    t.string "source_name", null: false
+    t.text "source_url"
+    t.date "source_publication_date"
+    t.boolean "active", default: true, null: false
+    t.datetime "verified_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["entity_id", "active"], name: "index_entity_person_roles_on_entity_id_and_active"
+    t.index ["entity_id", "person_id", "role_type", "source_name", "active"], name: "index_entity_person_roles_unique_active_state", unique: true
+    t.index ["entity_id"], name: "index_entity_person_roles_on_entity_id"
+    t.index ["person_id", "active"], name: "index_entity_person_roles_on_person_id_and_active"
+    t.index ["person_id"], name: "index_entity_person_roles_on_person_id"
+  end
+
   create_table "flag_entity_stats", force: :cascade do |t|
     t.integer "entity_id", null: false
     t.string "flag_type", null: false
@@ -179,6 +198,16 @@ ActiveRecord::Schema[8.0].define(version: 2026_04_17_113000) do
     t.index ["severity"], name: "index_flags_on_severity"
   end
 
+  create_table "people", force: :cascade do |t|
+    t.string "name", null: false
+    t.string "tax_identifier"
+    t.string "country_code", default: "PT", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["name", "country_code"], name: "index_people_on_name_and_country_code"
+    t.index ["tax_identifier", "country_code"], name: "index_people_on_tax_identifier_and_country_code", unique: true, where: "tax_identifier IS NOT NULL"
+  end
+
   add_foreign_key "benford_analyses", "contracts", column: "representative_contract_id", on_delete: :nullify
   add_foreign_key "benford_analyses", "entities"
   add_foreign_key "company_directors", "entities"
@@ -188,6 +217,8 @@ ActiveRecord::Schema[8.0].define(version: 2026_04_17_113000) do
   add_foreign_key "contract_winners", "entities"
   add_foreign_key "contracts", "data_sources"
   add_foreign_key "contracts", "entities", column: "contracting_entity_id"
+  add_foreign_key "entity_person_roles", "entities"
+  add_foreign_key "entity_person_roles", "people"
   add_foreign_key "flag_entity_stats", "entities"
   add_foreign_key "flags", "contracts"
 end

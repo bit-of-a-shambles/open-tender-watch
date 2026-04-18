@@ -63,4 +63,21 @@ class EntityTest < ActiveSupport::TestCase
   test "has many contracts_bid_on through contract_bidders" do
     assert_respond_to entities(:one), :contracts_bid_on
   end
+
+  test "current_people_roles falls back to company directors when normalized roles absent" do
+    names = entities(:two).current_people_roles.map(&:name)
+    assert_includes names, company_directors(:one).name
+    assert_includes names, company_directors(:two).name
+  end
+
+  test "current_people_roles prefers normalized active roles sorted by priority" do
+    entity = entities(:two)
+    director = Person.create!(name: "Zara Director", country_code: "PT")
+    manager = Person.create!(name: "Ana Manager", country_code: "PT")
+
+    EntityPersonRole.create!(entity:, person: manager, role_type: "manager", role_label: "Gerente", source_name: "Registo Comercial")
+    EntityPersonRole.create!(entity:, person: director, role_type: "director", role_label: "Diretora", source_name: "Registo Comercial")
+
+    assert_equal [ "Zara Director", "Ana Manager" ], entity.current_people_roles.map(&:name)
+  end
 end
