@@ -244,9 +244,15 @@ module PublicContracts
         if corpo.length > 0
           detalhe[:socios]   = extrair_socios(corpo)
           detalhe[:gerentes] = extrair_gerentes(corpo)
+          detalhe[:people]   = extrair_pessoas(corpo)
         end
 
         detalhe
+      end
+
+      def extrair_pessoas(texto)
+        build_people_entries(extrair_gerentes(texto), role_type: "manager", role_label: "Gerente") +
+          build_people_entries(extrair_socios(texto), role_type: "partner_shareholder", role_label: "Sócio")
       end
 
       def extrair_socios(texto)
@@ -283,6 +289,19 @@ module PublicContracts
           end
         end
         nomes.uniq
+      end
+
+      def build_people_entries(names, role_type:, role_label:)
+        Array(names).filter_map do |name|
+          next if name.blank?
+
+          {
+            name: name,
+            role_type: role_type,
+            role_label: role_label,
+            tax_identifier: nil
+          }
+        end
       end
     end
 
