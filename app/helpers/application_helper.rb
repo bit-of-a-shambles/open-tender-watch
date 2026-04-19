@@ -16,6 +16,7 @@ module ApplicationHelper
     "A1_REPEAT_DIRECT_AWARD"           => "high",    # OECD bid rigging; TI: HIGH
     "A2_PUBLICATION_AFTER_CELEBRATION" => "low",      # TI/OLAF: process compliance failure; LOW
     "A5_THRESHOLD_SPLITTING"           => "high",    # TI/OLAF/ECA: deliberate circumvention; HIGH
+    "A6_LOW_COMPETITION"               => "medium",  # single-bidder award; OECD bid-rigging indicator
     "A7_ABNORMAL_DIRECT_AWARD_RATE"    => "high",    # DIGIWHIST: strongest corruption predictor; HIGH
     "A9_PRICE_ANOMALY"                 => "high",    # OECD: price manipulation; worst case HIGH
     "A9_PRICE_REDUCTION"               => "low",
@@ -37,6 +38,12 @@ module ApplicationHelper
     "medium"   => { dot: "bg-[#ff8844]", text: "text-[#ff8844]", bg: "bg-[#ff884412]", border: "border-[#ff884433]" },
     "low"      => { dot: "bg-[#c8a84e]", text: "text-[#c8a84e]", bg: "bg-[#c8a84e12]", border: "border-[#c8a84e33]" },
   }.freeze
+
+  SEVERITY_ORDER = { "critical" => 0, "high" => 1, "medium" => 2, "low" => 3 }.freeze
+
+  def severity_rank(severity)
+    SEVERITY_ORDER.fetch(severity.to_s, 99)
+  end
 
   def severity_styles(severity)
     SEVERITY_STYLES.fetch(severity.to_s, SEVERITY_STYLES["medium"])

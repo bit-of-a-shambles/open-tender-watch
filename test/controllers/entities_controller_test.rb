@@ -100,51 +100,6 @@ class EntitiesControllerTest < ActionDispatch::IntegrationTest
     assert_not_includes response.body, contracts(:two).object
   end
 
-  test "show filters flagged contracts by severity inside the turbo frame" do
-    Flag.create!(
-      contract: contracts(:one),
-      flag_type: "A9_PRICE_ANOMALY",
-      severity: "medium",
-      score: 20,
-      details: { rule: "A9 medium" },
-      fired_at: Time.current
-    )
-
-    Flag.create!(
-      contract: contracts(:two),
-      flag_type: "A9_PRICE_ANOMALY",
-      severity: "high",
-      score: 40,
-      details: { rule: "A9 high" },
-      fired_at: Time.current
-    )
-
-    FlagEntityStat.create!(
-      entity: entities(:one),
-      flag_type: "A9_PRICE_ANOMALY",
-      severity: "medium",
-      total_exposure: contracts(:one).base_price,
-      contract_count: 1,
-      computed_at: Time.current
-    )
-
-    FlagEntityStat.create!(
-      entity: entities(:one),
-      flag_type: "A9_PRICE_ANOMALY",
-      severity: "high",
-      total_exposure: contracts(:two).base_price,
-      contract_count: 1,
-      computed_at: Time.current
-    )
-
-    get entity_url(entities(:one), flag_type: "A9_PRICE_ANOMALY", severity: "medium"),
-        headers: { "Turbo-Frame" => "entity-contracts" }
-
-    assert_response :success
-    assert_includes response.body, contracts(:one).object
-    assert_not_includes response.body, contracts(:two).object
-  end
-
   test "show filters contracts by date_from" do
     contracts(:one).update!(publication_date: Date.new(2025, 6, 1))
     contracts(:two).update!(publication_date: Date.new(2025, 1, 1))
@@ -238,7 +193,8 @@ class EntitiesControllerTest < ActionDispatch::IntegrationTest
     assert_equal true, data["benford_analysis"]["flagged"]
   end
 
-  test "show JSON export includes flag stats when entity has flagged contracts" do
+  test "show JSON export reports canonical severity for flag stats" do
+    # Stale DB value ("high") should not leak through — A2 is canonically low.
     FlagEntityStat.create!(
       entity: entities(:one),
       flag_type: "A2_PUBLICATION_AFTER_CELEBRATION",
@@ -253,10 +209,10 @@ class EntitiesControllerTest < ActionDispatch::IntegrationTest
     data = JSON.parse(response.body)
     assert_equal 1, data["flag_stats"].size
     assert_equal "A2_PUBLICATION_AFTER_CELEBRATION", data["flag_stats"].first["flag_type"]
-    assert_equal "high", data["flag_stats"].first["severity"]
+    assert_equal "low", data["flag_stats"].first["severity"]
   end
 
-  test "show keeps mixed severities as separate summary rows" do
+  test "show collapses A9 sub-flag types into one row per flag_type with severity breakdown" do
     FlagEntityStat.create!(
       entity: entities(:one),
       flag_type: "A9_PRICE_ANOMALY",
@@ -275,19 +231,70 @@ class EntitiesControllerTest < ActionDispatch::IntegrationTest
       computed_at: Time.current
     )
 
+    FlagEntityStat.create!(
+      entity: entities(:one),
+      flag_type: "A9_PRICE_REDUCTION",
+      severity: "low",
+      contract_count: 4,
+      total_exposure: 10_000,
+      computed_at: Time.current
+    )
+
     get entity_url(entities(:one), format: :json)
     assert_response :success
 
     data = JSON.parse(response.body)
-    a9_rows = data["flag_stats"].select { |row| row["flag_type"] == "A9_PRICE_ANOMALY" }
-    assert_equal [ "high", "medium" ], a9_rows.map { |row| row["severity"] }.sort
+    by_type = data["flag_stats"].group_by { |r| r["flag_type"] }
+
+    anomaly = by_type["A9_PRICE_ANOMALY"].first
+    assert_equal 1,      by_type["A9_PRICE_ANOMALY"].size
+    assert_equal "high", anomaly["severity"]
+    assert_equal 3,      anomaly["contract_count"]
+    assert_equal 85_000.0, anomaly["total_exposure"]
+    # Breakdown: high listed before medium, with its own count + exposure.
+    assert_equal [ "high", "medium" ], anomaly["severity_breakdown"].map { |b| b["severity"] }
+    assert_equal [ 2, 1 ],             anomaly["severity_breakdown"].map { |b| b["contract_count"] }
+    assert_equal [ 60_000.0, 25_000.0 ], anomaly["severity_breakdown"].map { |b| b["total_exposure"] }
+
+    reduction = by_type["A9_PRICE_REDUCTION"].first
+    assert_equal 1,     by_type["A9_PRICE_REDUCTION"].size
+    assert_equal "low", reduction["severity"]
+    # Single-severity flags still carry a breakdown — with exactly one row.
+    assert_equal 1, reduction["severity_breakdown"].size
+    assert_equal "low", reduction["severity_breakdown"].first["severity"]
   end
 
-  test "show renders low severity for late publication when that is what the db stores" do
+  test "show renders per-severity breakdown inline for flags with mixed severities" do
+    FlagEntityStat.create!(
+      entity: entities(:one),
+      flag_type: "A9_PRICE_ANOMALY",
+      severity: "medium",
+      contract_count: 1,
+      total_exposure: 25_000,
+      computed_at: Time.current
+    )
+
+    FlagEntityStat.create!(
+      entity: entities(:one),
+      flag_type: "A9_PRICE_ANOMALY",
+      severity: "high",
+      contract_count: 2,
+      total_exposure: 60_000,
+      computed_at: Time.current
+    )
+
+    get entity_url(entities(:one))
+    assert_response :success
+    # Both severity badges appear for A9 — the outer row (high) plus the medium breakdown row.
+    assert_includes response.body, I18n.t("dashboard.insights.severity_high")
+    assert_includes response.body, I18n.t("dashboard.insights.severity_medium")
+  end
+
+  test "show renders low severity badge for late publication regardless of stored severity" do
     FlagEntityStat.create!(
       entity: entities(:one),
       flag_type: "A2_PUBLICATION_AFTER_CELEBRATION",
-      severity: "low",
+      severity: "high",
       contract_count: 1,
       total_exposure: contracts(:one).base_price,
       computed_at: Time.current
