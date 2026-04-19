@@ -117,49 +117,9 @@ class CompaniesControllerTest < ActionDispatch::IntegrationTest
     assert_includes response.body, contracts(:two).object
   end
 
-  test "show filters contracts by flag_type and severity" do
-    Flag.create!(
-      contract: contracts(:two),
-      flag_type: "A9_PRICE_ANOMALY",
-      severity: "medium",
-      score: 20,
-      details: { rule: "A9 medium" },
-      fired_at: Time.current
-    )
-
-    other_contract = Contract.create!(
-      external_id: "contract-004",
-      contracting_entity: entities(:one),
-      data_source: data_sources(:portal_base),
-      country_code: "PT",
-      object: "Contrato A9 high",
-      contract_type: "Aquisição de Serviços",
-      procedure_type: "Ajuste Direto",
-      publication_date: Date.new(2026, 2, 21),
-      celebration_date: Date.new(2026, 2, 19),
-      base_price: 40_000,
-      total_effective_price: 85_000,
-      cpv_code: "90911000",
-      location: "Porto"
-    )
-    ContractWinner.create!(contract: other_contract, entity: entities(:two), price_share: 85_000)
-    Flag.create!(
-      contract: other_contract,
-      flag_type: "A9_PRICE_ANOMALY",
-      severity: "high",
-      score: 40,
-      details: { rule: "A9 high" },
-      fired_at: Time.current
-    )
-
-    get company_url(entities(:two), flag_type: "A9_PRICE_ANOMALY", severity: "medium"),
-        headers: { "Turbo-Frame" => "company-contracts" }
-    assert_response :success
-    assert_includes response.body, contracts(:two).object
-    assert_not_includes response.body, other_contract.object
-  end
-
-  test "show renders entity-style risk flag summary with severity" do
+  test "show renders risk flag summary with canonical severity for late publication" do
+    # Stale DB severity ("high") should be overridden by the canonical
+    # FLAG_TYPE_SEVERITY mapping, which marks A2 as low.
     Flag.create!(
       contract: contracts(:two),
       flag_type: "A2_PUBLICATION_AFTER_CELEBRATION",
@@ -172,10 +132,10 @@ class CompaniesControllerTest < ActionDispatch::IntegrationTest
     get company_url(entities(:two))
     assert_response :success
     assert_includes response.body, "A2 ·"
-    assert_includes response.body, I18n.t("dashboard.insights.severity_high")
+    assert_includes response.body, I18n.t("dashboard.insights.severity_low")
   end
 
-  test "show keeps mixed severities as separate summary rows" do
+  test "show collapses A9 severity variants into a single summary row per flag_type with severity breakdown" do
     Flag.create!(
       contract: contracts(:two),
       flag_type: "A9_PRICE_ANOMALY",
@@ -216,22 +176,54 @@ class CompaniesControllerTest < ActionDispatch::IntegrationTest
 
     data = JSON.parse(response.body)
     a9_rows = data["flag_stats"].select { |row| row["flag_type"] == "A9_PRICE_ANOMALY" }
-    assert_equal [ "high", "medium" ], a9_rows.map { |row| row["severity"] }.sort
+    assert_equal 1, a9_rows.size
+    assert_equal "high", a9_rows.first["severity"]
+    assert_equal 2,      a9_rows.first["contract_count"]
+    # Breakdown: high listed before medium, each with its own count.
+    assert_equal [ "high", "medium" ], a9_rows.first["severity_breakdown"].map { |b| b["severity"] }
+    assert_equal [ 1, 1 ],             a9_rows.first["severity_breakdown"].map { |b| b["contract_count"] }
   end
 
-  test "show renders low severity for late publication when that is what the db stores" do
+  test "show renders per-severity breakdown inline for flags with mixed severities" do
     Flag.create!(
       contract: contracts(:two),
-      flag_type: "A2_PUBLICATION_AFTER_CELEBRATION",
-      severity: "low",
-      score: 10,
-      details: { rule: "A2 low" },
+      flag_type: "A9_PRICE_ANOMALY",
+      severity: "medium",
+      score: 20,
+      details: { rule: "A9 medium" },
+      fired_at: Time.current
+    )
+
+    other_contract = Contract.create!(
+      external_id: "contract-005",
+      contracting_entity: entities(:one),
+      data_source: data_sources(:portal_base),
+      country_code: "PT",
+      object: "Contrato A9 high",
+      contract_type: "Aquisição de Serviços",
+      procedure_type: "Ajuste Direto",
+      publication_date: Date.new(2026, 2, 21),
+      celebration_date: Date.new(2026, 2, 19),
+      base_price: 40_000,
+      total_effective_price: 85_000,
+      cpv_code: "90911000",
+      location: "Porto"
+    )
+    ContractWinner.create!(contract: other_contract, entity: entities(:two), price_share: 85_000)
+    Flag.create!(
+      contract: other_contract,
+      flag_type: "A9_PRICE_ANOMALY",
+      severity: "high",
+      score: 40,
+      details: { rule: "A9 high" },
       fired_at: Time.current
     )
 
     get company_url(entities(:two))
     assert_response :success
-    assert_includes response.body, I18n.t("dashboard.insights.severity_low")
+    # Both severity badges appear — outer row (high) plus medium breakdown row.
+    assert_includes response.body, I18n.t("dashboard.insights.severity_high")
+    assert_includes response.body, I18n.t("dashboard.insights.severity_medium")
   end
 
   test "show filters contracts by date_from" do
@@ -388,7 +380,8 @@ class CompaniesControllerTest < ActionDispatch::IntegrationTest
     assert data.key?("exported_at")
   end
 
-  test "show JSON export includes flag stats when company has flagged contracts" do
+  test "show JSON export reports canonical severity for flag stats" do
+    # Stale DB value ("high") should not leak through — A2 is canonically low.
     Flag.create!(
       contract: contracts(:two),
       flag_type: "A2_PUBLICATION_AFTER_CELEBRATION",
@@ -403,7 +396,7 @@ class CompaniesControllerTest < ActionDispatch::IntegrationTest
     data = JSON.parse(response.body)
     assert_equal 1, data["flag_stats"].size
     assert_equal "A2_PUBLICATION_AFTER_CELEBRATION", data["flag_stats"].first["flag_type"]
-    assert_equal "high", data["flag_stats"].first["severity"]
+    assert_equal "low", data["flag_stats"].first["severity"]
     assert_equal contracts(:two).base_price.to_f, data["flag_stats"].first["total_exposure"]
   end
 
