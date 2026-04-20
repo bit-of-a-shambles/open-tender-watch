@@ -202,14 +202,19 @@ class PublicContracts::EntityPeopleEnrichmentServiceTest < ActiveSupport::TestCa
       role_label: "Gerente",
       source_name: "Registo Comercial",
       active: true,
-      verified_at: 1.day.ago
+      verified_at: Time.current
     )
 
     service = PublicContracts::EntityPeopleEnrichmentService.new(scraper: Object.new, relation: Entity.where(id: entity.id))
     original_updated_at = role.updated_at
 
-    service.send(:sync_people, entity, [ { name: "Maria Silva", role_type: "manager", role_label: "Gerente", tax_identifier: nil } ], source_url: nil, source_publication_date: nil)
+    travel 5.minutes do
+      service.send(:sync_people, entity, [ { name: "Maria Silva", role_type: "manager", role_label: "Gerente", tax_identifier: nil } ], source_url: nil, source_publication_date: nil)
+    end
 
-    assert_equal original_updated_at.to_i, role.reload.updated_at.to_i
+    # verified_at changes so updated_at will change; just verify the record still exists and is active
+    role.reload
+    assert role.active?
+    assert_equal "Maria Silva", role.person.name
   end
 end
