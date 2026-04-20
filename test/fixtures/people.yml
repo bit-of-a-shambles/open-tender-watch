@@ -1,0 +1,11 @@
+# frozen_string_literal: true
+
+joao:
+  name: "João Manuel da Silva"
+  tax_identifier: "123456789"
+  country_code: PT
+
+maria:
+  name: "Maria Santos"
+  tax_identifier: "987654321"
+  country_code: PT

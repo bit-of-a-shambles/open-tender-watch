@@ -1,0 +1,54 @@
+<div class="animate-fade-up max-w-3xl mx-auto mt-16">
+  <header class="mb-8">
+    <h1 class="font-['Space_Grotesk'] text-2xl font-bold text-[#e8e0d4] mb-2"><%= t("privacy.title") %></h1>
+    <p class="font-mono text-[11px] text-white/40"><%= t("privacy.last_updated") %></p>
+  </header>
+
+  <div class="space-y-6 font-mono text-[11px] text-white/60 leading-relaxed">
+    <section>
+      <h2 class="font-['Space_Grotesk'] text-base font-semibold text-[#e8e0d4] mb-3"><%= t("privacy.controller_heading") %></h2>
+      <p><%= t("privacy.controller_text") %></p>
+    </section>
+
+    <section>
+      <h2 class="font-['Space_Grotesk'] text-base font-semibold text-[#e8e0d4] mb-3"><%= t("privacy.purpose_heading") %></h2>
+      <p><%= t("privacy.purpose_text") %></p>
+    </section>
+
+    <section>
+      <h2 class="font-['Space_Grotesk'] text-base font-semibold text-[#e8e0d4] mb-3"><%= t("privacy.legal_basis_heading") %></h2>
+      <p><%= t("privacy.legal_basis_text_html") %></p>
+    </section>
+
+    <section>
+      <h2 class="font-['Space_Grotesk'] text-base font-semibold text-[#e8e0d4] mb-3"><%= t("privacy.data_heading") %></h2>
+      <p><%= t("privacy.data_text") %></p>
+    </section>
+
+    <section>
+      <h2 class="font-['Space_Grotesk'] text-base font-semibold text-[#e8e0d4] mb-3"><%= t("privacy.pseudonymisation_heading") %></h2>
+      <p><%= t("privacy.pseudonymisation_text") %></p>
+    </section>
+
+    <section>
+      <h2 class="font-['Space_Grotesk'] text-base font-semibold text-[#e8e0d4] mb-3"><%= t("privacy.rights_heading") %></h2>
+      <p><%= t("privacy.rights_text_html") %></p>
+    </section>
+
+    <section>
+      <h2 class="font-['Space_Grotesk'] text-base font-semibold text-[#e8e0d4] mb-3"><%= t("privacy.retention_heading") %></h2>
+      <p><%= t("privacy.retention_text") %></p>
+    </section>
+
+    <section>
+      <h2 class="font-['Space_Grotesk'] text-base font-semibold text-[#e8e0d4] mb-3"><%= t("privacy.contact_heading") %></h2>
+      <p><%= t("privacy.contact_text") %></p>
+    </section>
+  </div>
+
+  <div class="mt-10 pt-6 border-t border-white/10">
+    <%= link_to root_path, class: "font-mono text-[11px] text-white/30 hover:text-[#c8a84e] transition-colors" do %>
+      ← <%= t("nav.dashboard") %>
+    <% end %>
+  </div>
+</div>

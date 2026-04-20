@@ -403,16 +403,32 @@
       <%# Directors & Officers %>
       <div class="bg-white/[0.02] border border-white/[0.06] rounded-lg p-5">
         <div class="font-mono text-[10px] tracking-[2px] text-white/35 mb-4 uppercase"><%= t("companies.show.directors_heading") %></div>
+        <% unless journalist_access? %>
+          <div class="bg-[#c8a84e0d] border border-[#c8a84e22] rounded px-3 py-2 mb-4">
+            <p class="font-mono text-[10px] text-[#c8a84e] leading-relaxed"><%= t("tokens.pseudonymised_notice_html") %></p>
+          </div>
+        <% end %>
         <% if @directors.any? %>
           <ul class="space-y-3">
             <% @directors.each do |d| %>
-              <li class="border-b border-white/[0.05] pb-3 last:border-0 last:pb-0">
-                <div class="font-mono text-xs text-[#e8e0d4]"><%= d.name %></div>
+              <li class="border-b border-white/[0.05] pb-3 last:border-0 last:pb-0 <%= 'opacity-40' unless d.respond_to?(:active?) ? d.active? : true %>">
+                <div class="font-mono text-xs text-[#e8e0d4]"><%= display_person_name(d) %></div>
                 <% if d.role.present? %>
                   <div class="font-mono text-[10px] text-[#c8a84e] mt-0.5"><%= d.role %></div>
                 <% end %>
-                <% if d.tax_identifier.present? %>
-                  <div class="font-mono text-[9px] text-white/30 mt-0.5"><%= t("companies.show.nif") %> <%= d.tax_identifier %></div>
+                <% if d.respond_to?(:start_date) && (d.start_date.present? || d.end_date.present?) %>
+                  <div class="font-mono text-[9px] text-white/30 mt-0.5">
+                    <% if d.start_date.present? && d.end_date.present? %>
+                      <%= d.start_date.strftime("%Y-%m-%d") %> → <%= d.end_date.strftime("%Y-%m-%d") %>
+                    <% elsif d.start_date.present? %>
+                      <%= t("companies.show.since") %> <%= d.start_date.strftime("%Y-%m-%d") %>
+                    <% elsif d.end_date.present? %>
+                      <%= t("companies.show.until") %> <%= d.end_date.strftime("%Y-%m-%d") %>
+                    <% end %>
+                  </div>
+                <% end %>
+                <% if display_person_nif(d).present? %>
+                  <div class="font-mono text-[9px] text-white/30 mt-0.5"><%= t("companies.show.nif") %> <%= display_person_nif(d) %></div>
                 <% end %>
               </li>
             <% end %>

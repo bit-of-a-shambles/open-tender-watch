@@ -10,7 +10,29 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_04_18_172000) do
+ActiveRecord::Schema[8.0].define(version: 2026_04_20_091331) do
+  create_table "access_token_usages", force: :cascade do |t|
+    t.integer "access_token_id", null: false
+    t.string "path"
+    t.string "ip_address"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["access_token_id"], name: "index_access_token_usages_on_access_token_id"
+  end
+
+  create_table "access_tokens", force: :cascade do |t|
+    t.string "token", null: false
+    t.string "name", null: false
+    t.string "organisation"
+    t.string "access_level", default: "journalist", null: false
+    t.datetime "expires_at"
+    t.datetime "last_used_at"
+    t.integer "usage_count", default: 0, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["token"], name: "index_access_tokens_on_token", unique: true
+  end
+
   create_table "benford_analyses", force: :cascade do |t|
     t.integer "entity_id", null: false
     t.integer "representative_contract_id"
@@ -147,8 +169,10 @@ ActiveRecord::Schema[8.0].define(version: 2026_04_18_172000) do
     t.datetime "verified_at"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.date "start_date"
+    t.date "end_date"
     t.index ["entity_id", "active"], name: "index_entity_person_roles_on_entity_id_and_active"
-    t.index ["entity_id", "person_id", "role_type", "source_name", "active"], name: "index_entity_person_roles_unique_active_state", unique: true
+    t.index ["entity_id", "person_id", "role_type", "source_name", "start_date"], name: "index_entity_person_roles_unique_stint", unique: true
     t.index ["entity_id"], name: "index_entity_person_roles_on_entity_id"
     t.index ["person_id", "active"], name: "index_entity_person_roles_on_person_id_and_active"
     t.index ["person_id"], name: "index_entity_person_roles_on_person_id"
@@ -208,6 +232,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_04_18_172000) do
     t.index ["tax_identifier", "country_code"], name: "index_people_on_tax_identifier_and_country_code", unique: true, where: "tax_identifier IS NOT NULL"
   end
 
+  add_foreign_key "access_token_usages", "access_tokens"
   add_foreign_key "benford_analyses", "contracts", column: "representative_contract_id", on_delete: :nullify
   add_foreign_key "benford_analyses", "entities"
   add_foreign_key "company_directors", "entities"

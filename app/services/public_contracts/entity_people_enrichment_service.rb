@@ -115,12 +115,9 @@ module PublicContracts
         )
         person.save! if person.new_record? || person.changed?
 
-        role = entity.entity_person_roles.find_or_initialize_by(
-          person: person,
-          role_type: attributes[:role_type],
-          source_name: SOURCE_NAME,
-          active: true
-        )
+        role = entity.entity_person_roles
+          .where(person: person, role_type: attributes[:role_type], source_name: SOURCE_NAME, active: true)
+          .first_or_initialize
         role.role_label = attributes[:role_label]
         role.source_url = source_url
         role.source_publication_date = source_publication_date

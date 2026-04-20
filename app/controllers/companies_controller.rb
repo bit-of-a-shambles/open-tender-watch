@@ -130,8 +130,8 @@ class CompaniesController < ApplicationController
           .limit(PER_PAGE)
           .offset((@page - 1) * PER_PAGE)
 
-        # Directors & officers / people roles
-        @directors = @entity.current_directors_and_officers
+        # Directors & officers / people roles (all stints, active first)
+        @directors = @entity.all_people_roles
 
         # Pivot: contracts grouped by contracting authority
         @pivot_page = [ params[:pivot_page].to_i, 1 ].max

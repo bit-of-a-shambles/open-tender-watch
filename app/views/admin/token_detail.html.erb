@@ -1,0 +1,61 @@
+<div class="animate-fade-up">
+  <header class="py-8 border-b border-white/10">
+    <div class="flex items-center gap-4 mb-3">
+      <%= link_to admin_tokens_path, class: "font-mono text-[11px] tracking-[2px] text-white/30 hover:text-white/60 transition-colors" do %>
+        ← <%= t("admin.all_tokens") %>
+      <% end %>
+    </div>
+    <h1 class="font-['Space_Grotesk'] text-2xl font-bold text-[#e8e0d4] mb-1"><%= @token.name %></h1>
+    <p class="font-mono text-[11px] text-white/30"><%= @token.organisation %></p>
+  </header>
+
+  <%# Token details %>
+  <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-6">
+    <div class="bg-white/[0.02] border border-white/[0.06] rounded-lg p-4">
+      <div class="font-mono text-[10px] text-white/30 mb-1"><%= t("admin.col_level") %></div>
+      <div class="font-mono text-sm text-[#c8a84e]"><%= @token.access_level %></div>
+    </div>
+    <div class="bg-white/[0.02] border border-white/[0.06] rounded-lg p-4">
+      <div class="font-mono text-[10px] text-white/30 mb-1"><%= t("admin.col_uses") %></div>
+      <div class="font-['Space_Grotesk'] text-lg font-bold text-[#e8e0d4]"><%= number_with_delimiter(@token.usage_count) %></div>
+    </div>
+    <div class="bg-white/[0.02] border border-white/[0.06] rounded-lg p-4">
+      <div class="font-mono text-[10px] text-white/30 mb-1"><%= t("admin.col_last_used") %></div>
+      <div class="font-mono text-xs text-[#e8e0d4]"><%= @token.last_used_at&.strftime("%Y-%m-%d %H:%M") || "—" %></div>
+    </div>
+    <div class="bg-white/[0.02] border border-white/[0.06] rounded-lg p-4">
+      <div class="font-mono text-[10px] text-white/30 mb-1"><%= t("admin.expires") %></div>
+      <div class="font-mono text-xs <%= @token.expired? ? 'text-[#ff4444]' : 'text-[#e8e0d4]' %>">
+        <%= @token.expires_at&.strftime("%Y-%m-%d") || t("admin.never") %>
+      </div>
+    </div>
+  </div>
+
+  <div class="mt-4 bg-white/[0.02] border border-white/[0.06] rounded-lg p-4">
+    <div class="font-mono text-[10px] text-white/30 mb-1"><%= t("admin.full_token") %></div>
+    <code class="font-mono text-xs text-[#c8a84e] break-all"><%= @token.token %></code>
+  </div>
+
+  <%# Usage log %>
+  <section class="mt-8">
+    <h2 class="font-['Space_Grotesk'] text-base font-semibold text-[#e8e0d4] mb-4"><%= t("admin.recent_activity") %></h2>
+    <div class="border border-white/[0.08] rounded-lg overflow-hidden">
+      <div class="hidden sm:grid grid-cols-[180px_1fr_120px] bg-white/[0.03] px-4 py-3 border-b border-white/[0.08] font-mono text-[10px] tracking-[2px] text-white/35 uppercase">
+        <span><%= t("admin.col_time") %></span>
+        <span><%= t("admin.col_path") %></span>
+        <span><%= t("admin.col_ip") %></span>
+      </div>
+      <% if @usages.empty? %>
+        <div class="px-5 py-8 text-center font-mono text-sm text-white/25"><%= t("admin.no_activity") %></div>
+      <% else %>
+        <% @usages.each do |usage| %>
+          <div class="grid grid-cols-[180px_1fr_120px] px-4 py-2 border-b border-white/[0.04] last:border-0 font-mono text-[11px]">
+            <span class="text-white/35"><%= usage.created_at.strftime("%Y-%m-%d %H:%M:%S") %></span>
+            <span class="text-white/50 truncate"><%= usage.path %></span>
+            <span class="text-white/25"><%= usage.ip_address %></span>
+          </div>
+        <% end %>
+      <% end %>
+    </div>
+  </section>
+</div>

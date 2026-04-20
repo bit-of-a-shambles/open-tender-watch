@@ -1,0 +1,3 @@
+# frozen_string_literal: true
+# Empty — tests create EntityPersonRole records inline to avoid fixture interactions.
+# People fixtures exist in people.yml for helper-level tests.
