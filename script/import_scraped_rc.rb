@@ -308,11 +308,11 @@ BEGIN {
     stint_keys = stints.map { |s|
       person = find_person(entity, s)
       next unless person
-      [person.id, s[:role_type], s[:start_date]]
+      [ person.id, s[:role_type], s[:start_date] ]
     }.compact
 
     entity.entity_person_roles.where(active: true, source_name: SOURCE_NAME).includes(:person).find_each do |role|
-      next if stint_keys.include?([role.person_id, role.role_type, role.start_date])
+      next if stint_keys.include?([ role.person_id, role.role_type, role.start_date ])
       role.update!(active: false, verified_at: Time.current)
     end
 
