@@ -25,7 +25,7 @@ module ApplicationHelper
     "B3_PRICE_LOW"                     => "high",    # worst case
     "B5_BENFORD_DEVIATION"             => "medium",  # DIGIWHIST/Nigrini: supporting indicator only
     "C1_MISSING_WINNER_NIF"            => "medium",  # OLAF: traceability failure; MEDIUM
-    "C3_MISSING_MANDATORY_FIELDS"      => "low",     # OLAF: compliance failure; LOW
+    "C3_MISSING_MANDATORY_FIELDS"      => "low"      # OLAF: compliance failure; LOW
   }.freeze
 
   def flag_type_severity(flag_type)
@@ -36,7 +36,7 @@ module ApplicationHelper
     "critical" => { dot: "bg-[#ff0000]", text: "text-[#ff0000]", bg: "bg-[#ff000015]", border: "border-[#ff000033]" },
     "high"     => { dot: "bg-[#ff4444]", text: "text-[#ff4444]", bg: "bg-[#ff444412]", border: "border-[#ff444433]" },
     "medium"   => { dot: "bg-[#ff8844]", text: "text-[#ff8844]", bg: "bg-[#ff884412]", border: "border-[#ff884433]" },
-    "low"      => { dot: "bg-[#c8a84e]", text: "text-[#c8a84e]", bg: "bg-[#c8a84e12]", border: "border-[#c8a84e33]" },
+    "low"      => { dot: "bg-[#c8a84e]", text: "text-[#c8a84e]", bg: "bg-[#c8a84e12]", border: "border-[#c8a84e33]" }
   }.freeze
 
   SEVERITY_ORDER = { "critical" => 0, "high" => 1, "medium" => 2, "low" => 3 }.freeze

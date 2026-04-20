@@ -39,8 +39,48 @@
       "user_input": null,
       "confidence": "Medium",
       "note": "False positive: safe_ids is built from batch_ids.map(&:to_i) — integer coercion prevents injection"
+    },
+    {
+      "warning_type": "SQL Injection",
+      "warning_code": 0,
+      "fingerprint": "0f3bd3ff9c4da8a78c1f92f8cc559eaddd438dc6c98da71e92cfcceb1f5ef41b",
+      "check_name": "SQL",
+      "message": "Possible SQL injection",
+      "file": "app/controllers/dashboard_controller.rb",
+      "line": 46,
+      "link": "https://brakemanscanner.org/docs/warning_types/sql_injection/",
+      "code": null,
+      "render_path": null,
+      "location": {
+        "type": "method",
+        "class": "DashboardController",
+        "method": "show"
+      },
+      "user_input": null,
+      "confidence": "High",
+      "note": "False positive: Flag.max_severity_sql returns a static CASE constant — no user input"
+    },
+    {
+      "warning_type": "SQL Injection",
+      "warning_code": 0,
+      "fingerprint": "7f1715b1ca8c15815b728847000e59ec431fe5b837cc1cc79d37a1d06707111b",
+      "check_name": "SQL",
+      "message": "Possible SQL injection",
+      "file": "app/jobs/dashboard_stats_job.rb",
+      "line": 33,
+      "link": "https://brakemanscanner.org/docs/warning_types/sql_injection/",
+      "code": null,
+      "render_path": null,
+      "location": {
+        "type": "method",
+        "class": "DashboardStatsJob",
+        "method": "perform"
+      },
+      "user_input": null,
+      "confidence": "High",
+      "note": "False positive: Flag.max_severity_sql returns a static CASE constant — no user input"
     }
   ],
-  "updated": "2026-04-03 18:50:00 +0000",
-  "brakeman_version": "7.0.2"
+  "updated": "2026-04-20 12:00:00 +0000",
+  "brakeman_version": "8.0.4"
 }
