@@ -1,0 +1,29 @@
+<div class="animate-fade-up max-w-md mx-auto mt-16">
+  <header class="mb-8">
+    <h1 class="font-['Space_Grotesk'] text-2xl font-bold text-[#e8e0d4] mb-2"><%= t("tokens.title") %></h1>
+    <p class="font-mono text-[11px] text-white/40 leading-relaxed"><%= t("tokens.description") %></p>
+  </header>
+
+  <% if flash[:alert] %>
+    <div class="bg-[#ff444422] border border-[#ff444444] rounded-lg px-4 py-3 mb-6 font-mono text-xs text-[#ff4444]">
+      <%= flash[:alert] %>
+    </div>
+  <% end %>
+
+  <%= form_with url: access_token_path, method: :post, class: "space-y-4" do |f| %>
+    <div>
+      <label for="token" class="block font-mono text-[10px] tracking-[2px] text-white/35 uppercase mb-2"><%= t("tokens.label") %></label>
+      <input type="text" name="token" id="token" autocomplete="off" required
+             class="w-full bg-white/[0.04] border border-white/[0.12] rounded-lg px-4 py-3 font-mono text-sm text-[#e8e0d4] placeholder-white/20 focus:outline-none focus:border-[#c8a84e55] transition-all"
+             placeholder="<%= t("tokens.placeholder") %>">
+    </div>
+    <button type="submit"
+            class="w-full bg-[#c8a84e1a] border border-[#c8a84e44] text-[#c8a84e] font-mono text-xs tracking-widest px-4 py-3 rounded-lg hover:bg-[#c8a84e33] transition-all cursor-pointer">
+      <%= t("tokens.submit") %>
+    </button>
+  <% end %>
+
+  <p class="mt-8 font-mono text-[10px] text-white/25 leading-relaxed">
+    <%= t("tokens.request_info_html") %>
+  </p>
+</div>

@@ -1,0 +1,38 @@
+<div class="animate-fade-up">
+  <header class="py-8 border-b border-white/10">
+    <div class="flex items-center gap-4 mb-3">
+      <%= link_to admin_path, class: "font-mono text-[11px] tracking-[2px] text-white/30 hover:text-white/60 transition-colors" do %>
+        ← <%= t("admin.title") %>
+      <% end %>
+    </div>
+    <h1 class="font-['Space_Grotesk'] text-2xl font-bold text-[#e8e0d4]"><%= t("admin.all_tokens") %></h1>
+  </header>
+
+  <div class="border border-white/[0.08] rounded-lg overflow-hidden mt-6">
+    <div class="hidden sm:grid grid-cols-[1fr_150px_100px_80px_120px] bg-white/[0.03] px-4 py-3 border-b border-white/[0.08] font-mono text-[10px] tracking-[2px] text-white/35 uppercase">
+      <span><%= t("admin.col_name") %></span>
+      <span><%= t("admin.col_organisation") %></span>
+      <span><%= t("admin.col_level") %></span>
+      <span class="text-right"><%= t("admin.col_uses") %></span>
+      <span class="text-right"><%= t("admin.col_last_used") %></span>
+    </div>
+    <% @tokens.each do |token| %>
+      <% expired = token.expired? %>
+      <%= link_to admin_token_detail_path(token), class: "grid grid-cols-[1fr_150px_100px_80px_120px] px-4 py-3 border-b border-white/[0.04] last:border-0 hover:bg-white/[0.03] transition-colors #{expired ? 'opacity-40' : ''}" do %>
+        <div>
+          <div class="font-mono text-xs text-[#e8e0d4]"><%= token.name %></div>
+          <div class="font-mono text-[9px] text-white/20 mt-0.5"><%= token.token[0..11] %>…</div>
+        </div>
+        <div class="font-mono text-[11px] text-white/40"><%= token.organisation %></div>
+        <div>
+          <span class="font-mono text-[10px] px-2 py-0.5 rounded border
+            <%= token.access_level == 'auditor' ? 'text-[#c8a84e] border-[#c8a84e33] bg-[#c8a84e0d]' : 'text-white/50 border-white/10 bg-white/[0.02]' %>">
+            <%= token.access_level %>
+          </span>
+        </div>
+        <div class="text-right font-mono text-xs text-[#e8e0d4]"><%= number_with_delimiter(token.usage_count) %></div>
+        <div class="text-right font-mono text-[11px] text-white/35"><%= token.last_used_at&.strftime("%Y-%m-%d %H:%M") || "—" %></div>
+      <% end %>
+    <% end %>
+  </div>
+</div>

@@ -21,6 +21,13 @@ class Entity < ApplicationRecord
     company_directors.order(:role, :name).to_a
   end
 
+  def all_people_roles
+    roles = entity_person_roles.includes(:person).sort_by { |role| [ role.active ? 0 : 1, role.sort_priority, role.name ] }
+    return roles if roles.any?
+
+    company_directors.order(:role, :name).to_a
+  end
+
   def current_directors_and_officers
     current_people_roles
   end

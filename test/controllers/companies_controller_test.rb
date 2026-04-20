@@ -292,8 +292,9 @@ class CompaniesControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
     # heading uses & which is HTML-escaped to &amp; in the response body
     assert_includes response.body, "Directors"
-    assert_includes response.body, company_directors(:one).name
-    assert_includes response.body, company_directors(:two).name
+    # Directors are pseudonymised for public access
+    assert_includes response.body, "[P-"
+    assert_not_includes response.body, company_directors(:one).name
   end
 
   test "show renders empty directors state for entity without directors" do
@@ -416,5 +417,22 @@ class CompaniesControllerTest < ActionDispatch::IntegrationTest
     assert data.key?("benford_analysis")
     assert_equal 100, data["benford_analysis"]["sample_size"]
     assert_equal true, data["benford_analysis"]["flagged"]
+  end
+
+  test "show pseudonymises directors for public access" do
+    get company_url(entities(:two))
+    assert_response :success
+    assert_not_includes response.body, company_directors(:one).name
+    assert_includes response.body, "[P-"
+  end
+
+  test "show reveals director names with valid token session" do
+    token = access_tokens(:one)
+    post access_token_url, params: { token: token.token }
+
+    get company_url(entities(:two))
+    assert_response :success
+    assert_includes response.body, company_directors(:one).name
+    assert_not_includes response.body, "[P-"
   end
 end

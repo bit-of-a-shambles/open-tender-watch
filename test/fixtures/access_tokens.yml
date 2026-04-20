@@ -1,0 +1,23 @@
+# frozen_string_literal: true
+
+one:
+  token: "test_token_journalist_abc123"
+  name: "Test Journalist"
+  organisation: "Test Newspaper"
+  access_level: journalist
+  usage_count: 0
+
+two:
+  token: "test_token_auditor_xyz789"
+  name: "Test Auditor"
+  organisation: "Tribunal de Contas"
+  access_level: auditor
+  usage_count: 0
+
+expired:
+  token: "test_token_expired_000"
+  name: "Expired User"
+  organisation: "Old Org"
+  access_level: journalist
+  expires_at: <%= 1.day.ago.to_fs(:db) %>
+  usage_count: 5

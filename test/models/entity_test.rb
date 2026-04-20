@@ -80,4 +80,27 @@ class EntityTest < ActiveSupport::TestCase
 
     assert_equal [ "Zara Director", "Ana Manager" ], entity.current_people_roles.map(&:name)
   end
+
+  test "all_people_roles returns active then inactive sorted by priority" do
+    entity = entities(:two)
+    active = Person.create!(name: "Ana Active", country_code: "PT")
+    former = Person.create!(name: "Bob Former", country_code: "PT")
+
+    EntityPersonRole.create!(entity:, person: active, role_type: "manager", role_label: "Gerente", source_name: "Registo Comercial", active: true, start_date: Date.new(2020, 1, 1))
+    EntityPersonRole.create!(entity:, person: former, role_type: "manager", role_label: "Gerente", source_name: "Registo Comercial", active: false, start_date: Date.new(2015, 1, 1), end_date: Date.new(2019, 12, 31))
+
+    roles = entity.all_people_roles
+    assert_equal [ "Ana Active", "Bob Former" ], roles.map(&:name)
+    assert roles.first.active?
+    assert_not roles.last.active?
+  end
+
+  test "all_people_roles falls back to company directors when no person roles" do
+    names = entities(:two).all_people_roles.map(&:name)
+    assert_includes names, company_directors(:one).name
+  end
+
+  test "current_directors_and_officers delegates to current_people_roles" do
+    assert_equal entities(:two).current_people_roles, entities(:two).current_directors_and_officers
+  end
 end
