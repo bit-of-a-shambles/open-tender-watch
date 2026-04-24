@@ -20,6 +20,7 @@ gem "tailwindcss-rails"
 gem "jbuilder"
 gem "nokogiri"
 gem "roo", "~> 3.0"   # XLSX/ODS parsing for Portal BASE and dados.gov.pt bulk imports
+gem "ferrum"           # Chrome DevTools Protocol — headless browser for Registo Comercial harvester
 
 # Use Active Model has_secure_password [https://guides.rubyonrails.org/active_model_basics.html#securepassword]
 # gem "bcrypt", "~> 3.1.7"

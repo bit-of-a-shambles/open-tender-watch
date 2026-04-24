@@ -1,24 +1,11 @@
 # frozen_string_literal: true
 
 namespace :enrich do
-  desc "Enrich company people roles from Registo Comercial (NIF=..., INPUT=..., LIMIT=..., OFFSET=...)"
-  task company_people: :environment do
-    stats = PublicContracts::EntityPeopleEnrichmentService.new.call(
-      nif: ENV["NIF"],
-      input: ENV["INPUT"],
-      limit: ENV["LIMIT"],
-      offset: ENV["OFFSET"]
-    )
-
-    puts "Processed: #{stats[:processed]}"
-    puts "Updated:   #{stats[:updated]}"
-    puts "Skipped:   #{stats[:skipped]}"
-  end
-
-  desc "Enrich all PT companies ordered by flagged exposure (SKIP_ENRICHED=1 to skip already-done)"
-  task company_people_by_risk: :environment do
+  desc "Export target NIFs ordered by flagged exposure (OUTPUT=path, SKIP_ENRICHED=1, LIMIT=N)"
+  task export_nifs: :environment do
     skip_enriched = ENV.fetch("SKIP_ENRICHED", "1") == "1"
     limit = ENV["LIMIT"]&.to_i
+    output = ENV.fetch("OUTPUT", "/tmp/rc_target_nifs.txt")
 
     # Phase 1: flagged companies ordered by total exposure DESC
     flagged_ids = Entity
@@ -47,44 +34,65 @@ namespace :enrich do
 
     all_ids = all_ids.first(limit) if limit
 
-    total = all_ids.size
-    puts "Enriching #{total} companies (#{flagged_ids.size} flagged first)"
-    puts "Started at #{Time.current.strftime('%H:%M:%S')}"
+    nifs = Entity.where(id: all_ids).index_by(&:id)
+    ordered_nifs = all_ids.filter_map { |id| nifs[id]&.tax_identifier }
 
-    service = PublicContracts::EntityPeopleEnrichmentService.new
-    stats = { processed: 0, updated: 0, skipped: 0, errors: 0 }
-    start_time = Process.clock_gettime(Process::CLOCK_MONOTONIC)
+    File.write(output, ordered_nifs.join("\n") + "\n")
+    puts "Exported #{ordered_nifs.size} NIFs to #{output} (#{flagged_ids.size} flagged first)"
+  end
 
-    all_ids.each_with_index do |entity_id, index|
-      entity = Entity.find(entity_id)
-      stats[:processed] += 1
+  desc "Harvest Registo Comercial via Ferrum + 2Captcha, importing into DB as each NIF completes (TWOCAPTCHA_KEY=, NIFS_FILE=, BATCH=, OUTPUT=, HEADLESS=)"
+  task harvest: :environment do
+    captcha_key = ENV.fetch("TWOCAPTCHA_KEY") { abort "Set TWOCAPTCHA_KEY environment variable" }
+    output = ENV.fetch("OUTPUT", "/tmp/rc_results.json")
+    headless = ENV.fetch("HEADLESS", "false") == "true"
+    batch = ENV["BATCH"]&.to_i
+    nifs_file = ENV["NIFS_FILE"]
 
-      begin
-        if service.enrich_entity(entity)
-          stats[:updated] += 1
-        else
-          stats[:skipped] += 1
-        end
-      rescue => e
-        stats[:errors] += 1
-        $stderr.puts "  ERROR #{entity.tax_identifier} (#{entity.name}): #{e.message}"
-      end
-
-      if (index + 1) % 25 == 0 || index + 1 == total
-        elapsed = Process.clock_gettime(Process::CLOCK_MONOTONIC) - start_time
-        rate = (index + 1) / elapsed
-        eta_seconds = ((total - index - 1) / rate).round
-        eta_h, eta_m = eta_seconds.divmod(3600).then { |h, r| [h, r / 60] }
-        puts "[#{Time.current.strftime('%H:%M:%S')}] " \
-             "#{index + 1}/#{total} " \
-             "(#{stats[:updated]} found, #{stats[:skipped]} empty, #{stats[:errors]} errors) " \
-             "ETA: #{eta_h}h#{eta_m}m"
-      end
+    if nifs_file
+      abort "File not found: #{nifs_file}" unless File.exist?(nifs_file)
+      nifs = File.readlines(nifs_file).map(&:strip).reject(&:empty?)
+    else
+      # Default: export flagged NIFs inline
+      Rake::Task["enrich:export_nifs"].invoke
+      nifs = File.readlines("/tmp/rc_target_nifs.txt").map(&:strip).reject(&:empty?)
     end
 
-    elapsed = Process.clock_gettime(Process::CLOCK_MONOTONIC) - start_time
-    puts "\nDone in #{(elapsed / 60).round}m — " \
-         "processed: #{stats[:processed]}, updated: #{stats[:updated]}, " \
-         "skipped: #{stats[:skipped]}, errors: #{stats[:errors]}"
+    nifs = nifs.first(batch) if batch
+
+    importer = PublicContracts::PT::RegistoComercialImporter.new
+    db_stats = { processed: 0, updated: 0, skipped: 0, roles_created: 0 }
+
+    on_nif_complete = ->(nif, nif_data) {
+      result = importer.import_nif(nif, nif_data)
+      db_stats[:processed] += result.processed
+      db_stats[:updated] += result.updated
+      db_stats[:skipped] += result.skipped
+      db_stats[:roles_created] += result.roles_created
+
+      if result.updated > 0
+        puts "  💾 DB: #{nif} imported (#{result.roles_created} roles)"
+      end
+    }
+
+    harvester = PublicContracts::PT::RegistoComercialHarvester.new(
+      captcha_key: captcha_key,
+      output_path: output,
+      headless: headless,
+      on_nif_complete: on_nif_complete
+    )
+    harvester.harvest(nifs)
+
+    puts "\nDB import totals: #{db_stats}"
+  end
+
+  desc "Import harvested Registo Comercial JSON into the database (INPUT=path)"
+  task import_rc: :environment do
+    input = ENV.fetch("INPUT", "/tmp/rc_results.json")
+    abort "File not found: #{input}" unless File.exist?(input)
+
+    importer = PublicContracts::PT::RegistoComercialImporter.new
+    stats = importer.import_file(input)
+    puts "Done: processed=#{stats.processed} updated=#{stats.updated} skipped=#{stats.skipped} roles_created=#{stats.roles_created}"
   end
 end

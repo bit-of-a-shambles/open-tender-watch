@@ -407,6 +407,7 @@ DEPENDENCIES
   capybara
   cuprite
   debug
+  ferrum
   importmap-rails
   jbuilder
   kamal
