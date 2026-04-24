@@ -5,6 +5,8 @@ SimpleCov.start "rails" do
   minimum_coverage line: 100
   # Give each parallel worker a unique command name so results are merged
   command_name "Rails Tests"
+  # Exclude browser-dependent harvester (requires Chrome + 2Captcha API key)
+  add_filter "app/services/public_contracts/pt/registo_comercial_harvester.rb"
 end
 
 ENV["RAILS_ENV"] ||= "test"

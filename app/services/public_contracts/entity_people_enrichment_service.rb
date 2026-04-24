@@ -6,7 +6,7 @@ module PublicContracts
   class EntityPeopleEnrichmentService
     SOURCE_NAME = "Registo Comercial"
 
-    def initialize(scraper: PT::RegistoComercial.new, relation: Entity.where(country_code: "PT", is_company: true))
+    def initialize(scraper:, relation: Entity.where(country_code: "PT", is_company: true))
       @scraper = scraper
       @relation = relation
     end
