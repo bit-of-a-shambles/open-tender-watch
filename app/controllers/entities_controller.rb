@@ -37,6 +37,10 @@ class EntitiesController < ApplicationController
   def show
     @entity = Entity.find(params[:id])
 
+    unless @entity.is_public_body?
+      return redirect_to company_path(@entity, request.query_parameters.merge(format: params[:format]))
+    end
+
     # Aggregate flag stats — one row per flag_type with an inline per-severity
     # breakdown. The outer row's severity badge is derived at display time
     # from the canonical FLAG_TYPE_SEVERITY mapping so stale values in

@@ -56,7 +56,8 @@
         </div>
       <% else %>
         <% @entities.each do |entity| %>
-          <%= link_to entity_path(entity), class: "grid grid-cols-[1fr_90px_80px] sm:grid-cols-[1fr_140px_100px_160px_80px] px-4 sm:px-5 py-3.5 border-b border-white/[0.04] last:border-0 hover:bg-white/[0.03] transition-colors group items-center", data: { turbo_frame: "_top" } do %>
+          <% entity_link = entity.is_public_body? ? entity_path(entity) : company_path(entity) %>
+          <%= link_to entity_link, class: "grid grid-cols-[1fr_90px_80px] sm:grid-cols-[1fr_140px_100px_160px_80px] px-4 sm:px-5 py-3.5 border-b border-white/[0.04] last:border-0 hover:bg-white/[0.03] transition-colors group items-center", data: { turbo_frame: "_top" } do %>
             <div class="pr-3">
               <div class="text-sm text-[#e8e0d4] group-hover:text-white transition-colors leading-snug line-clamp-2">
                 <%= entity.name %>
