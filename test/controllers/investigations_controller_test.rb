@@ -187,7 +187,81 @@ class InvestigationsControllerTest < ActionDispatch::IntegrationTest
     assert_includes response.body, I18n.t("investigations.show.timeline_title")
     assert_includes response.body, I18n.t("investigations.show.flagged_rate_label")
     assert_includes response.body, I18n.t("investigations.show.hhi_label")
+    assert_includes response.body, I18n.t(
+      "investigations.show.highlight_flagged_contracts",
+      flagged: "1",
+      total: "1",
+      rate: "100%"
+    )
+    assert_includes response.body, I18n.t(
+      "investigations.show.highlight_supplier_concentration_level",
+      level: I18n.t("investigations.show.hhi_levels.high"),
+      hhi: "1.0000"
+    )
+    assert_includes response.body, I18n.t(
+      "investigations.show.highlight_individual_links",
+      people: "1",
+      companies: "1"
+    )
     assert_includes response.body, I18n.t("investigations.show.hhi_interpretation", level: I18n.t("investigations.show.hhi_levels.high"))
+    refute_includes response.body, people(:joao).name
+    refute_includes response.body, people(:joao).tax_identifier
+  end
+
+  test "show highlights aggregate people-link coverage when winner people data is partial" do
+    authority = create_entity!(name: "Cobertura Parcial", tax_identifier: "790000406")
+    supplier_with_people = create_entity!(
+      name: "Fornecedor Ligado",
+      tax_identifier: "790000407",
+      is_public_body: false,
+      is_company: true
+    )
+    supplier_without_people = create_entity!(
+      name: "Fornecedor Sem Ligacao",
+      tax_identifier: "790000408",
+      is_public_body: false,
+      is_company: true
+    )
+
+    first_contract = create_contract!(
+      entity: authority,
+      external_id: "report-coverage-001",
+      value: 90_000,
+      publication_date: Date.new(2025, 3, 14),
+      celebration_date: Date.new(2025, 3, 14)
+    )
+    second_contract = create_contract!(
+      entity: authority,
+      external_id: "report-coverage-002",
+      value: 70_000,
+      publication_date: Date.new(2025, 4, 11),
+      celebration_date: Date.new(2025, 4, 10)
+    )
+
+    add_winner!(contract: first_contract, winner: supplier_with_people)
+    add_winner!(contract: second_contract, winner: supplier_without_people)
+    add_flag!(contract: first_contract, flag_type: "A1_REPEAT_DIRECT_AWARD", score: 8)
+
+    EntityPersonRole.create!(
+      entity: supplier_with_people,
+      person: people(:joao),
+      role_type: "director",
+      source_name: "fixture",
+      active: true
+    )
+
+    get investigation_url(authority)
+
+    assert_response :success
+    assert_includes response.body, I18n.t(
+      "investigations.show.highlight_people_links_coverage",
+      with_people: "1",
+      without_people: "1",
+      total: "2",
+      coverage: "50%"
+    )
+    refute_includes response.body, people(:joao).name
+    refute_includes response.body, people(:joao).tax_identifier
   end
 
   test "show highlights missing winner data and neutral period distribution" do

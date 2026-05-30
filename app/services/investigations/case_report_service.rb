@@ -18,6 +18,8 @@ module Investigations
       flagged_contracts_total = flagged_contracts_scope.count(:id)
       contracts_with_winner_count = contracts_with_winner_count()
       contracts_without_winner_count = [ contracts_total - contracts_with_winner_count, 0 ].max
+      winner_company_ids = winner_company_ids()
+      people_link_summary = people_link_summary_for(winner_company_ids)
 
       spend_by_company = spend_by_winner_company
       total_spend = spend_by_company.values.sum
@@ -36,12 +38,15 @@ module Investigations
           supplier_spend_available: spend_by_company.any?,
           contracts_with_winner_count: contracts_with_winner_count,
           contracts_without_winner_count: contracts_without_winner_count,
-          winner_company_count: spend_by_company.size,
+          winner_company_count: winner_company_ids.size,
           top_supplier_count: top_suppliers.size,
           top_supplier_share: ratio(top_suppliers.sum { |row| row[:awarded_value] }, total_spend),
           hhi: hhi(spend_by_company, total_spend),
-          linked_individual_count: 0,
-          winner_companies_with_individuals_count: 0,
+          linked_individual_count: people_link_summary[:linked_individual_count],
+          winner_companies_with_individuals_count: people_link_summary[:winner_companies_with_individuals_count],
+          multi_company_individual_count: people_link_summary[:multi_company_individual_count],
+          winner_companies_without_people_data_count: people_link_summary[:winner_companies_without_people_data_count],
+          winner_company_people_coverage_rate: people_link_summary[:winner_company_people_coverage_rate],
           quarter_end_peak_ratio: quarter_end_peak_ratio,
           year_end_peak_ratio: year_end_peak_ratio
         },
@@ -70,6 +75,66 @@ module Investigations
 
     def flagged_contracts_scope
       contracts_scope.joins(:flags).distinct
+    end
+
+    def winner_company_ids
+      ContractWinner
+        .joins(:contract, :entity)
+        .where(contracts: { contracting_entity_id: entity.id })
+        .where("entities.is_public_body = ? OR entities.is_public_body IS NULL", false)
+        .distinct
+        .pluck(:entity_id)
+    end
+
+    def people_link_summary_for(winner_company_ids)
+      company_ids = Array(winner_company_ids).compact.uniq
+      return empty_people_link_summary if company_ids.empty?
+
+      role_rows = EntityPersonRole.active
+        .where(entity_id: company_ids)
+        .where.not(person_id: nil)
+        .distinct
+        .pluck(:entity_id, :person_id)
+
+      role_company_ids = role_rows.map(&:first).uniq
+      role_person_ids = role_rows.map(&:second).uniq
+
+      multi_company_individual_count = EntityPersonRole.active
+        .where(entity_id: company_ids)
+        .where.not(person_id: nil)
+        .group(:person_id)
+        .having("COUNT(DISTINCT entity_person_roles.entity_id) > 1")
+        .count
+        .size
+
+      legacy_company_ids = company_ids - role_company_ids
+      legacy_rows = CompanyDirector
+        .where(entity_id: legacy_company_ids)
+        .distinct
+        .pluck(:entity_id, :id)
+
+      legacy_company_ids_with_people = legacy_rows.map(&:first).uniq
+      legacy_people_count = legacy_rows.map(&:second).uniq.size
+
+      winner_companies_with_individuals_count = role_company_ids.size + legacy_company_ids_with_people.size
+
+      {
+        linked_individual_count: role_person_ids.size + legacy_people_count,
+        winner_companies_with_individuals_count: winner_companies_with_individuals_count,
+        multi_company_individual_count: multi_company_individual_count,
+        winner_companies_without_people_data_count: [ company_ids.size - winner_companies_with_individuals_count, 0 ].max,
+        winner_company_people_coverage_rate: ratio(winner_companies_with_individuals_count, company_ids.size)
+      }
+    end
+
+    def empty_people_link_summary
+      {
+        linked_individual_count: 0,
+        winner_companies_with_individuals_count: 0,
+        multi_company_individual_count: 0,
+        winner_companies_without_people_data_count: 0,
+        winner_company_people_coverage_rate: 0.0
+      }
     end
 
     def spend_by_winner_company
