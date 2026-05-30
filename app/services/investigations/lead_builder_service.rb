@@ -18,6 +18,10 @@ module Investigations
 
     LEAD_TYPE_PRIORITY = LEAD_TYPE_BY_FLAG.keys.freeze
     ALLOWED_LEAD_TYPES = (LEAD_TYPE_BY_FLAG.values + [ "multi_flag_risk" ]).uniq.freeze
+    FLAG_TYPES_BY_LEAD_TYPE = LEAD_TYPE_BY_FLAG
+      .each_with_object(Hash.new { |hash, key| hash[key] = [] }) { |(flag_type, lead_type), hash| hash[lead_type] << flag_type }
+      .transform_values(&:freeze)
+      .freeze
 
     SEVERITY_TO_SCORE = {
       "low" => 1,
@@ -77,11 +81,15 @@ module Investigations
     def scoped_stats
       scope = FlagEntityStat.joins(:entity)
       scope = scope.where(severity: @severity) if @severity.present?
+
+      lead_type_entity_ids = lead_type_entity_scope
+      scope = scope.where(entity_id: lead_type_entity_ids) if lead_type_entity_ids
+
       scope
     end
 
     def ranked_entity_rows
-      scoped_stats
+      query = scoped_stats
         .select(
           "flag_entity_stats.entity_id AS entity_id",
           "entities.name AS entity_name",
@@ -91,7 +99,12 @@ module Investigations
         )
         .group("flag_entity_stats.entity_id, entities.name")
         .order(Arel.sql("total_exposure DESC, contract_count DESC, entities.name ASC"))
-        .limit(@limit * 4)
+
+      # When filtering by lead type we must not pre-truncate too early,
+      # otherwise lower-exposure but valid leads disappear from the result set.
+      query = query.limit(@limit * 4) unless @lead_type.present?
+
+      query
     end
 
     def detail_rows_by_entity(entity_ids)
@@ -182,6 +195,17 @@ module Investigations
       parsed = DEFAULT_LIMIT if parsed.nil?
       parsed = DEFAULT_LIMIT if parsed <= 0
       [ parsed, MAX_LIMIT ].min
+    end
+
+    def lead_type_entity_scope
+      return nil if @lead_type.blank? || @lead_type == "multi_flag_risk"
+
+      flag_types = FLAG_TYPES_BY_LEAD_TYPE.fetch(@lead_type, [])
+      return nil if flag_types.empty?
+
+      scope = FlagEntityStat.where(flag_type: flag_types)
+      scope = scope.where(severity: @severity) if @severity.present?
+      scope.select(:entity_id).distinct
     end
   end
 end

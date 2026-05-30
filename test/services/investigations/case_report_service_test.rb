@@ -87,6 +87,10 @@ class Investigations::CaseReportServiceTest < ActiveSupport::TestCase
     report = Investigations::CaseReportService.new(entity: authority, top_contract_limit: 3).call
 
     assert_in_delta 0.8, report.dig(:metrics, :flagged_rate), 0.001
+    assert_equal true, report.dig(:metrics, :winner_data_available)
+    assert_equal true, report.dig(:metrics, :supplier_spend_available)
+    assert_equal 5, report.dig(:metrics, :contracts_with_winner_count)
+    assert_equal 0, report.dig(:metrics, :contracts_without_winner_count)
     assert_in_delta((230_000.0 / 260_000.0), report.dig(:metrics, :top_supplier_share), 0.001)
     assert_in_delta 0.3107, report.dig(:metrics, :hhi), 0.001
     assert_in_delta 0.8, report.dig(:metrics, :quarter_end_peak_ratio), 0.001
@@ -110,8 +114,30 @@ class Investigations::CaseReportServiceTest < ActiveSupport::TestCase
     assert_equal 0, report.dig(:metrics, :contracts_total)
     assert_equal 0, report.dig(:metrics, :flagged_contracts_total)
     assert_equal 0.0, report.dig(:metrics, :flagged_rate)
+    assert_equal false, report.dig(:metrics, :winner_data_available)
+    assert_equal false, report.dig(:metrics, :supplier_spend_available)
+    assert_equal 0, report.dig(:metrics, :contracts_with_winner_count)
+    assert_equal 0, report.dig(:metrics, :contracts_without_winner_count)
     assert_equal [], report[:top_suppliers]
     assert_equal [], report[:top_contracts]
     assert_equal [], report[:timeline]
+  end
+
+  test "marks winner data unavailable when contracts have no winners" do
+    authority = create_entity!(name: "Sem Adjudicatarios", tax_identifier: "770002101")
+
+    create_contract!(entity: authority, external_id: "no-winner-1", value: 75_000, celebration_date: Date.new(2025, 1, 15))
+    create_contract!(entity: authority, external_id: "no-winner-2", value: 45_000, celebration_date: Date.new(2025, 2, 20))
+
+    report = Investigations::CaseReportService.new(entity: authority).call
+
+    assert_equal 2, report.dig(:metrics, :contracts_total)
+    assert_equal false, report.dig(:metrics, :winner_data_available)
+    assert_equal false, report.dig(:metrics, :supplier_spend_available)
+    assert_equal 0, report.dig(:metrics, :contracts_with_winner_count)
+    assert_equal 2, report.dig(:metrics, :contracts_without_winner_count)
+    assert_equal 0, report.dig(:metrics, :winner_company_count)
+    assert_equal 0.0, report.dig(:metrics, :top_supplier_share)
+    assert_equal [], report[:top_suppliers]
   end
 end

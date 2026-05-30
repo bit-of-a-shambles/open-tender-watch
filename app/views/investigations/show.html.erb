@@ -3,6 +3,16 @@
 <% top_contracts = @report[:top_contracts] %>
 <% timeline = @report[:timeline] %>
 <% hhi_value = metrics[:hhi].to_f %>
+<% winner_data_available = metrics[:winner_data_available] %>
+<% supplier_spend_available = metrics[:supplier_spend_available] %>
+<% contracts_with_winner_count = metrics[:contracts_with_winner_count].to_i %>
+<% contracts_without_winner_count = metrics[:contracts_without_winner_count].to_i %>
+<% quarter_end_ratio = metrics[:quarter_end_peak_ratio].to_f %>
+<% year_end_ratio = metrics[:year_end_peak_ratio].to_f %>
+<% quarter_end_baseline = 4.0 / 12.0 %>
+<% year_end_baseline = 1.0 / 12.0 %>
+<% quarter_end_peak_detected = quarter_end_ratio >= (quarter_end_baseline + 0.07) %>
+<% year_end_peak_detected = year_end_ratio >= (year_end_baseline + 0.05) %>
 <% hhi_level_key = if hhi_value < 0.15
   "low"
 elsif hhi_value <= 0.25
@@ -26,26 +36,55 @@ end %>
   <section class="bg-white/2 border border-white/8 rounded-lg p-5">
     <h2 class="font-['Space_Grotesk'] text-lg text-[#e8e0d4] mb-3"><%= t("investigations.show.highlights_title") %></h2>
     <div class="space-y-2 font-mono text-sm text-white/80">
+      <% if supplier_spend_available %>
+        <p>
+          <%= t(
+            "investigations.show.highlight_top_suppliers",
+            companies: metrics[:top_supplier_count],
+            share: number_to_percentage(metrics[:top_supplier_share] * 100.0, precision: 1, strip_insignificant_zeros: true)
+          ) %>
+        </p>
+        <p>
+          <%= t(
+            "investigations.show.highlight_individual_links",
+            people: number_with_delimiter(metrics[:linked_individual_count]),
+            companies: number_with_delimiter(metrics[:winner_companies_with_individuals_count])
+          ) %>
+        </p>
+      <% elsif winner_data_available %>
+        <p>
+          <%= t(
+            "investigations.show.highlight_missing_supplier_spend_data",
+            with_winner: number_with_delimiter(contracts_with_winner_count),
+            without_winner: number_with_delimiter(contracts_without_winner_count),
+            total: number_with_delimiter(metrics[:contracts_total])
+          ) %>
+        </p>
+      <% else %>
+        <p>
+          <%= t(
+            "investigations.show.highlight_missing_winner_data",
+            with_winner: number_with_delimiter(contracts_with_winner_count),
+            without_winner: number_with_delimiter(contracts_without_winner_count),
+            total: number_with_delimiter(metrics[:contracts_total])
+          ) %>
+        </p>
+      <% end %>
+
       <p>
-        <%= t(
-          "investigations.show.highlight_top_suppliers",
-          companies: metrics[:top_supplier_count],
-          share: number_to_percentage(metrics[:top_supplier_share] * 100.0, precision: 1, strip_insignificant_zeros: true)
-        ) %>
-      </p>
-      <p>
-        <%= t(
-          "investigations.show.highlight_individual_links",
-          people: number_with_delimiter(metrics[:linked_individual_count]),
-          companies: number_with_delimiter(metrics[:winner_companies_with_individuals_count])
-        ) %>
-      </p>
-      <p>
-        <%= t(
-          "investigations.show.highlight_period_peaks",
-          quarter: number_to_percentage(metrics[:quarter_end_peak_ratio] * 100.0, precision: 1, strip_insignificant_zeros: true),
-          year_end: number_to_percentage(metrics[:year_end_peak_ratio] * 100.0, precision: 1, strip_insignificant_zeros: true)
-        ) %>
+        <% if quarter_end_peak_detected || year_end_peak_detected %>
+          <%= t(
+            "investigations.show.highlight_period_peaks",
+            quarter: number_to_percentage(quarter_end_ratio * 100.0, precision: 1, strip_insignificant_zeros: true),
+            year_end: number_to_percentage(year_end_ratio * 100.0, precision: 1, strip_insignificant_zeros: true)
+          ) %>
+        <% else %>
+          <%= t(
+            "investigations.show.highlight_period_distribution",
+            quarter: number_to_percentage(quarter_end_ratio * 100.0, precision: 1, strip_insignificant_zeros: true),
+            year_end: number_to_percentage(year_end_ratio * 100.0, precision: 1, strip_insignificant_zeros: true)
+          ) %>
+        <% end %>
       </p>
     </div>
   </section>
