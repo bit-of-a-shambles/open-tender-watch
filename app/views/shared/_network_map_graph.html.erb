@@ -1,6 +1,8 @@
 <% default_limit = Graph::NetworkMapService::DEFAULT_NODE_LIMIT %>
+<% allow_individuals = local_assigns.fetch(:allow_individuals, journalist_access?) %>
+<% show_connected_individuals_summary = local_assigns.fetch(:show_connected_individuals_summary, true) %>
 <% max_limit = Graph::NetworkMapService::MAX_NODE_LIMIT %>
-<% include_individuals_default = local_assigns.fetch(:include_individuals_default, false) %>
+<% include_individuals_default = allow_individuals && local_assigns.fetch(:include_individuals_default, false) %>
 <% include_individuals_default_value = include_individuals_default ? "true" : "false" %>
 <% default_must_include_entity_ids = Array(local_assigns.fetch(:default_must_include_entity_ids, [])).compact %>
 <% default_must_include_entity_ids_value = default_must_include_entity_ids.join(",") %>
@@ -17,7 +19,7 @@
          data-network-map-graph-default-isolate-network-value="<%= default_isolate_network_value %>"
          data-network-map-graph-public-body-label-value="<%= t('graph.legend_public_body') %>"
          data-network-map-graph-company-label-value="<%= t('graph.legend_company') %>"
-         data-network-map-graph-individual-label-value="<%= journalist_access? ? t('graph.legend_individual') : '' %>"
+         data-network-map-graph-individual-label-value="<%= allow_individuals ? t('graph.legend_individual') : '' %>"
          data-network-map-graph-edge-award-label-value="<%= t('graph_map.edge_award') %>"
          data-network-map-graph-edge-entity-role-label-value="<%= t('graph.edge_entity_role') %>"
          data-network-map-graph-entity-path-template-value="<%= entity_path('__ID__') %>"
@@ -40,7 +42,7 @@
       <p class="font-mono text-[10px] text-white/35 mt-1"><%= t("graph_map.subtitle") %></p>
     </div>
     <p class="font-mono text-[10px] text-[#c8a84e] bg-[#c8a84e12] border border-[#c8a84e33] px-2 py-1 rounded">
-      <%= journalist_access? ? t("graph.privacy_notice_authenticated") : t("graph_map.privacy_notice_public") %>
+      <%= allow_individuals ? t("graph.privacy_notice_authenticated") : t("graph_map.privacy_notice_public") %>
     </p>
   </div>
 
@@ -93,7 +95,7 @@
       <span class="font-mono text-[10px] text-white/55"><%= t("graph_map.include_companies") %></span>
     </label>
 
-    <% if journalist_access? %>
+    <% if allow_individuals %>
       <label class="flex items-center gap-1.5 px-2 py-1 rounded border border-white/10 bg-white/3">
         <input type="checkbox"
                data-network-map-graph-target="includeIndividuals"
@@ -198,10 +200,12 @@
             <span><%= t("graph_map.summary_flagged_size") %></span>
             <span class="text-[#e8e0d4]" data-network-map-graph-target="summaryFlaggedSize">€0</span>
           </div>
-          <div class="flex items-center justify-between">
-            <span><%= t("graph_map.summary_connected_individuals") %></span>
-            <span class="text-[#e8e0d4]" data-network-map-graph-target="summaryConnectedIndividuals">0</span>
-          </div>
+          <% if show_connected_individuals_summary %>
+            <div class="flex items-center justify-between">
+              <span><%= t("graph_map.summary_connected_individuals") %></span>
+              <span class="text-[#e8e0d4]" data-network-map-graph-target="summaryConnectedIndividuals">0</span>
+            </div>
+          <% end %>
         </div>
       </div>
 
@@ -259,7 +263,7 @@
     <span class="font-mono text-[9px] tracking-[2px] text-white/35 uppercase"><%= t("graph.legend_heading") %></span>
     <span class="font-mono text-[10px] text-white/55 flex items-center gap-1.5"><span class="inline-block w-2.5 h-2.5 rounded-full bg-[#44b7ff]"></span><%= t("graph.legend_public_body") %></span>
     <span class="font-mono text-[10px] text-white/55 flex items-center gap-1.5"><span class="inline-block w-2.5 h-2.5 rounded-full bg-[#ff9f5b]"></span><%= t("graph.legend_company") %></span>
-    <% if journalist_access? %>
+    <% if allow_individuals %>
       <span class="font-mono text-[10px] text-white/55 flex items-center gap-1.5"><span class="inline-block w-2.5 h-2.5 rounded-full bg-[#a6b0bf]"></span><%= t("graph.legend_individual") %></span>
     <% end %>
   </div>

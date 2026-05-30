@@ -44,13 +44,6 @@ end %>
             share: number_to_percentage(metrics[:top_supplier_share] * 100.0, precision: 1, strip_insignificant_zeros: true)
           ) %>
         </p>
-        <p>
-          <%= t(
-            "investigations.show.highlight_individual_links",
-            people: number_with_delimiter(metrics[:linked_individual_count]),
-            companies: number_with_delimiter(metrics[:winner_companies_with_individuals_count])
-          ) %>
-        </p>
       <% elsif winner_data_available %>
         <p>
           <%= t(
@@ -153,7 +146,9 @@ end %>
     <p class="text-white/40 text-sm mb-2"><%= t("investigations.show.network_subtitle") %></p>
 
     <%= render "shared/network_map_graph",
-      include_individuals_default: true,
+      include_individuals_default: false,
+      allow_individuals: false,
+      show_connected_individuals_summary: false,
       data_sources: @data_sources,
       default_must_include_entity_ids: [ @entity.id ],
       default_isolate_network: true %>
