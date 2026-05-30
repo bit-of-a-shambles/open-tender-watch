@@ -63,4 +63,48 @@ module ApplicationHelper
   def next_sort_dir(column, sort_col, sort_dir)
     (sort_col == column && sort_dir == "desc") ? "asc" : "desc"
   end
+
+  def global_nav_items
+    items = [
+      { key: :dashboard, path: root_path, label: t("nav.dashboard") },
+      { key: :contracts, path: contracts_path, label: t("nav.contracts") },
+      { key: :entities, path: entities_path, label: t("nav.entities") },
+      { key: :companies, path: companies_path, label: t("nav.companies") },
+      { key: :graph, path: graph_path, label: t("nav.graph") }
+    ]
+
+    if journalist_access?
+      items << { key: :investigations, path: investigations_path, label: t("nav.investigations") }
+    end
+
+    items
+  end
+
+  def global_nav_active?(key)
+    path = request.path
+
+    case key.to_sym
+    when :dashboard
+      path == root_path || path.start_with?("/dashboard")
+    when :contracts
+      path.start_with?("/contracts")
+    when :entities
+      path.start_with?("/entities")
+    when :companies
+      path.start_with?("/companies")
+    when :graph
+      path.start_with?("/graph") || path.start_with?("/api/graph")
+    when :investigations
+      path.start_with?("/investigations")
+    else
+      false
+    end
+  end
+
+  def global_nav_link_classes(active)
+    base = "font-mono text-[11px] tracking-[2px] uppercase px-3 py-2 rounded border transition-colors whitespace-nowrap"
+    return "#{base} border-[#c8a84e55] bg-[#c8a84e12] text-[#c8a84e]" if active
+
+    "#{base} border-white/8 bg-white/[0.02] text-white/45 hover:text-[#e8e0d4] hover:border-white/20"
+  end
 end

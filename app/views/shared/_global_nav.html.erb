@@ -1,0 +1,56 @@
+<header class="sticky top-0 z-50 border-b border-white/10 bg-[#0d0f14]/90 backdrop-blur-md">
+  <div class="container mx-auto px-3 sm:px-6 max-w-[1100px] py-3">
+    <div class="flex flex-wrap md:flex-nowrap items-center gap-3">
+      <%= link_to root_path, class: "order-1 inline-flex items-center gap-2.5 min-w-0" do %>
+        <span class="w-2 h-2 shrink-0 rounded-full bg-[#ff4444] shadow-[0_0_10px_rgba(255,68,68,0.5)] animate-pulse-slow"></span>
+        <span class="font-['Space_Grotesk'] text-base sm:text-lg font-semibold tracking-tight text-[#e8e0d4] truncate">
+          <%= t("app.name") %>
+        </span>
+      <% end %>
+
+      <nav class="order-3 basis-full md:order-2 md:flex-1" aria-label="Primary">
+        <div class="overflow-x-auto">
+          <ul class="flex items-center gap-1 min-w-max pb-0.5">
+            <% global_nav_items.each do |item| %>
+              <% active = global_nav_active?(item[:key]) %>
+              <li>
+                <%= link_to item[:label], item[:path], class: global_nav_link_classes(active) %>
+              </li>
+            <% end %>
+          </ul>
+        </div>
+      </nav>
+
+      <div class="order-2 md:order-3 ml-auto flex items-center gap-1.5 shrink-0">
+        <% if journalist_access? %>
+          <div class="flex items-center gap-1.5 mr-1">
+            <span class="font-mono text-[10px] tracking-widest text-[#c8a84e] border border-[#c8a84e33] bg-[#c8a84e0d] px-2 py-1 rounded">
+              <%= current_access_token.access_level.upcase %>
+            </span>
+            <%= link_to destroy_access_token_path, data: { turbo_method: :delete }, class: "font-mono text-[10px] text-white/25 hover:text-[#ff4444] transition-colors px-1" do %>✕<% end %>
+          </div>
+        <% else %>
+          <%= link_to new_access_token_path, class: "font-mono text-[10px] tracking-widest text-white/35 border border-white/[0.12] bg-white/[0.03] hover:border-white/25 hover:text-white/70 px-2 py-1 rounded transition-all mr-1" do %>
+            <%= t("tokens.access_link") %>
+          <% end %>
+        <% end %>
+
+        <% [["en", "gb"], ["pt", "pt"]].each do |locale_code, flag_code| %>
+          <% active = I18n.locale.to_s == locale_code %>
+          <%= link_to set_locale_path(locale: locale_code),
+              data: { turbo_method: :post },
+              class: "flex items-center gap-1.5 px-2 py-1 rounded border transition-all #{active ? 'border-[#c8a84e55] bg-[#c8a84e0d]' : 'border-white/[0.08] bg-white/[0.02] hover:border-white/20 opacity-65 hover:opacity-100'}" do %>
+            <img src="https://flagcdn.com/20x15/<%= flag_code %>.png"
+                 srcset="https://flagcdn.com/40x30/<%= flag_code %>.png 2x"
+                 width="20" height="15"
+                 alt="<%= locale_code.upcase %>"
+                 class="rounded-xs">
+            <span class="hidden sm:inline font-mono text-[10px] tracking-widest <%= active ? 'text-[#c8a84e]' : 'text-white/40' %>">
+              <%= t("locale.#{locale_code}") %>
+            </span>
+          <% end %>
+        <% end %>
+      </div>
+    </div>
+  </div>
+</header>
