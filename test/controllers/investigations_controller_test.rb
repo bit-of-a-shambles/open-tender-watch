@@ -85,6 +85,63 @@ class InvestigationsControllerTest < ActionDispatch::IntegrationTest
     assert_includes response.body, I18n.t("investigations.card.total_exposure")
     assert_includes response.body, I18n.t("investigations.card.open_report")
     assert_includes response.body, investigation_path(entity)
+    assert_includes response.body, I18n.t("investigations.summary.top_per_type", count: 20)
+  end
+
+  test "index groups leads by lead type when no type filter is provided" do
+    repeat_entity = create_entity!(name: "Repeat Lead Entity", tax_identifier: "790000111")
+    late_entity = create_entity!(name: "Late Lead Entity", tax_identifier: "790000112")
+
+    create_flag_stat!(
+      entity: repeat_entity,
+      flag_type: "A1_REPEAT_DIRECT_AWARD",
+      severity: "high",
+      total_exposure: 12_000,
+      contract_count: 4
+    )
+
+    create_flag_stat!(
+      entity: late_entity,
+      flag_type: "A2_PUBLICATION_AFTER_CELEBRATION",
+      severity: "medium",
+      total_exposure: 5_500,
+      contract_count: 3
+    )
+
+    post access_token_url, params: { token: access_tokens(:one).token }
+
+    get investigations_url
+
+    assert_response :success
+    assert_includes response.body, I18n.t("investigations.lead_types.repeat_direct_awards")
+    assert_includes response.body, I18n.t("investigations.lead_types.late_publication")
+    assert_includes response.body, repeat_entity.name
+    assert_includes response.body, late_entity.name
+  end
+
+  test "index caps each lead type at top 20 when no type filter is provided" do
+    21.times do |index|
+      entity = create_entity!(
+        name: "Repeat Lead #{index}",
+        tax_identifier: format("%09d", 790001000 + index)
+      )
+
+      create_flag_stat!(
+        entity: entity,
+        flag_type: "A1_REPEAT_DIRECT_AWARD",
+        severity: "high",
+        total_exposure: 50_000 - index,
+        contract_count: 2
+      )
+    end
+
+    post access_token_url, params: { token: access_tokens(:one).token }
+
+    get investigations_url
+
+    assert_response :success
+    assert_includes response.body, "Repeat Lead 0"
+    refute_includes response.body, "Repeat Lead 20"
   end
 
   test "show requires journalist authentication" do
@@ -135,6 +192,41 @@ class InvestigationsControllerTest < ActionDispatch::IntegrationTest
     assert_includes response.body, I18n.t("investigations.show.flagged_rate_label")
     assert_includes response.body, I18n.t("investigations.show.hhi_label")
     assert_includes response.body, I18n.t("investigations.show.hhi_interpretation", level: I18n.t("investigations.show.hhi_levels.high"))
+  end
+
+  test "show highlights missing winner data and neutral period distribution" do
+    authority = create_entity!(name: "Sem Adjudicatarios Show", tax_identifier: "790000404")
+
+    12.times do |index|
+      month = index + 1
+      create_contract!(
+        entity: authority,
+        external_id: "no-winner-show-#{month}",
+        value: 10_000 + index,
+        publication_date: Date.new(2025, month, 10),
+        celebration_date: Date.new(2025, month, 10)
+      )
+    end
+
+    post access_token_url, params: { token: access_tokens(:one).token }
+
+    get investigation_url(authority)
+
+    assert_response :success
+    assert_includes response.body, I18n.t(
+      "investigations.show.highlight_missing_winner_data",
+      with_winner: "0",
+      without_winner: "12",
+      total: "12"
+    )
+
+    neutral_label = I18n.t(
+      "investigations.show.highlight_period_distribution",
+      quarter: "Q",
+      year_end: "Y"
+    ).split(":").first
+
+    assert_includes response.body, neutral_label
   end
 
   test "index applies lead type filter" do

@@ -149,4 +149,33 @@ class Investigations::LeadBuilderServiceTest < ActiveSupport::TestCase
     assert_nil result.dig(:meta, :filters, :lead_type)
     assert_equal Investigations::LeadBuilderService::MAX_LIMIT, result.dig(:meta, :limit)
   end
+
+  test "lead_type filter does not drop lower-exposure matching leads" do
+    5.times do |index|
+      high_entity = create_entity!(name: "High Exposure #{index}", tax_identifier: "780001#{index}01")
+      create_flag_stat!(
+        entity: high_entity,
+        flag_type: "A1_REPEAT_DIRECT_AWARD",
+        severity: "high",
+        total_exposure: 100_000 - (index * 10_000),
+        contract_count: 5
+      )
+    end
+
+    late_entity = create_entity!(name: "Late Publication Entity", tax_identifier: "780009901")
+    create_flag_stat!(
+      entity: late_entity,
+      flag_type: "A2_PUBLICATION_AFTER_CELEBRATION",
+      severity: "medium",
+      total_exposure: 100,
+      contract_count: 2
+    )
+
+    result = Investigations::LeadBuilderService.new(lead_type: "late_publication", limit: 1).call
+
+    assert_equal 1, result[:leads].size
+    assert_equal 1, result.dig(:meta, :candidate_count)
+    assert_equal late_entity.id, result[:leads].first[:entity_id]
+    assert_equal "late_publication", result[:leads].first[:lead_type]
+  end
 end

@@ -18,6 +18,8 @@ module Investigations
     def call
       contracts_total = contracts_scope.count
       flagged_contracts_total = flagged_contracts_scope.count(:id)
+      contracts_with_winner_count = contracts_with_winner_count()
+      contracts_without_winner_count = [ contracts_total - contracts_with_winner_count, 0 ].max
 
       spend_by_company = spend_by_winner_company
       total_spend = spend_by_company.values.sum
@@ -34,6 +36,10 @@ module Investigations
           flagged_contracts_total: flagged_contracts_total,
           flagged_rate: ratio(flagged_contracts_total, contracts_total),
           total_spend: total_spend,
+          winner_data_available: contracts_with_winner_count.positive?,
+          supplier_spend_available: spend_by_company.any?,
+          contracts_with_winner_count: contracts_with_winner_count,
+          contracts_without_winner_count: contracts_without_winner_count,
           winner_company_count: spend_by_company.size,
           top_supplier_count: top_suppliers.size,
           top_supplier_share: ratio(top_suppliers.sum { |row| row[:awarded_value] }, total_spend),
@@ -56,6 +62,14 @@ module Investigations
 
     def contracts_scope
       Contract.where(contracting_entity_id: entity.id)
+    end
+
+    def contracts_with_winner_count
+      ContractWinner
+        .joins(:contract)
+        .where(contracts: { contracting_entity_id: entity.id })
+        .distinct
+        .count(:contract_id)
     end
 
     def flagged_contracts_scope
@@ -81,29 +95,39 @@ module Investigations
     end
 
     def raw_spend_by_winner_company
-      scoped_contracts_sql = contracts_scope
-        .select(:id, :base_price, :total_effective_price)
-        .to_sql
-
-      winner_counts_sql = ContractWinner
-        .joins("INNER JOIN (#{scoped_contracts_sql}) scoped_contracts ON scoped_contracts.id = contract_winners.contract_id")
-        .select("contract_id, COUNT(*) AS winner_count")
+      winner_counts_by_contract = ContractWinner
+        .joins(:contract)
+        .where(contracts: { contracting_entity_id: entity.id })
         .group(:contract_id)
-        .to_sql
+        .count
 
-      rows = ContractWinner
-        .joins("INNER JOIN (#{scoped_contracts_sql}) scoped_contracts ON scoped_contracts.id = contract_winners.contract_id")
-        .joins("INNER JOIN entities ON entities.id = contract_winners.entity_id")
-        .joins("INNER JOIN (#{winner_counts_sql}) winner_counts ON winner_counts.contract_id = contract_winners.contract_id")
-        .where("entities.is_company = ?", true)
-        .group("contract_winners.entity_id")
-        .pluck(
-          Arel.sql("contract_winners.entity_id"),
-          Arel.sql("COALESCE(SUM(COALESCE(contract_winners.price_share, COALESCE(scoped_contracts.total_effective_price, scoped_contracts.base_price) / NULLIF(winner_counts.winner_count, 0))), 0)")
-        )
+      return {} if winner_counts_by_contract.empty?
 
-      rows.each_with_object({}) do |(winner_entity_id, awarded_value), result|
-        result[winner_entity_id] = awarded_value.to_f
+      contract_values = contracts_scope
+        .pluck(:id, Arel.sql("COALESCE(total_effective_price, base_price)"))
+        .to_h
+
+      return {} if contract_values.empty?
+
+      winner_rows = ContractWinner
+        .joins(:contract, :entity)
+        .where(contracts: { contracting_entity_id: entity.id })
+        .where("entities.is_public_body = ? OR entities.is_public_body IS NULL", false)
+        .pluck(:contract_id, :entity_id, :price_share)
+
+      return {} if winner_rows.empty?
+
+      winner_rows.each_with_object(Hash.new(0.0)) do |(contract_id, winner_entity_id, price_share), result|
+        allocated_value = if price_share.present?
+          price_share.to_f
+        else
+          winner_count = winner_counts_by_contract[contract_id].to_i
+          next if winner_count <= 0
+
+          contract_values[contract_id].to_f / winner_count
+        end
+
+        result[winner_entity_id] += allocated_value
       end
     end
 
