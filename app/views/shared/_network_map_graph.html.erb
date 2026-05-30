@@ -1,0 +1,258 @@
+<% default_limit = Graph::NetworkMapService::DEFAULT_NODE_LIMIT %>
+<% include_individuals_default = local_assigns.fetch(:include_individuals_default, false) %>
+<% include_individuals_default_value = include_individuals_default ? "true" : "false" %>
+<% data_sources = local_assigns.fetch(:data_sources, []) %>
+
+<section class="mt-6 bg-white/2 border border-white/6 rounded-lg p-5"
+         data-controller="network-map-graph"
+         data-network-map-graph-endpoint-value="<%= "#{network_map_graph_path}.json" %>"
+         data-network-map-graph-default-limit-value="<%= default_limit %>"
+         data-network-map-graph-default-include-individuals-value="<%= include_individuals_default_value %>"
+         data-network-map-graph-public-body-label-value="<%= t('graph.legend_public_body') %>"
+         data-network-map-graph-company-label-value="<%= t('graph.legend_company') %>"
+         data-network-map-graph-individual-label-value="<%= journalist_access? ? t('graph.legend_individual') : '' %>"
+         data-network-map-graph-edge-award-label-value="<%= t('graph_map.edge_award') %>"
+         data-network-map-graph-edge-entity-role-label-value="<%= t('graph.edge_entity_role') %>"
+         data-network-map-graph-entity-path-template-value="<%= entity_path('__ID__') %>"
+         data-network-map-graph-company-path-template-value="<%= company_path('__ID__') %>"
+         data-network-map-graph-open-entity-label-value="<%= t('graph_map.open_entity') %>"
+         data-network-map-graph-open-company-label-value="<%= t('graph_map.open_company') %>"
+         data-network-map-graph-contracts-label-value="<%= t('graph_map.closest_contracts') %>"
+         data-network-map-graph-flagged-label-value="<%= t('graph_map.closest_flagged') %>"
+         data-network-map-graph-shared-individuals-label-value="<%= t('graph_map.shared_individuals') %>"
+         data-network-map-graph-yes-label-value="<%= h(t('graph.yes')) %>"
+         data-network-map-graph-no-label-value="<%= h(t('graph.no')) %>"
+         data-network-map-graph-error-label-value="<%= t('graph.error') %>"
+         data-network-map-graph-search-endpoint-value="<%= graph_search_entities_path %>"
+         data-network-map-graph-search-placeholder-value="<%= t('graph_map.search_placeholder') %>"
+         data-network-map-graph-search-no-results-label-value="<%= t('graph_map.search_no_results') %>"
+         data-network-map-graph-isolate-network-label-value="<%= t('graph_map.isolate_network') %>">
+  <div class="flex items-start justify-between gap-3 flex-wrap">
+    <div>
+      <h2 class="font-['Space_Grotesk'] text-base font-semibold text-[#e8e0d4]"><%= t("graph_map.heading") %></h2>
+      <p class="font-mono text-[10px] text-white/35 mt-1"><%= t("graph_map.subtitle") %></p>
+    </div>
+    <p class="font-mono text-[10px] text-[#c8a84e] bg-[#c8a84e12] border border-[#c8a84e33] px-2 py-1 rounded">
+      <%= journalist_access? ? t("graph.privacy_notice_authenticated") : t("graph_map.privacy_notice_public") %>
+    </p>
+  </div>
+
+  <%# Search bar %>
+  <div class="relative mt-4">
+    <input type="search"
+           data-network-map-graph-target="nodeSearch"
+           data-action="input->network-map-graph#inputNodeSearch blur->network-map-graph#blurNodeSearch"
+           placeholder="<%= t('graph_map.search_placeholder') %>"
+           autocomplete="off"
+           class="w-full bg-white/4 border border-white/10 rounded px-3 py-2 font-mono text-xs text-[#e8e0d4] placeholder-white/25 focus:outline-none focus:border-[#c8a84e55] transition-all">
+    <div data-network-map-graph-target="searchDropdown"
+         class="hidden absolute z-20 top-full left-0 right-0 mt-1 rounded overflow-hidden"
+         style="background:#13151c;border:1px solid rgba(255,255,255,0.12);box-shadow:0 8px 24px rgba(0,0,0,0.5);">
+    </div>
+  </div>
+
+  <form class="flex items-center gap-2 mt-3 flex-wrap" data-action="submit->network-map-graph#applyFilters">
+    <label class="font-mono text-[10px] text-white/35"><%= t("graph.filter_from") %></label>
+    <input type="date"
+           data-network-map-graph-target="dateFrom"
+           class="bg-white/4 border border-white/10 rounded px-2 py-1.5 font-mono text-xs text-[#e8e0d4] focus:outline-none focus:border-[#c8a84e55] transition-all">
+
+    <label class="font-mono text-[10px] text-white/35"><%= t("graph.filter_to") %></label>
+    <input type="date"
+           data-network-map-graph-target="dateTo"
+           class="bg-white/4 border border-white/10 rounded px-2 py-1.5 font-mono text-xs text-[#e8e0d4] focus:outline-none focus:border-[#c8a84e55] transition-all">
+
+    <label class="font-mono text-[10px] text-white/35"><%= t("graph_map.limit") %></label>
+    <input type="number"
+           min="20"
+           max="400"
+           value="<%= default_limit %>"
+           data-network-map-graph-target="limit"
+           class="w-22 bg-white/4 border border-white/10 rounded px-2 py-1.5 font-mono text-xs text-[#e8e0d4] focus:outline-none focus:border-[#c8a84e55] transition-all">
+
+    <label class="flex items-center gap-1.5 px-2 py-1 rounded border border-white/10 bg-white/3">
+      <input type="checkbox"
+             data-network-map-graph-target="includePublicBodies"
+             class="accent-[#44b7ff]"
+             checked>
+      <span class="font-mono text-[10px] text-white/55"><%= t("graph_map.include_public_bodies") %></span>
+    </label>
+
+    <label class="flex items-center gap-1.5 px-2 py-1 rounded border border-white/10 bg-white/3">
+      <input type="checkbox"
+             data-network-map-graph-target="includeCompanies"
+             class="accent-[#ff9f5b]"
+             checked>
+      <span class="font-mono text-[10px] text-white/55"><%= t("graph_map.include_companies") %></span>
+    </label>
+
+    <% if journalist_access? %>
+      <label class="flex items-center gap-1.5 px-2 py-1 rounded border border-white/10 bg-white/3">
+        <input type="checkbox"
+               data-network-map-graph-target="includeIndividuals"
+               class="accent-[#c8a84e]"
+               <%= "checked" if include_individuals_default %>>
+        <span class="font-mono text-[10px] text-white/55"><%= t("graph.include_individuals") %></span>
+      </label>
+    <% end %>
+
+    <% if data_sources.any? %>
+      <span class="font-mono text-[10px] text-white/25">|</span>
+      <% data_sources.each do |ds| %>
+        <label class="flex items-center gap-1.5 px-2 py-1 rounded border border-white/10 bg-white/3">
+          <input type="checkbox"
+                 name="data_source_ids[]"
+                 value="<%= ds.id %>"
+                 data-network-map-graph-target="dataSourceFilter"
+                 class="accent-[#a78bfa]"
+                 checked>
+          <span class="font-mono text-[10px] text-white/55"><%= ds.name %></span>
+        </label>
+      <% end %>
+    <% end %>
+
+    <label class="flex items-center gap-1.5 px-2 py-1 rounded border border-[#c8a84e33] bg-[#c8a84e08]">
+      <input type="checkbox"
+             data-network-map-graph-target="isolateNetwork"
+             data-action="change->network-map-graph#toggleIsolateNetwork"
+             class="accent-[#c8a84e]">
+      <span class="font-mono text-[10px] text-[#c8a84e]/70"><%= t("graph_map.isolate_network") %></span>
+    </label>
+
+    <button type="submit"
+            class="bg-[#c8a84e1a] border border-[#c8a84e44] text-[#c8a84e] font-mono text-[10px] tracking-widest px-3 py-1.5 rounded hover:bg-[#c8a84e33] transition-all cursor-pointer">
+      <%= t("graph.apply") %>
+    </button>
+
+    <button type="button"
+            data-action="click->network-map-graph#resetFilters"
+            class="border border-white/10 text-white/30 font-mono text-[10px] tracking-widest px-3 py-1.5 rounded hover:text-white/60 hover:border-white/20 transition-all cursor-pointer">
+      <%= t("graph.reset") %>
+    </button>
+
+    <button type="button"
+            data-action="click->network-map-graph#resetView"
+            class="border border-[#c8a84e44] text-[#c8a84e] font-mono text-[10px] tracking-widest px-3 py-1.5 rounded hover:bg-[#c8a84e22] transition-all cursor-pointer">
+      <%= t("graph_map.reset_view") %>
+    </button>
+
+    <button type="button"
+            data-action="click->network-map-graph#zoomOut"
+            class="border border-white/12 text-white/55 font-mono text-[11px] px-2 py-1.5 rounded hover:text-white/80 hover:border-white/25 transition-all cursor-pointer"
+            aria-label="<%= t('graph_map.zoom_out') %>">
+      −
+    </button>
+
+    <button type="button"
+            data-action="click->network-map-graph#zoomIn"
+            class="border border-white/12 text-white/55 font-mono text-[11px] px-2 py-1.5 rounded hover:text-white/80 hover:border-white/25 transition-all cursor-pointer"
+            aria-label="<%= t('graph_map.zoom_in') %>">
+      +
+    </button>
+  </form>
+
+  <div class="mt-4 grid lg:grid-cols-[1fr_280px] gap-4">
+    <div class="relative border border-white/8 rounded-lg overflow-hidden bg-[#0d0f14] min-h-[520px]">
+      <div data-network-map-graph-target="canvas" class="h-[520px] w-full"></div>
+
+      <div data-network-map-graph-target="loading"
+           class="absolute inset-0 flex items-center justify-center font-mono text-xs text-white/35 bg-[#0d0f14]/70">
+        <%= t("graph.loading") %>
+      </div>
+
+      <div data-network-map-graph-target="error"
+           class="hidden absolute inset-0 items-center justify-center text-center px-4 font-mono text-xs text-[#ff4444] bg-[#0d0f14]/80">
+      </div>
+
+      <div data-network-map-graph-target="empty"
+           class="hidden absolute inset-0 items-center justify-center text-center px-4 font-mono text-xs text-white/35 bg-[#0d0f14]/80">
+        <%= t("graph.empty") %>
+      </div>
+    </div>
+
+    <aside class="bg-white/2 border border-white/6 rounded-lg p-4 space-y-4">
+      <div>
+        <h3 class="font-mono text-[10px] tracking-[2px] text-white/35 uppercase mb-2"><%= t("graph.summary_heading") %></h3>
+        <div class="space-y-1.5 font-mono text-[11px] text-white/55">
+          <div class="flex items-center justify-between">
+            <span><%= t("graph.summary_nodes") %></span>
+            <span class="text-[#e8e0d4]" data-network-map-graph-target="nodesCount">0</span>
+          </div>
+          <div class="flex items-center justify-between">
+            <span><%= t("graph.summary_edges") %></span>
+            <span class="text-[#e8e0d4]" data-network-map-graph-target="edgesCount">0</span>
+          </div>
+          <div class="flex items-center justify-between">
+            <span><%= t("graph.summary_truncated") %></span>
+            <span class="text-[#e8e0d4]" data-network-map-graph-target="truncated">-</span>
+          </div>
+          <div class="flex items-center justify-between">
+            <span><%= t("graph_map.summary_flagged_size") %></span>
+            <span class="text-[#e8e0d4]" data-network-map-graph-target="summaryFlaggedSize">€0</span>
+          </div>
+          <div class="flex items-center justify-between">
+            <span><%= t("graph_map.summary_connected_individuals") %></span>
+            <span class="text-[#e8e0d4]" data-network-map-graph-target="summaryConnectedIndividuals">0</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="pt-3 border-t border-white/6">
+        <h3 class="font-mono text-[10px] tracking-[2px] text-white/35 uppercase mb-2"><%= t("graph.selection_heading") %></h3>
+        <div class="font-mono text-[11px] text-[#e8e0d4] mb-2" data-network-map-graph-target="selectedName">-</div>
+        <div class="space-y-1.5 font-mono text-[10px] text-white/45">
+          <div class="flex items-center justify-between">
+            <span><%= t("graph.selection_type") %></span>
+            <span class="text-white/70" data-network-map-graph-target="selectedType">-</span>
+          </div>
+          <div class="flex items-center justify-between">
+            <span><%= t("graph_map.selection_connections") %></span>
+            <span class="text-white/70" data-network-map-graph-target="selectedConnections">-</span>
+          </div>
+          <div class="flex items-center justify-between">
+            <span><%= t("graph.selection_contracts") %></span>
+            <span class="text-white/70" data-network-map-graph-target="selectedContracts">-</span>
+          </div>
+          <div class="flex items-center justify-between">
+            <span><%= t("graph.selection_value") %></span>
+            <span class="text-white/70" data-network-map-graph-target="selectedValue">-</span>
+          </div>
+          <div class="flex items-center justify-between">
+            <span><%= t("graph.selection_entities") %></span>
+            <span class="text-white/70 text-right max-w-[150px] truncate" data-network-map-graph-target="selectedEntities">-</span>
+          </div>
+          <div class="flex items-center justify-between">
+            <span><%= t("graph.selection_flagged") %></span>
+            <span class="text-white/70" data-network-map-graph-target="selectedFlagged">-</span>
+          </div>
+          <div class="flex items-center justify-between">
+            <span><%= t("graph_map.selection_flagged_size") %></span>
+            <span class="text-white/70" data-network-map-graph-target="selectedFlaggedSize">-</span>
+          </div>
+        </div>
+        <a href="#"
+            class="hidden mt-2 items-center gap-1 font-mono text-[10px] text-[#c8a84e] hover:text-[#e8e0d4] transition-colors"
+           data-network-map-graph-target="selectedNodeLink">
+          <%= t("graph_map.open_entity") %>
+        </a>
+        <div class="mt-3 pt-3 border-t border-white/6">
+          <h4 class="font-mono text-[9px] tracking-[2px] text-white/30 uppercase mb-2"><%= t("graph_map.closest_heading") %></h4>
+          <ol class="space-y-1.5 font-mono text-[10px]" data-network-map-graph-target="closestNodes">
+            <li class="text-white/35">-</li>
+          </ol>
+        </div>
+      </div>
+    </aside>
+  </div>
+
+  <p class="mt-2 font-mono text-[10px] text-white/35"><%= t("graph_map.navigation_hint") %></p>
+
+  <div class="mt-3 pt-3 border-t border-white/6 flex items-center gap-4 flex-wrap">
+    <span class="font-mono text-[9px] tracking-[2px] text-white/35 uppercase"><%= t("graph.legend_heading") %></span>
+    <span class="font-mono text-[10px] text-white/55 flex items-center gap-1.5"><span class="inline-block w-2.5 h-2.5 rounded-full bg-[#44b7ff]"></span><%= t("graph.legend_public_body") %></span>
+    <span class="font-mono text-[10px] text-white/55 flex items-center gap-1.5"><span class="inline-block w-2.5 h-2.5 rounded-full bg-[#ff9f5b]"></span><%= t("graph.legend_company") %></span>
+    <% if journalist_access? %>
+      <span class="font-mono text-[10px] text-white/55 flex items-center gap-1.5"><span class="inline-block w-2.5 h-2.5 rounded-full bg-[#a6b0bf]"></span><%= t("graph.legend_individual") %></span>
+    <% end %>
+  </div>
+</section>

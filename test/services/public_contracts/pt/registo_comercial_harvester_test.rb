@@ -416,6 +416,48 @@ class PublicContracts::PT::RegistoComercialHarvesterTest < ActiveSupport::TestCa
     assert_nothing_raised { @harvester.send(:notify_nif_complete, "501412727") }
   end
 
+  test "do_search retries when NIF input field is missing" do
+    search_clicked = false
+    go_to_calls = 0
+
+    search_button = Object.new
+    search_button.define_singleton_method(:click) { search_clicked = true }
+
+    page = Object.new
+    page.define_singleton_method(:at_css) do |selector|
+      case selector
+      when PublicContracts::PT::RegistoComercialHarvester::SEARCH_BTN_SEL
+        search_button
+      when PublicContracts::PT::RegistoComercialHarvester::GRID_SEL
+        Object.new
+      else
+        nil
+      end
+    end
+    page.define_singleton_method(:go_to) { |_url| go_to_calls += 1 }
+
+    @harvester.instance_variable_set(:@page, page)
+
+    attempts = 0
+    @harvester.stub(:set_nif_input!, ->(_nif) { attempts += 1; attempts > 1 }) do
+      @harvester.stub(:solve_nobot, nil) do
+        @harvester.stub(:solve_captcha, "token_123") do
+          @harvester.stub(:inject_captcha_token, nil) do
+            @harvester.stub(:wait_for_load, nil) do
+              @harvester.stub(:sleep, nil) do
+                result = @harvester.send(:do_search, "501412727")
+                assert_equal :success, result
+              end
+            end
+          end
+        end
+      end
+    end
+
+    assert_equal 1, go_to_calls
+    assert search_clicked
+  end
+
   # ── harvest integration (mocked browser) ───────────────────────
 
   test "harvest skips already-harvested NIFs and quits browser" do

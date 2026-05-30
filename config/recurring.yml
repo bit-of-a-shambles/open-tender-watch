@@ -17,3 +17,7 @@ production:
     class: DashboardStatsJob
     schedule: every hour
     queue: default
+  refresh_graph_edge_summaries:
+    class: GraphEdgeSummariesRefreshJob
+    schedule: every 3 hours at minute 27
+    queue: default

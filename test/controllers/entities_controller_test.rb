@@ -42,6 +42,33 @@ class EntitiesControllerTest < ActionDispatch::IntegrationTest
     assert_includes response.body, entities(:one).name
   end
 
+  test "show redirects company entities to company route" do
+    get entity_url(entities(:two), format: :html)
+
+    assert_equal "http://www.example.com#{company_path(entities(:two))}?format=html", response.location
+  end
+
+  test "show renders network graph panel" do
+    get entity_url(entities(:one))
+    assert_response :success
+    assert_includes response.body, "data-controller=\"entity-network-graph\""
+    assert_includes response.body, I18n.t("graph.heading")
+  end
+
+  test "show hides anonymized individual toggle for public users" do
+    get entity_url(entities(:one))
+    assert_response :success
+    refute_includes response.body, I18n.t("graph.include_individuals")
+  end
+
+  test "show renders anonymized individual toggle for authenticated users" do
+    post access_token_url, params: { token: access_tokens(:one).token }
+
+    get entity_url(entities(:one))
+    assert_response :success
+    assert_includes response.body, I18n.t("graph.include_individuals")
+  end
+
   test "show sorts contracts by base_price" do
     get entity_url(entities(:one), sort: "base_price", dir: "asc")
     assert_response :success

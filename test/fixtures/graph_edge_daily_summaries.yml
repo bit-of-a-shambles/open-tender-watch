@@ -1,0 +1,2 @@
+# frozen_string_literal: true
+# Intentionally empty: graph edge summaries are generated or created inline in tests.
