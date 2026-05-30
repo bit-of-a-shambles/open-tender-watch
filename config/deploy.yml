@@ -48,10 +48,9 @@ env:
     # Set number of processes dedicated to Solid Queue (default: 1)
     # JOB_CONCURRENCY: 3
 
-    # Set number of cores available to the application on each server (default: 1).
-    # 1 worker × 3 threads = 3 concurrent requests. Reduces memory by ~170MB under viral load.
-    # Increase back to 2 once the server is upgraded or traffic normalises.
-    WEB_CONCURRENCY: 1
+    # 2 workers × 3 threads = 6 concurrent requests. This increases headroom
+    # against crawler bursts while keeping memory bounded on the current VPS.
+    WEB_CONCURRENCY: 2
 
     # Match this to any external database server to configure Active Record correctly
     # Use opentenderwatch-db for a db accessory server on same machine via local kamal docker network.

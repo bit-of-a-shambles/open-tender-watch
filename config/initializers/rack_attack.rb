@@ -35,32 +35,57 @@ class Rack::Attack
     req.env["HTTP_CF_CONNECTING_IP"].presence || req.ip
   end
 
+  def self.crawler_signature(req)
+    ua = req.user_agent.to_s
+    match = ua.match(/(AhrefsBot|SemrushBot|Claude-SearchBot|Amzn-SearchBot|Barkrowler|MJ12bot|DotBot|Bytespider|PetalBot|YandexBot|bingbot|Googlebot)/i)
+    match && match[1].downcase
+  end
+
   # ---------------------------------------------------------------------------
   # Throttles — reads are generous (this is a public data service).
   # ---------------------------------------------------------------------------
 
-  # General browsing: 120 req / 1 min per real IP.
-  throttle("req/ip/1m", limit: 120, period: 1.minute) do |req|
+  # General browsing: 90 req / 1 min per real IP.
+  throttle("req/ip/1m", limit: 90, period: 1.minute) do |req|
     Rack::Attack.real_ip(req) unless req.path.start_with?("/assets", "/up")
   end
 
   # API-style pattern: same endpoint hammered repeatedly.
-  # 30 req / 1 min per real IP per path.
-  throttle("req/ip/path/1m", limit: 30, period: 1.minute) do |req|
+  # 20 req / 1 min per real IP per path.
+  throttle("req/ip/path/1m", limit: 20, period: 1.minute) do |req|
     "#{Rack::Attack.real_ip(req)}:#{req.path}" unless req.path.start_with?("/assets", "/up")
   end
 
   # Export / heavy queries — contracts index with filters can be slow.
-  throttle("contracts/ip/1m", limit: 20, period: 1.minute) do |req|
+  throttle("contracts/ip/1m", limit: 15, period: 1.minute) do |req|
     Rack::Attack.real_ip(req) if req.path.start_with?("/contracts") && req.get?
   end
 
+  # Crawler bursts across rotating IPs can saturate a small server.
+  throttle("crawler/signature/1m", limit: 30, period: 1.minute) do |req|
+    signature = Rack::Attack.crawler_signature(req)
+    "crawler:#{signature}" if signature && req.get? && !req.path.start_with?("/assets", "/up")
+  end
+
+  throttle("crawler/signature/1h", limit: 300, period: 1.hour) do |req|
+    signature = Rack::Attack.crawler_signature(req)
+    "crawler:#{signature}" if signature && req.get? && !req.path.start_with?("/assets", "/up")
+  end
+
   # Graph network API — potentially heavy aggregation queries.
-  throttle("graph/ip/1m", limit: 20, period: 1.minute) do |req|
+  throttle("graph/network/ip/1m", limit: 6, period: 1.minute) do |req|
+    Rack::Attack.real_ip(req) if req.path.start_with?("/api/graph/network") && req.get?
+  end
+
+  throttle("graph/network/ip/1h", limit: 60, period: 1.hour) do |req|
+    Rack::Attack.real_ip(req) if req.path.start_with?("/api/graph/network") && req.get?
+  end
+
+  throttle("graph/ip/1m", limit: 10, period: 1.minute) do |req|
     Rack::Attack.real_ip(req) if req.path.start_with?("/api/graph") && req.get?
   end
 
-  throttle("graph/ip/1h", limit: 200, period: 1.hour) do |req|
+  throttle("graph/ip/1h", limit: 90, period: 1.hour) do |req|
     Rack::Attack.real_ip(req) if req.path.start_with?("/api/graph") && req.get?
   end
 

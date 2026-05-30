@@ -283,6 +283,22 @@ class GraphControllerTest < ActionDispatch::IntegrationTest
     assert_operator data.dig("meta", "summary", "total_flagged_value"), :>=, 500.0
   end
 
+  test "network map clamps oversized limit params" do
+    get network_map_graph_url, params: { limit: 9999 }
+
+    assert_response :success
+    data = JSON.parse(response.body)
+    assert_equal Graph::NetworkMapService::MAX_NODE_LIMIT, data.dig("meta", "node_limit")
+  end
+
+  test "network map falls back to default limit when param is invalid" do
+    get network_map_graph_url, params: { limit: "invalid" }
+
+    assert_response :success
+    data = JSON.parse(response.body)
+    assert_equal Graph::NetworkMapService::DEFAULT_NODE_LIMIT, data.dig("meta", "node_limit")
+  end
+
   test "network map honors boolean node type filters" do
     get network_map_graph_url, params: {
       include_public_bodies: "false",
