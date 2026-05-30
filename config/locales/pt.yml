@@ -12,6 +12,13 @@ pt:
     entities: "Entidades"
     companies: "Empresas"
     graph: "Grafo"
+    investigations: "Investigações"
+
+  date:
+    formats:
+      default: "%d/%m/%Y"
+      short: "%d/%m/%Y"
+      long: "%d de %B de %Y"
 
   graphs:
     title: "Grafo de Rede de Entidades"
@@ -19,6 +26,82 @@ pt:
     entity_label: "Entidade"
     load_button: "Carregar Grafo"
     empty: "Sem entidades disponíveis para desenhar o grafo."
+
+  investigations:
+    title: "Investigações Automatizadas"
+    subtitle: "Pistas geradas por sinais de risco para escrutínio jornalístico."
+    access_required: "É necessária autenticação de jornalista para aceder às investigações."
+    empty: "Sem pistas de investigação para os filtros selecionados."
+    filters:
+      severity: "Gravidade"
+      lead_type: "Tipo de Pista"
+      all_severities: "Todas as gravidades"
+      all_lead_types: "Todos os tipos de pista"
+      apply: "Aplicar"
+    summary:
+      leads: "%{count} pistas"
+      candidate_pool: "%{count} candidatos"
+      limit: "limite %{count}"
+    card:
+      total_exposure: "Exposição sinalizada"
+      flagged_contracts: "Contratos sinalizados"
+      top_flags: "Sinais principais"
+      confidence: "Confiança"
+      open_report: "Abrir Relatório"
+      open_entity: "Abrir Entidade"
+      open_graph: "Abrir Grafo"
+    lead_types:
+      supplier_concentration: "Padrão de concentração de fornecedor"
+      repeat_direct_awards: "Padrão de ajuste direto repetido"
+      threshold_splitting: "Padrão de fracionamento de limiares"
+      late_publication: "Padrão de publicação tardia"
+      price_anomaly: "Padrão de anomalia de preço"
+      data_integrity: "Padrão de integridade de dados"
+      multi_flag_risk: "Padrão multi-sinal de risco"
+    confidence:
+      high: "Alta"
+      medium: "Média"
+      low: "Baixa"
+    show:
+      subtitle: "Relatório automatizado gerado a partir de evidência de risco ao nível do contrato."
+      highlights_title: "Principais Conclusões"
+      highlight_top_suppliers: "%{companies} empresas recebem %{share} da despesa total"
+      highlight_individual_links: "%{people} indivíduos ligados a %{companies} empresas vencedoras"
+      highlight_period_peaks: "Picos de adjudicação no fim de trimestre/ano: %{quarter} em mar/jun/set/dez; %{year_end} em dezembro"
+      metrics_title: "Métricas-Chave"
+      flagged_rate_label: "Taxa de Sinalização"
+      flagged_rate_formula: "contratos_sinalizados / contratos_totais = %{flagged} / %{total} = %{rate}"
+      hhi_label: "Concentração HHI"
+      hhi_formula: "HHI = Σ s_i² = %{hhi}"
+      hhi_interpretation: "Interpretação: concentração %{level} de fornecedores"
+      hhi_thresholds: "Limiares: baixa < 0,15; média 0,15-0,25; alta > 0,25"
+      hhi_levels:
+        low: "baixa"
+        medium: "média"
+        high: "alta"
+      suppliers_table:
+        company: "Empresa"
+        value: "Valor adjudicado"
+        share: "Quota"
+      network_title: "Mapa de Rede do Cluster"
+      network_subtitle: "Cluster principal centrado nesta entidade com ligações pessoa-empresa."
+      contracts_title: "Top 30 Contratos de Maior Risco"
+      contracts_subtitle: "Contratos com maior score combinado, com evidência por indicador."
+      no_contracts: "Sem contratos disponíveis para esta entidade."
+      contracts_table:
+        contract: "Contrato"
+        date: "Data"
+        value: "Valor"
+        risk: "Risco"
+        evidence: "Evidência"
+      timeline_title: "Linha Temporal de Adjudicações"
+      timeline_subtitle: "Volume mensal de adjudicações e sinais de risco de alterações contratuais."
+      no_timeline: "Sem dados de linha temporal para esta entidade."
+      timeline_table:
+        period: "Período"
+        adjudications: "Adjudicações"
+        value: "Valor adjudicado"
+        amendments: "Sinais de alterações"
 
   stats:
     contracts: "CONTRATOS"
@@ -62,6 +145,7 @@ pt:
         next: "Próxim. →"
     severity_filter:
       all: "Todos"
+      critical: "Crítico"
       high: "Alto"
       medium: "Médio"
       low: "Baixo"

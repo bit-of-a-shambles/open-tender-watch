@@ -44,6 +44,8 @@ export default class extends Controller {
     searchEndpoint: String,
     defaultLimit: Number,
     defaultIncludeIndividuals: String,
+    defaultMustIncludeEntityIds: String,
+    defaultIsolateNetwork: String,
     publicBodyLabel: String,
     companyLabel: String,
     individualLabel: String,
@@ -68,7 +70,7 @@ export default class extends Controller {
     this.graphData = null
     this.selectedNodeId = null
     this.pendingSelectNodeId = null
-    this.forcedEntityIds = []
+    this.forcedEntityIds = this.parseDefaultMustIncludeEntityIds()
     this.abortController = null
     this.resizeTimer = null
     this.navigationCleanup = null
@@ -93,7 +95,9 @@ export default class extends Controller {
     if (this.hasIncludeIndividualsTarget) {
       this.includeIndividualsTarget.checked = this.defaultIncludeIndividualsEnabled()
     }
-    if (this.hasIsolateNetworkTarget) this.isolateNetworkTarget.checked = false
+    if (this.hasIsolateNetworkTarget) {
+      this.isolateNetworkTarget.checked = this.defaultIsolateNetworkEnabled()
+    }
 
     this.loadGraph()
   }
@@ -121,12 +125,14 @@ export default class extends Controller {
     if (this.hasIncludeIndividualsTarget) {
       this.includeIndividualsTarget.checked = this.defaultIncludeIndividualsEnabled()
     }
-    if (this.hasIsolateNetworkTarget) this.isolateNetworkTarget.checked = false
+    if (this.hasIsolateNetworkTarget) {
+      this.isolateNetworkTarget.checked = this.defaultIsolateNetworkEnabled()
+    }
     if (this.hasNodeSearchTarget) this.nodeSearchTarget.value = ""
     if (this.hasDataSourceFilterTargets) {
       this.dataSourceFilterTargets.forEach((cb) => { cb.checked = true })
     }
-    this.forcedEntityIds = []
+    this.forcedEntityIds = this.parseDefaultMustIncludeEntityIds()
     this.pendingSelectNodeId = null
     this.closeSearchDropdown()
 
@@ -1139,6 +1145,20 @@ export default class extends Controller {
   defaultIncludeIndividualsEnabled() {
     const raw = this.defaultIncludeIndividualsValue || this.element.getAttribute("data-network-map-graph-default-include-individuals-value")
     return this.truthy(raw)
+  }
+
+  defaultIsolateNetworkEnabled() {
+    const raw = this.defaultIsolateNetworkValue || this.element.getAttribute("data-network-map-graph-default-isolate-network-value")
+    return this.truthy(raw)
+  }
+
+  parseDefaultMustIncludeEntityIds() {
+    const raw = this.defaultMustIncludeEntityIdsValue || this.element.getAttribute("data-network-map-graph-default-must-include-entity-ids-value")
+
+    return String(raw || "")
+      .split(",")
+      .map((value) => Number.parseInt(String(value).trim(), 10))
+      .filter((value) => Number.isInteger(value) && value > 0)
   }
 
   truthy(value) {

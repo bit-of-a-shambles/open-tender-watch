@@ -4,6 +4,8 @@ Rails.application.routes.draw do
   resources :contracts, only: [ :index, :show ]
   resources :entities, only: [ :index, :show ]
   resources :companies, only: [ :index, :show ]
+  get "investigations", to: "investigations#index", as: :investigations
+  get "investigations/:id", to: "investigations#show", as: :investigation
   get "graph", to: "graphs#index", as: :graph
   get "api/graph/network", to: "graph#network_map", defaults: { format: :json }, as: :network_map_graph
   get "api/graph/entities/:entity_id/network", to: "graph#entity_network", defaults: { format: :json }, as: :entity_network_graph
