@@ -1,7 +1,5 @@
 # frozen_string_literal: true
 
-require "set"
-
 module Investigations
   class CaseReportService
     TOP_CONTRACTS_LIMIT = 30
@@ -25,8 +23,6 @@ module Investigations
       total_spend = spend_by_company.values.sum
       top_suppliers = top_supplier_rows(spend_by_company, total_spend)
 
-      linked_individual_count, winner_companies_with_individuals_count = linked_individual_metrics(spend_by_company.keys)
-
       timeline = timeline_rows
       quarter_end_peak_ratio, year_end_peak_ratio = period_peak_ratios(timeline, contracts_total)
 
@@ -44,8 +40,8 @@ module Investigations
           top_supplier_count: top_suppliers.size,
           top_supplier_share: ratio(top_suppliers.sum { |row| row[:awarded_value] }, total_spend),
           hhi: hhi(spend_by_company, total_spend),
-          linked_individual_count: linked_individual_count,
-          winner_companies_with_individuals_count: winner_companies_with_individuals_count,
+          linked_individual_count: 0,
+          winner_companies_with_individuals_count: 0,
           quarter_end_peak_ratio: quarter_end_peak_ratio,
           year_end_peak_ratio: year_end_peak_ratio
         },
@@ -147,49 +143,6 @@ module Investigations
             share: ratio(awarded_value, total_spend)
           }
         end
-    end
-
-    def linked_individual_metrics(winner_company_ids)
-      return [ 0, 0 ] if winner_company_ids.empty?
-
-      role_rows = EntityPersonRole
-        .active
-        .joins(:person)
-        .where(entity_id: winner_company_ids)
-        .pluck("entity_person_roles.entity_id", "entity_person_roles.person_id", "people.tax_identifier", "people.name")
-
-      director_rows = CompanyDirector
-        .where(entity_id: winner_company_ids)
-        .pluck(:entity_id, :tax_identifier, :name)
-
-      individuals = Set.new
-      companies_with_individuals = Set.new
-
-      role_rows.each do |entity_id, person_id, tax_identifier, name|
-        key = person_key(person_id:, tax_identifier:, name:)
-        next if key.blank?
-
-        individuals << key
-        companies_with_individuals << entity_id
-      end
-
-      director_rows.each do |entity_id, tax_identifier, name|
-        key = person_key(tax_identifier:, name:)
-        next if key.blank?
-
-        individuals << key
-        companies_with_individuals << entity_id
-      end
-
-      [ individuals.size, companies_with_individuals.size ]
-    end
-
-    def person_key(person_id: nil, tax_identifier: nil, name: nil)
-      return "person_id:#{person_id}" if person_id.present?
-      return "tax_identifier:#{tax_identifier}" if tax_identifier.present?
-      return if name.blank?
-
-      "name:#{name.to_s.strip.downcase.gsub(/\s+/, " ")}"
     end
 
     def timeline_rows

@@ -59,10 +59,10 @@ class InvestigationsControllerTest < ActionDispatch::IntegrationTest
     )
   end
 
-  test "index requires journalist authentication" do
+  test "index is publicly accessible" do
     get investigations_url
 
-    assert_redirected_to new_access_token_url
+    assert_response :success
   end
 
   test "index renders automated leads for authenticated users" do
@@ -74,8 +74,6 @@ class InvestigationsControllerTest < ActionDispatch::IntegrationTest
       total_exposure: 9_500,
       contract_count: 6
     )
-
-    post access_token_url, params: { token: access_tokens(:one).token }
 
     get investigations_url
 
@@ -144,15 +142,15 @@ class InvestigationsControllerTest < ActionDispatch::IntegrationTest
     refute_includes response.body, "Repeat Lead 20"
   end
 
-  test "show requires journalist authentication" do
+  test "show is publicly accessible" do
     entity = create_entity!(name: "Restricted Report Entity", tax_identifier: "790000401")
 
     get investigation_url(entity)
 
-    assert_redirected_to new_access_token_url
+    assert_response :success
   end
 
-  test "show renders report for authenticated users" do
+  test "show renders report for public users" do
     authority = create_entity!(name: "Hospital Público Alfa", tax_identifier: "790000402")
     supplier = create_entity!(
       name: "Fornecedor Alfa",
@@ -178,8 +176,6 @@ class InvestigationsControllerTest < ActionDispatch::IntegrationTest
       source_name: "fixture",
       active: true
     )
-
-    post access_token_url, params: { token: access_tokens(:one).token }
 
     get investigation_url(authority)
 
@@ -207,8 +203,6 @@ class InvestigationsControllerTest < ActionDispatch::IntegrationTest
         celebration_date: Date.new(2025, month, 10)
       )
     end
-
-    post access_token_url, params: { token: access_tokens(:one).token }
 
     get investigation_url(authority)
 
@@ -249,8 +243,6 @@ class InvestigationsControllerTest < ActionDispatch::IntegrationTest
       contract_count: 5
     )
 
-    post access_token_url, params: { token: access_tokens(:one).token }
-
     get investigations_url, params: { lead_type: "supplier_concentration" }
 
     assert_response :success
@@ -268,8 +260,6 @@ class InvestigationsControllerTest < ActionDispatch::IntegrationTest
       contract_count: 3
     )
 
-    post access_token_url, params: { token: access_tokens(:one).token }
-
     get investigations_url, params: { severity: "bad", lead_type: "bad" }
 
     assert_response :success
@@ -286,10 +276,10 @@ class InvestigationsControllerTest < ActionDispatch::IntegrationTest
     assert_includes response.body, I18n.t("nav.investigations")
   end
 
-  test "dashboard hides investigations navigation for public users" do
+  test "dashboard shows investigations navigation for public users" do
     get dashboard_index_url
 
     assert_response :success
-    refute_includes response.body, investigations_path
+    assert_includes response.body, investigations_path
   end
 end

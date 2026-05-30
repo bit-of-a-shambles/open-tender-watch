@@ -258,7 +258,9 @@ export default class extends Controller {
     this.edgesCountTarget.textContent = this.formatInteger(edges.length)
     this.truncatedTarget.textContent = truncated ? this.yesLabelValue : this.noLabelValue
     this.summaryFlaggedSizeTarget.textContent = this.formatCurrency(summary.total_flagged_value || 0)
-    this.summaryConnectedIndividualsTarget.textContent = this.formatInteger(summary.connected_individual_count || 0)
+    if (this.hasSummaryConnectedIndividualsTarget) {
+      this.summaryConnectedIndividualsTarget.textContent = this.formatInteger(summary.connected_individual_count || 0)
+    }
   }
 
   renderSelectedDetails(node) {

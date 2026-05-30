@@ -3,7 +3,6 @@
 class InvestigationsController < ApplicationController
   TOP_PER_LEAD_TYPE_LIMIT = 20
 
-  before_action :require_journalist_access!
   before_action :set_entity, only: [ :show ]
 
   def index
@@ -26,12 +25,6 @@ class InvestigationsController < ApplicationController
 
   def set_entity
     @entity = Entity.find(params[:id])
-  end
-
-  def require_journalist_access!
-    return if journalist_access?
-
-    redirect_to new_access_token_path, alert: t("investigations.access_required")
   end
 
   def normalized_severity(value)

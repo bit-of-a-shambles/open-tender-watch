@@ -51,8 +51,8 @@ class Rack::Attack
   end
 
   # API-style pattern: same endpoint hammered repeatedly.
-  # 20 req / 1 min per real IP per path.
-  throttle("req/ip/path/1m", limit: 20, period: 1.minute) do |req|
+  # 40 req / 1 min per real IP per path.
+  throttle("req/ip/path/1m", limit: 40, period: 1.minute) do |req|
     "#{Rack::Attack.real_ip(req)}:#{req.path}" unless req.path.start_with?("/assets", "/up")
   end
 
@@ -72,20 +72,20 @@ class Rack::Attack
     "crawler:#{signature}" if signature && req.get? && !req.path.start_with?("/assets", "/up")
   end
 
-  # Graph network API — potentially heavy aggregation queries.
-  throttle("graph/network/ip/1m", limit: 6, period: 1.minute) do |req|
+  # Graph network API — interactive UI can issue short bursts during navigation.
+  throttle("graph/network/ip/1m", limit: 30, period: 1.minute) do |req|
     Rack::Attack.real_ip(req) if req.path.start_with?("/api/graph/network") && req.get?
   end
 
-  throttle("graph/network/ip/1h", limit: 60, period: 1.hour) do |req|
+  throttle("graph/network/ip/1h", limit: 600, period: 1.hour) do |req|
     Rack::Attack.real_ip(req) if req.path.start_with?("/api/graph/network") && req.get?
   end
 
-  throttle("graph/ip/1m", limit: 10, period: 1.minute) do |req|
+  throttle("graph/ip/1m", limit: 30, period: 1.minute) do |req|
     Rack::Attack.real_ip(req) if req.path.start_with?("/api/graph") && req.get?
   end
 
-  throttle("graph/ip/1h", limit: 90, period: 1.hour) do |req|
+  throttle("graph/ip/1h", limit: 600, period: 1.hour) do |req|
     Rack::Attack.real_ip(req) if req.path.start_with?("/api/graph") && req.get?
   end
 
@@ -93,14 +93,14 @@ class Rack::Attack
   # 5 exports per minute per IP is generous for investigative use; prevents
   # automated scraping of the full dataset via repeated .csv/.json downloads.
   throttle("exports/ip/1m", limit: 5, period: 1.minute) do |req|
-    if req.get? && req.path.match?(/\.(csv|json)\z/)
+    if req.get? && req.path.match?(/\.(csv|json)\z/) && !req.path.start_with?("/api/graph")
       Rack::Attack.real_ip(req)
     end
   end
 
   # Sustained export limit — 20 exports per hour per IP.
   throttle("exports/ip/1h", limit: 20, period: 1.hour) do |req|
-    if req.get? && req.path.match?(/\.(csv|json)\z/)
+    if req.get? && req.path.match?(/\.(csv|json)\z/) && !req.path.start_with?("/api/graph")
       Rack::Attack.real_ip(req)
     end
   end

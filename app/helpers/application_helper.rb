@@ -65,19 +65,14 @@ module ApplicationHelper
   end
 
   def global_nav_items
-    items = [
+    [
       { key: :dashboard, path: root_path, label: t("nav.dashboard") },
       { key: :contracts, path: contracts_path, label: t("nav.contracts") },
       { key: :entities, path: entities_path, label: t("nav.entities") },
       { key: :companies, path: companies_path, label: t("nav.companies") },
-      { key: :graph, path: graph_path, label: t("nav.graph") }
+      { key: :graph, path: graph_path, label: t("nav.graph") },
+      { key: :investigations, path: investigations_path, label: t("nav.investigations") }
     ]
-
-    if journalist_access?
-      items << { key: :investigations, path: investigations_path, label: t("nav.investigations") }
-    end
-
-    items
   end
 
   def global_nav_active?(key)
