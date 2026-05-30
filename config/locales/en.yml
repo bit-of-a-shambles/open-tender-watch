@@ -12,6 +12,13 @@ en:
     entities: "Entities"
     companies: "Companies"
     graph: "Graph"
+    investigations: "Investigations"
+
+  date:
+    formats:
+      default: "%Y-%m-%d"
+      short: "%Y-%m-%d"
+      long: "%B %d, %Y"
 
   graphs:
     title: "Entity Network Graph"
@@ -19,6 +26,82 @@ en:
     entity_label: "Entity"
     load_button: "Load Graph"
     empty: "No entities available to render the graph."
+
+  investigations:
+    title: "Automated Investigations"
+    subtitle: "Leads generated from risk flags for journalist scrutiny."
+    access_required: "Journalist authentication is required to access investigations."
+    empty: "No investigation leads available for the selected filters."
+    filters:
+      severity: "Severity"
+      lead_type: "Lead Type"
+      all_severities: "All severities"
+      all_lead_types: "All lead types"
+      apply: "Apply"
+    summary:
+      leads: "%{count} leads"
+      candidate_pool: "%{count} candidates"
+      limit: "limit %{count}"
+    card:
+      total_exposure: "Flagged exposure"
+      flagged_contracts: "Flagged contracts"
+      top_flags: "Top signals"
+      confidence: "Confidence"
+      open_report: "Open Report"
+      open_entity: "Open Entity"
+      open_graph: "Open Graph"
+    lead_types:
+      supplier_concentration: "Supplier concentration cluster"
+      repeat_direct_awards: "Repeat direct awards pattern"
+      threshold_splitting: "Threshold splitting pattern"
+      late_publication: "Late publication pattern"
+      price_anomaly: "Price anomaly pattern"
+      data_integrity: "Data integrity pattern"
+      multi_flag_risk: "Multi-flag risk pattern"
+    confidence:
+      high: "High"
+      medium: "Medium"
+      low: "Low"
+    show:
+      subtitle: "Automated case report generated from contract-level risk evidence."
+      highlights_title: "Executive Highlights"
+      highlight_top_suppliers: "%{companies} companies receive %{share} of total spend"
+      highlight_individual_links: "%{people} individuals linked to %{companies} winner companies"
+      highlight_period_peaks: "Award peaks at quarter/year end: %{quarter} in Mar/Jun/Sep/Dec; %{year_end} in December"
+      metrics_title: "Key Metrics"
+      flagged_rate_label: "Flagged Rate"
+      flagged_rate_formula: "flagged_contracts / total_contracts = %{flagged} / %{total} = %{rate}"
+      hhi_label: "HHI Concentration"
+      hhi_formula: "HHI = Σ s_i² = %{hhi}"
+      hhi_interpretation: "Interpretation: %{level} supplier concentration"
+      hhi_thresholds: "Thresholds: low < 0.15; medium 0.15-0.25; high > 0.25"
+      hhi_levels:
+        low: "low"
+        medium: "medium"
+        high: "high"
+      suppliers_table:
+        company: "Company"
+        value: "Awarded value"
+        share: "Share"
+      network_title: "Network Cluster Map"
+      network_subtitle: "Main cluster focused on this entity with person-company links."
+      contracts_title: "Top 30 High-Risk Contracts"
+      contracts_subtitle: "Highest combined risk score, with indicator evidence."
+      no_contracts: "No contracts available for this entity."
+      contracts_table:
+        contract: "Contract"
+        date: "Date"
+        value: "Value"
+        risk: "Risk"
+        evidence: "Evidence"
+      timeline_title: "Award Timeline"
+      timeline_subtitle: "Monthly award volume and amendment risk signals."
+      no_timeline: "No timeline data available for this entity."
+      timeline_table:
+        period: "Period"
+        adjudications: "Awards"
+        value: "Awarded value"
+        amendments: "Amendment signals"
 
   stats:
     contracts: "CONTRACTS"
@@ -62,6 +145,7 @@ en:
         next: "Next →"
     severity_filter:
       all: "All"
+      critical: "Critical"
       high: "High"
       medium: "Medium"
       low: "Low"

@@ -1,0 +1,120 @@
+<% lead_type_options = Investigations::LeadBuilderService::ALLOWED_LEAD_TYPES.map { |lead_type| [t("investigations.lead_types.#{lead_type}"), lead_type] } %>
+
+<div class="animate-fade-up mt-8">
+  <header class="mb-6">
+    <div class="flex items-center gap-3 mb-2">
+      <div class="w-2.5 h-2.5 rounded-full bg-[#ff4444] shadow-[0_0_12px_rgba(255,68,68,0.5)] animate-pulse-slow"></div>
+      <span class="font-mono text-[11px] tracking-[3px] text-white/40 font-semibold uppercase"><%= t("nav.investigations") %></span>
+    </div>
+    <h1 class="font-['Space_Grotesk'] text-2xl sm:text-3xl font-bold tracking-tight bg-linear-to-r from-[#e8e0d4] to-[#c8a84e] bg-clip-text text-transparent">
+      <%= t("investigations.title") %>
+    </h1>
+    <p class="text-white/40 text-sm mt-1"><%= t("investigations.subtitle") %></p>
+  </header>
+
+  <div class="border border-white/8 rounded-lg p-4 mb-5 bg-black/10">
+    <%= form_with url: investigations_path, method: :get, class: "flex flex-wrap items-end gap-2.5" do |f| %>
+      <div>
+        <label class="block font-mono text-[10px] tracking-[2px] text-white/40 mb-1"><%= t("investigations.filters.severity") %></label>
+        <%= f.select :severity,
+            [[t("investigations.filters.all_severities"), ""],
+             [t("dashboard.severity_filter.critical", default: "Critical"), "critical"],
+             [t("dashboard.severity_filter.high"), "high"],
+             [t("dashboard.severity_filter.medium"), "medium"],
+             [t("dashboard.severity_filter.low"), "low"]],
+            { selected: @severity_filter },
+            class: "bg-black/30 border border-white/10 rounded px-2.5 py-2 font-mono text-xs text-white/75 focus:outline-hidden focus:border-[#c8a84e66]" %>
+      </div>
+
+      <div>
+        <label class="block font-mono text-[10px] tracking-[2px] text-white/40 mb-1"><%= t("investigations.filters.lead_type") %></label>
+        <%= f.select :lead_type,
+            [[t("investigations.filters.all_lead_types"), ""]] + lead_type_options,
+            { selected: @lead_type_filter },
+            class: "bg-black/30 border border-white/10 rounded px-2.5 py-2 font-mono text-xs text-white/75 focus:outline-hidden focus:border-[#c8a84e66]" %>
+      </div>
+
+      <%= f.submit t("investigations.filters.apply"),
+          class: "bg-[#c8a84e22] text-[#c8a84e] border border-[#c8a84e44] px-3 py-2 rounded font-mono text-xs font-semibold tracking-[1px] hover:bg-[#c8a84e33] transition-colors cursor-pointer" %>
+    <% end %>
+  </div>
+
+  <div class="flex flex-wrap items-center gap-2 mb-5 font-mono text-[11px] text-white/35">
+    <span><%= t("investigations.summary.leads", count: @leads.size) %></span>
+    <span>·</span>
+    <span><%= t("investigations.summary.candidate_pool", count: @meta[:candidate_count]) %></span>
+    <span>·</span>
+    <span><%= t("investigations.summary.limit", count: @meta[:limit]) %></span>
+  </div>
+
+  <% if @leads.empty? %>
+    <div class="border border-white/8 rounded-lg px-5 py-12 bg-black/10 text-center font-mono text-sm text-white/30">
+      <%= t("investigations.empty") %>
+    </div>
+  <% else %>
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-3">
+      <% @leads.each do |lead| %>
+        <% severity_classes = severity_styles(lead[:max_severity]) %>
+        <article class="bg-white/2 border border-white/8 rounded-lg p-4 hover:border-[#c8a84e44] transition-colors">
+          <div class="flex items-start justify-between gap-3 mb-2">
+            <h2 class="font-['Space_Grotesk'] text-lg text-[#e8e0d4] leading-tight">
+              <%= lead[:entity_name] %>
+            </h2>
+            <span class="font-mono text-[9px] tracking-[1px] uppercase px-1.5 py-0.5 rounded border <%= severity_classes[:text] %> <%= severity_classes[:bg] %> <%= severity_classes[:border] %>">
+              <%= t("dashboard.insights.severity_#{lead[:max_severity]}", default: lead[:max_severity].to_s.upcase) %>
+            </span>
+          </div>
+
+          <p class="font-mono text-[10px] tracking-[1px] text-[#c8a84e] mb-3">
+            <%= t("investigations.lead_types.#{lead[:lead_type]}") %>
+          </p>
+
+          <div class="grid grid-cols-2 gap-2 mb-3 font-mono text-xs">
+            <div class="rounded border border-white/8 bg-black/20 p-2.5">
+              <div class="text-white/35 text-[10px] mb-1"><%= t("investigations.card.total_exposure") %></div>
+              <div class="text-[#e8e0d4] font-semibold">
+                <%= number_to_currency(lead[:total_exposure], unit: "€", delimiter: ",", separator: ".", format: "%u%n", precision: 0) %>
+              </div>
+            </div>
+            <div class="rounded border border-white/8 bg-black/20 p-2.5">
+              <div class="text-white/35 text-[10px] mb-1"><%= t("investigations.card.flagged_contracts") %></div>
+              <div class="text-[#e8e0d4] font-semibold"><%= number_with_delimiter(lead[:flagged_contract_count]) %></div>
+            </div>
+          </div>
+
+          <div class="mb-3">
+            <div class="font-mono text-[10px] tracking-[2px] text-white/35 uppercase mb-1.5"><%= t("investigations.card.top_flags") %></div>
+            <div class="space-y-1">
+              <% lead[:top_flags].each do |flag| %>
+                <div class="flex items-center justify-between font-mono text-[10px] text-white/65">
+                  <span class="truncate pr-3"><%= flag_type_label(flag[:flag_type]) %></span>
+                  <span><%= number_with_delimiter(flag[:contract_count]) %></span>
+                </div>
+              <% end %>
+            </div>
+          </div>
+
+          <div class="flex items-center justify-between gap-2 pt-2 border-t border-white/6">
+            <div class="font-mono text-[10px] text-white/40">
+              <%= t("investigations.card.confidence") %>: <span class="text-white/70"><%= t("investigations.confidence.#{lead[:confidence]}") %></span>
+            </div>
+            <div class="flex items-center gap-2">
+              <%= link_to t("investigations.card.open_report"), investigation_path(lead[:entity_id]),
+                  class: "font-mono text-[10px] text-[#c8a84e] hover:text-[#e8e0d4] transition-colors" %>
+              <%= link_to t("investigations.card.open_graph"), graph_path,
+                  class: "font-mono text-[10px] text-white/35 hover:text-[#c8a84e] transition-colors" %>
+              <%= link_to t("investigations.card.open_entity"), entity_path(lead[:entity_id]),
+                  class: "font-mono text-[10px] text-white/35 hover:text-[#c8a84e] transition-colors" %>
+            </div>
+          </div>
+        </article>
+      <% end %>
+    </div>
+  <% end %>
+
+  <div class="mt-8 pt-5 border-t border-white/10">
+    <%= link_to dashboard_index_path, class: "font-mono text-[11px] text-white/30 hover:text-[#c8a84e] transition-colors" do %>
+      ← <%= t("nav.dashboard") %>
+    <% end %>
+  </div>
+</div>

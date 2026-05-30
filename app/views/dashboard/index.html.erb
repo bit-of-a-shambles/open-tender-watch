@@ -54,6 +54,11 @@
     <%= link_to graph_path, class: "font-mono text-xs tracking-widest uppercase px-4 py-3 font-semibold text-white/50 border-b-2 border-transparent hover:text-[#c8a84e] hover:border-[#c8a84e44] transition-all whitespace-nowrap shrink-0" do %>
       <%= t("nav.graph") %>
     <% end %>
+    <% if journalist_access? %>
+      <%= link_to investigations_path, class: "font-mono text-xs tracking-widest uppercase px-4 py-3 font-semibold text-white/50 border-b-2 border-transparent hover:text-[#c8a84e] hover:border-[#c8a84e44] transition-all whitespace-nowrap shrink-0" do %>
+        <%= t("nav.investigations") %>
+      <% end %>
+    <% end %>
     <%= link_to contracts_path, class: "font-mono text-xs tracking-widest uppercase px-4 py-3 font-semibold text-white/50 border-b-2 border-transparent hover:text-[#c8a84e] hover:border-[#c8a84e44] transition-all whitespace-nowrap shrink-0 ml-auto" do %>
       <%= t("nav.contracts") %> →
     <% end %>

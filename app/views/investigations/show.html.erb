@@ -1,0 +1,220 @@
+<% metrics = @report[:metrics] %>
+<% top_suppliers = @report[:top_suppliers] %>
+<% top_contracts = @report[:top_contracts] %>
+<% timeline = @report[:timeline] %>
+<% hhi_value = metrics[:hhi].to_f %>
+<% hhi_level_key = if hhi_value < 0.15
+  "low"
+elsif hhi_value <= 0.25
+  "medium"
+else
+  "high"
+end %>
+
+<div class="animate-fade-up mt-8 space-y-6">
+  <header>
+    <div class="flex items-center gap-3 mb-2">
+      <div class="w-2.5 h-2.5 rounded-full bg-[#ff4444] shadow-[0_0_12px_rgba(255,68,68,0.5)] animate-pulse-slow"></div>
+      <span class="font-mono text-[11px] tracking-[3px] text-white/40 font-semibold uppercase"><%= t("nav.investigations") %></span>
+    </div>
+    <h1 class="font-['Space_Grotesk'] text-2xl sm:text-3xl font-bold tracking-tight bg-linear-to-r from-[#e8e0d4] to-[#c8a84e] bg-clip-text text-transparent">
+      <%= @entity.name %>
+    </h1>
+    <p class="text-white/40 text-sm mt-1"><%= t("investigations.show.subtitle") %></p>
+  </header>
+
+  <section class="bg-white/2 border border-white/8 rounded-lg p-5">
+    <h2 class="font-['Space_Grotesk'] text-lg text-[#e8e0d4] mb-3"><%= t("investigations.show.highlights_title") %></h2>
+    <div class="space-y-2 font-mono text-sm text-white/80">
+      <p>
+        <%= t(
+          "investigations.show.highlight_top_suppliers",
+          companies: metrics[:top_supplier_count],
+          share: number_to_percentage(metrics[:top_supplier_share] * 100.0, precision: 1, strip_insignificant_zeros: true)
+        ) %>
+      </p>
+      <p>
+        <%= t(
+          "investigations.show.highlight_individual_links",
+          people: number_with_delimiter(metrics[:linked_individual_count]),
+          companies: number_with_delimiter(metrics[:winner_companies_with_individuals_count])
+        ) %>
+      </p>
+      <p>
+        <%= t(
+          "investigations.show.highlight_period_peaks",
+          quarter: number_to_percentage(metrics[:quarter_end_peak_ratio] * 100.0, precision: 1, strip_insignificant_zeros: true),
+          year_end: number_to_percentage(metrics[:year_end_peak_ratio] * 100.0, precision: 1, strip_insignificant_zeros: true)
+        ) %>
+      </p>
+    </div>
+  </section>
+
+  <section class="bg-white/2 border border-white/8 rounded-lg p-5">
+    <h2 class="font-['Space_Grotesk'] text-lg text-[#e8e0d4] mb-3"><%= t("investigations.show.metrics_title") %></h2>
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-3 mb-4">
+      <div class="rounded border border-white/8 bg-black/20 p-3">
+        <div class="font-mono text-[10px] tracking-[2px] text-white/35 uppercase mb-1"><%= t("investigations.show.flagged_rate_label") %></div>
+        <div class="font-mono text-xs text-white/80">
+          <%= t(
+            "investigations.show.flagged_rate_formula",
+            flagged: number_with_delimiter(metrics[:flagged_contracts_total]),
+            total: number_with_delimiter(metrics[:contracts_total]),
+            rate: number_to_percentage(metrics[:flagged_rate] * 100.0, precision: 1, strip_insignificant_zeros: true)
+          ) %>
+        </div>
+      </div>
+
+      <div class="rounded border border-white/8 bg-black/20 p-3">
+        <div class="font-mono text-[10px] tracking-[2px] text-white/35 uppercase mb-1"><%= t("investigations.show.hhi_label") %></div>
+        <div class="font-mono text-xs text-white/80">
+          <%= t(
+            "investigations.show.hhi_formula",
+            hhi: number_with_precision(metrics[:hhi], precision: 4)
+          ) %>
+        </div>
+        <div class="font-mono text-xs text-white/60 mt-1.5">
+          <%= t(
+            "investigations.show.hhi_interpretation",
+            level: t("investigations.show.hhi_levels.#{hhi_level_key}")
+          ) %>
+        </div>
+        <div class="font-mono text-[10px] text-white/40 mt-1">
+          <%= t("investigations.show.hhi_thresholds") %>
+        </div>
+      </div>
+    </div>
+
+    <% if top_suppliers.any? %>
+      <div class="overflow-x-auto border border-white/8 rounded-lg">
+        <table class="min-w-full text-left font-mono text-xs">
+          <thead class="bg-white/4 text-white/45 uppercase tracking-[1px]">
+            <tr>
+              <th class="px-3 py-2"><%= t("investigations.show.suppliers_table.company") %></th>
+              <th class="px-3 py-2"><%= t("investigations.show.suppliers_table.value") %></th>
+              <th class="px-3 py-2"><%= t("investigations.show.suppliers_table.share") %></th>
+            </tr>
+          </thead>
+          <tbody>
+            <% top_suppliers.each do |supplier| %>
+              <tr class="border-t border-white/8 text-white/75">
+                <td class="px-3 py-2"><%= supplier[:name] %></td>
+                <td class="px-3 py-2"><%= number_to_currency(supplier[:awarded_value], unit: "€", delimiter: ",", separator: ".", format: "%u%n", precision: 0) %></td>
+                <td class="px-3 py-2"><%= number_to_percentage(supplier[:share] * 100.0, precision: 1, strip_insignificant_zeros: true) %></td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+      </div>
+    <% end %>
+  </section>
+
+  <section class="bg-white/2 border border-white/8 rounded-lg p-5">
+    <h2 class="font-['Space_Grotesk'] text-lg text-[#e8e0d4] mb-2"><%= t("investigations.show.network_title") %></h2>
+    <p class="text-white/40 text-sm mb-2"><%= t("investigations.show.network_subtitle") %></p>
+
+    <%= render "shared/network_map_graph",
+      include_individuals_default: true,
+      data_sources: @data_sources,
+      default_must_include_entity_ids: [ @entity.id ],
+      default_isolate_network: true %>
+  </section>
+
+  <section class="bg-white/2 border border-white/8 rounded-lg p-5">
+    <h2 class="font-['Space_Grotesk'] text-lg text-[#e8e0d4] mb-2"><%= t("investigations.show.contracts_title") %></h2>
+    <p class="text-white/40 text-sm mb-3"><%= t("investigations.show.contracts_subtitle") %></p>
+
+    <% if top_contracts.empty? %>
+      <p class="font-mono text-xs text-white/40"><%= t("investigations.show.no_contracts") %></p>
+    <% else %>
+      <div class="overflow-x-auto border border-white/8 rounded-lg">
+        <table class="min-w-full text-left font-mono text-xs">
+          <thead class="bg-white/4 text-white/45 uppercase tracking-[1px]">
+            <tr>
+              <th class="px-3 py-2"><%= t("investigations.show.contracts_table.contract") %></th>
+              <th class="px-3 py-2"><%= t("investigations.show.contracts_table.date") %></th>
+              <th class="px-3 py-2"><%= t("investigations.show.contracts_table.value") %></th>
+              <th class="px-3 py-2"><%= t("investigations.show.contracts_table.risk") %></th>
+              <th class="px-3 py-2"><%= t("investigations.show.contracts_table.evidence") %></th>
+            </tr>
+          </thead>
+          <tbody>
+            <% top_contracts.each do |contract| %>
+              <% display_value = contract[:total_effective_price].positive? ? contract[:total_effective_price] : contract[:base_price] %>
+              <% display_date = contract[:celebration_date] || contract[:publication_date] %>
+              <tr class="border-t border-white/8 align-top text-white/75">
+                <td class="px-3 py-2 min-w-[260px]">
+                  <div class="text-[#e8e0d4]"><%= contract[:object].presence || contract[:external_id] %></div>
+                  <div class="text-white/35 mt-1"><%= contract[:external_id] %></div>
+                </td>
+                <td class="px-3 py-2 whitespace-nowrap"><%= display_date ? l(display_date, format: :short) : "-" %></td>
+                <td class="px-3 py-2 whitespace-nowrap"><%= number_to_currency(display_value, unit: "€", delimiter: ",", separator: ".", format: "%u%n", precision: 0) %></td>
+                <td class="px-3 py-2 whitespace-nowrap">
+                  <span class="text-[#ff6666]"><%= contract[:risk_score] %></span>
+                  <span class="text-white/35">(<%= contract[:flag_count] %>)</span>
+                </td>
+                <td class="px-3 py-2 min-w-[320px]">
+                  <% if contract[:flags].empty? %>
+                    <span class="text-white/30">-</span>
+                  <% else %>
+                    <div class="space-y-1">
+                      <% contract[:flags].first(3).each do |flag| %>
+                        <div>
+                          <span class="text-[#c8a84e]"><%= flag_type_label(flag[:flag_type]) %></span>
+                          <span class="text-white/35">(<%= flag[:score] %>)</span>
+                          <% if flag[:evidence].present? %>
+                            <div class="text-white/45"><%= flag[:evidence] %></div>
+                          <% end %>
+                        </div>
+                      <% end %>
+                    </div>
+                  <% end %>
+                </td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+      </div>
+    <% end %>
+  </section>
+
+  <section class="bg-white/2 border border-white/8 rounded-lg p-5">
+    <h2 class="font-['Space_Grotesk'] text-lg text-[#e8e0d4] mb-2"><%= t("investigations.show.timeline_title") %></h2>
+    <p class="text-white/40 text-sm mb-3"><%= t("investigations.show.timeline_subtitle") %></p>
+
+    <% if timeline.empty? %>
+      <p class="font-mono text-xs text-white/40"><%= t("investigations.show.no_timeline") %></p>
+    <% else %>
+      <div class="overflow-x-auto border border-white/8 rounded-lg">
+        <table class="min-w-full text-left font-mono text-xs">
+          <thead class="bg-white/4 text-white/45 uppercase tracking-[1px]">
+            <tr>
+              <th class="px-3 py-2"><%= t("investigations.show.timeline_table.period") %></th>
+              <th class="px-3 py-2"><%= t("investigations.show.timeline_table.adjudications") %></th>
+              <th class="px-3 py-2"><%= t("investigations.show.timeline_table.value") %></th>
+              <th class="px-3 py-2"><%= t("investigations.show.timeline_table.amendments") %></th>
+            </tr>
+          </thead>
+          <tbody>
+            <% timeline.each do |row| %>
+              <tr class="border-t border-white/8 text-white/75">
+                <td class="px-3 py-2 whitespace-nowrap"><%= row[:month] %></td>
+                <td class="px-3 py-2"><%= number_with_delimiter(row[:adjudication_count]) %></td>
+                <td class="px-3 py-2"><%= number_to_currency(row[:adjudication_value], unit: "€", delimiter: ",", separator: ".", format: "%u%n", precision: 0) %></td>
+                <td class="px-3 py-2"><%= number_with_delimiter(row[:amendment_flag_count]) %></td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+      </div>
+    <% end %>
+
+    <p class="mt-3 font-mono text-xs text-white/45"><%= @report[:methodology_note] %></p>
+  </section>
+
+  <div class="pt-2">
+    <%= link_to investigations_path, class: "font-mono text-[11px] text-white/30 hover:text-[#c8a84e] transition-colors" do %>
+      ← <%= t("nav.investigations") %>
+    <% end %>
+  </div>
+</div>
