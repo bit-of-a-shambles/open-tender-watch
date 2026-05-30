@@ -68,6 +68,27 @@ class CompaniesControllerTest < ActionDispatch::IntegrationTest
     assert_includes response.body, entities(:two).name
   end
 
+  test "show renders network graph panel" do
+    get company_url(entities(:two))
+    assert_response :success
+    assert_includes response.body, "data-controller=\"entity-network-graph\""
+    assert_includes response.body, I18n.t("graph.heading")
+  end
+
+  test "show hides anonymized individual toggle for public users" do
+    get company_url(entities(:two))
+    assert_response :success
+    refute_includes response.body, I18n.t("graph.include_individuals")
+  end
+
+  test "show renders anonymized individual toggle for authenticated users" do
+    post access_token_url, params: { token: access_tokens(:one).token }
+
+    get company_url(entities(:two))
+    assert_response :success
+    assert_includes response.body, I18n.t("graph.include_individuals")
+  end
+
   test "show lists contracts won by that company" do
     get company_url(entities(:two))
     assert_response :success

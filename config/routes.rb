@@ -4,6 +4,10 @@ Rails.application.routes.draw do
   resources :contracts, only: [ :index, :show ]
   resources :entities, only: [ :index, :show ]
   resources :companies, only: [ :index, :show ]
+  get "graph", to: "graphs#index", as: :graph
+  get "api/graph/network", to: "graph#network_map", defaults: { format: :json }, as: :network_map_graph
+  get "api/graph/entities/:entity_id/network", to: "graph#entity_network", defaults: { format: :json }, as: :entity_network_graph
+  get "api/graph/search", to: "graph#search_entities", defaults: { format: :json }, as: :graph_search_entities
   match "locale/:locale", to: "locales#set", via: [ :get, :post ], as: :set_locale
 
   # Access token authentication for journalists

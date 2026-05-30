@@ -1,0 +1,16 @@
+<div class="animate-fade-up mt-8">
+  <header class="mb-6">
+    <h1 class="font-['Space_Grotesk'] text-2xl sm:text-3xl font-bold tracking-tight bg-linear-to-r from-[#e8e0d4] to-[#c8a84e] bg-clip-text text-transparent">
+      <%= t("graphs.title") %>
+    </h1>
+    <p class="text-white/40 text-sm mt-1"><%= t("graphs.subtitle") %></p>
+  </header>
+
+  <%= render "shared/network_map_graph", include_individuals_default: false, data_sources: @data_sources %>
+
+  <div class="mt-8 pt-5 border-t border-white/10">
+    <%= link_to dashboard_index_path, class: "font-mono text-[11px] text-white/30 hover:text-[#c8a84e] transition-colors" do %>
+      ← <%= t("nav.dashboard") %>
+    <% end %>
+  </div>
+</div>

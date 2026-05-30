@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_04_20_091331) do
+ActiveRecord::Schema[8.0].define(version: 2026_05_29_101500) do
   create_table "access_token_usages", force: :cascade do |t|
     t.integer "access_token_id", null: false
     t.string "path"
@@ -222,6 +222,30 @@ ActiveRecord::Schema[8.0].define(version: 2026_04_20_091331) do
     t.index ["severity"], name: "index_flags_on_severity"
   end
 
+  create_table "graph_edge_daily_summaries", force: :cascade do |t|
+    t.integer "source_entity_id", null: false
+    t.integer "target_entity_id", null: false
+    t.date "publication_date"
+    t.integer "data_source_id"
+    t.integer "contract_count", default: 0, null: false
+    t.decimal "total_value", precision: 15, scale: 2, default: "0.0", null: false
+    t.integer "flagged_contract_count", default: 0, null: false
+    t.decimal "flagged_total_value", precision: 15, scale: 2, default: "0.0", null: false
+    t.integer "risk_total_score", default: 0, null: false
+    t.boolean "source_is_public_body", default: false, null: false
+    t.boolean "source_is_company", default: false, null: false
+    t.boolean "target_is_public_body", default: false, null: false
+    t.boolean "target_is_company", default: false, null: false
+    t.datetime "computed_at", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["computed_at"], name: "index_graph_edge_daily_summaries_on_computed_at"
+    t.index ["publication_date", "data_source_id"], name: "idx_graph_edge_daily_summary_date_source"
+    t.index ["source_entity_id", "publication_date"], name: "idx_graph_edge_daily_summary_source_date"
+    t.index ["source_entity_id", "target_entity_id", "publication_date", "data_source_id"], name: "idx_graph_edge_daily_summary_lookup"
+    t.index ["target_entity_id", "publication_date"], name: "idx_graph_edge_daily_summary_target_date"
+  end
+
   create_table "people", force: :cascade do |t|
     t.string "name", null: false
     t.string "tax_identifier"
@@ -246,4 +270,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_04_20_091331) do
   add_foreign_key "entity_person_roles", "people"
   add_foreign_key "flag_entity_stats", "entities"
   add_foreign_key "flags", "contracts"
+  add_foreign_key "graph_edge_daily_summaries", "data_sources"
+  add_foreign_key "graph_edge_daily_summaries", "entities", column: "source_entity_id"
+  add_foreign_key "graph_edge_daily_summaries", "entities", column: "target_entity_id"
 end

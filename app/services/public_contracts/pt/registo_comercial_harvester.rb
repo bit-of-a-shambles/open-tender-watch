@@ -173,16 +173,27 @@ module PublicContracts
       def do_search(nif, attempt: 0)
         raise "Too many search retries for #{nif}" if attempt > 3
 
-        # Clear and fill NIF
-        @page.evaluate("document.querySelector('#{NIF_INPUT_SEL}').value = ''")
-        @page.evaluate("document.querySelector('#{NIF_INPUT_SEL}').value = #{nif.to_json}")
+        unless set_nif_input!(nif)
+          log "  ⚠ NIF input field not found — reloading search page and retrying..."
+          @page.go_to(SEARCH_URL)
+          sleep 2
+          return do_search(nif, attempt: attempt + 1)
+        end
 
         solve_nobot
         token = solve_captcha
         inject_captcha_token(token)
 
         # Click search
-        @page.at_css(SEARCH_BTN_SEL).click
+        search_btn = @page.at_css(SEARCH_BTN_SEL)
+        unless search_btn
+          log "  ⚠ Search button not found — reloading search page and retrying..."
+          @page.go_to(SEARCH_URL)
+          sleep 2
+          return do_search(nif, attempt: attempt + 1)
+        end
+
+        search_btn.click
         wait_for_load
 
         # Check result
@@ -311,6 +322,36 @@ module PublicContracts
             }
           })();
         JS
+      end
+
+      def set_nif_input!(nif)
+        @page.evaluate(<<~JS)
+          (() => {
+            const selectors = [
+              '#{NIF_INPUT_SEL}',
+              "input[id$='txtDadosPubNif']",
+              "input[name$='txtDadosPubNif']"
+            ];
+
+            let input = null;
+            for (const sel of selectors) {
+              input = document.querySelector(sel);
+              if (input) break;
+            }
+
+            if (!input) return false;
+
+            input.value = '';
+            input.dispatchEvent(new Event('input', { bubbles: true }));
+            input.value = #{nif.to_json};
+            input.dispatchEvent(new Event('input', { bubbles: true }));
+            input.dispatchEvent(new Event('change', { bubbles: true }));
+            return true;
+          })();
+        JS
+      rescue => e
+        log "  ⚠ Failed to set NIF input: #{e.message}"
+        false
       end
 
       # ── Grid parsing ───────────────────────────────────────────────

@@ -88,9 +88,20 @@ class EnrichTaskTest < ActiveSupport::TestCase
   test "harvest task creates harvester with correct options and on_nif_complete callback" do
     captured_args = nil
     captured_nifs = nil
+    imported = []
 
     fake_harvester = Object.new
     fake_harvester.define_singleton_method(:harvest) { |nifs| captured_nifs = nifs }
+    fake_importer = Object.new
+    fake_importer.define_singleton_method(:import_nif) do |nif, nif_data|
+      imported << [ nif, nif_data ]
+      PublicContracts::PT::RegistoComercialImporter::Stats.new(
+        processed: 1,
+        updated: 1,
+        skipped: 0,
+        roles_created: 2
+      )
+    end
 
     Dir.mktmpdir do |dir|
       nifs_file = File.join(dir, "nifs.txt")
@@ -101,18 +112,22 @@ class EnrichTaskTest < ActiveSupport::TestCase
       ENV["BATCH"] = "1"
       ENV["HEADLESS"] = "true"
 
-      PublicContracts::PT::RegistoComercialHarvester.stub(:new, ->(captcha_key:, output_path:, headless:, on_nif_complete: nil) {
-        captured_args = { captcha_key: captcha_key, output_path: output_path, headless: headless, on_nif_complete: on_nif_complete }
-        fake_harvester
-      }) do
-        Rake::Task["enrich:harvest"].reenable
-        Rake::Task["enrich:harvest"].invoke
+      PublicContracts::PT::RegistoComercialImporter.stub(:new, fake_importer) do
+        PublicContracts::PT::RegistoComercialHarvester.stub(:new, ->(captcha_key:, output_path:, headless:, on_nif_complete: nil) {
+          captured_args = { captcha_key: captcha_key, output_path: output_path, headless: headless, on_nif_complete: on_nif_complete }
+          fake_harvester
+        }) do
+          Rake::Task["enrich:harvest"].reenable
+          Rake::Task["enrich:harvest"].invoke
+        end
       end
 
       assert_equal "test_key_123", captured_args[:captcha_key]
       assert captured_args[:headless]
       assert_respond_to captured_args[:on_nif_complete], :call
       assert_equal ["501412727"], captured_nifs  # BATCH=1
+      captured_args[:on_nif_complete].call("501412727", { "totalResults" => 1 })
+      assert_equal [["501412727", { "totalResults" => 1 }]], imported
     ensure
       ENV.delete("TWOCAPTCHA_KEY")
       ENV.delete("NIFS_FILE")
