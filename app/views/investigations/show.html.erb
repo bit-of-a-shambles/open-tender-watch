@@ -20,6 +20,12 @@ elsif hhi_value <= 0.25
 else
   "high"
 end %>
+<% linked_individual_count = metrics[:linked_individual_count].to_i %>
+<% winner_company_count = metrics[:winner_company_count].to_i %>
+<% winner_companies_with_individuals_count = metrics[:winner_companies_with_individuals_count].to_i %>
+<% winner_companies_without_people_data_count = metrics[:winner_companies_without_people_data_count].to_i %>
+<% multi_company_individual_count = metrics[:multi_company_individual_count].to_i %>
+<% winner_company_people_coverage_rate = metrics[:winner_company_people_coverage_rate].to_f %>
 
 <div class="animate-fade-up mt-8 space-y-6">
   <header>
@@ -60,6 +66,54 @@ end %>
             with_winner: number_with_delimiter(contracts_with_winner_count),
             without_winner: number_with_delimiter(contracts_without_winner_count),
             total: number_with_delimiter(metrics[:contracts_total])
+          ) %>
+        </p>
+      <% end %>
+
+      <p>
+        <%= t(
+          "investigations.show.highlight_flagged_contracts",
+          flagged: number_with_delimiter(metrics[:flagged_contracts_total]),
+          total: number_with_delimiter(metrics[:contracts_total]),
+          rate: number_to_percentage(metrics[:flagged_rate] * 100.0, precision: 1, strip_insignificant_zeros: true)
+        ) %>
+      </p>
+
+      <p>
+        <%= t(
+          "investigations.show.highlight_supplier_concentration_level",
+          level: t("investigations.show.hhi_levels.#{hhi_level_key}"),
+          hhi: number_with_precision(metrics[:hhi], precision: 4)
+        ) %>
+      </p>
+
+      <% if linked_individual_count.positive? %>
+        <p>
+          <%= t(
+            "investigations.show.highlight_individual_links",
+            people: number_with_delimiter(linked_individual_count),
+            companies: number_with_delimiter(winner_companies_with_individuals_count)
+          ) %>
+        </p>
+      <% end %>
+
+      <% if multi_company_individual_count.positive? %>
+        <p>
+          <%= t(
+            "investigations.show.highlight_shared_individual_links",
+            people: number_with_delimiter(multi_company_individual_count)
+          ) %>
+        </p>
+      <% end %>
+
+      <% if winner_company_count.positive? && winner_companies_without_people_data_count.positive? %>
+        <p>
+          <%= t(
+            "investigations.show.highlight_people_links_coverage",
+            with_people: number_with_delimiter(winner_companies_with_individuals_count),
+            without_people: number_with_delimiter(winner_companies_without_people_data_count),
+            total: number_with_delimiter(winner_company_count),
+            coverage: number_to_percentage(winner_company_people_coverage_rate * 100.0, precision: 1, strip_insignificant_zeros: true)
           ) %>
         </p>
       <% end %>

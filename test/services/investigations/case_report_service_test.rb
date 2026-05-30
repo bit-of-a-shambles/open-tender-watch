@@ -97,6 +97,9 @@ class Investigations::CaseReportServiceTest < ActiveSupport::TestCase
     assert_in_delta 0.4, report.dig(:metrics, :year_end_peak_ratio), 0.001
     assert_equal 2, report.dig(:metrics, :linked_individual_count)
     assert_equal 2, report.dig(:metrics, :winner_companies_with_individuals_count)
+    assert_equal 0, report.dig(:metrics, :multi_company_individual_count)
+    assert_equal 2, report.dig(:metrics, :winner_companies_without_people_data_count)
+    assert_in_delta 0.5, report.dig(:metrics, :winner_company_people_coverage_rate), 0.001
 
     assert_equal 3, report[:top_contracts].size
     assert_equal c1.id, report[:top_contracts].first[:id]
@@ -118,6 +121,11 @@ class Investigations::CaseReportServiceTest < ActiveSupport::TestCase
     assert_equal false, report.dig(:metrics, :supplier_spend_available)
     assert_equal 0, report.dig(:metrics, :contracts_with_winner_count)
     assert_equal 0, report.dig(:metrics, :contracts_without_winner_count)
+    assert_equal 0, report.dig(:metrics, :linked_individual_count)
+    assert_equal 0, report.dig(:metrics, :winner_companies_with_individuals_count)
+    assert_equal 0, report.dig(:metrics, :multi_company_individual_count)
+    assert_equal 0, report.dig(:metrics, :winner_companies_without_people_data_count)
+    assert_equal 0.0, report.dig(:metrics, :winner_company_people_coverage_rate)
     assert_equal [], report[:top_suppliers]
     assert_equal [], report[:top_contracts]
     assert_equal [], report[:timeline]
@@ -138,6 +146,11 @@ class Investigations::CaseReportServiceTest < ActiveSupport::TestCase
     assert_equal 2, report.dig(:metrics, :contracts_without_winner_count)
     assert_equal 0, report.dig(:metrics, :winner_company_count)
     assert_equal 0.0, report.dig(:metrics, :top_supplier_share)
+    assert_equal 0, report.dig(:metrics, :linked_individual_count)
+    assert_equal 0, report.dig(:metrics, :winner_companies_with_individuals_count)
+    assert_equal 0, report.dig(:metrics, :multi_company_individual_count)
+    assert_equal 0, report.dig(:metrics, :winner_companies_without_people_data_count)
+    assert_equal 0.0, report.dig(:metrics, :winner_company_people_coverage_rate)
     assert_equal [], report[:top_suppliers]
   end
 end
