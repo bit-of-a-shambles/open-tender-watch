@@ -1,4 +1,5 @@
 <% default_limit = Graph::NetworkMapService::DEFAULT_NODE_LIMIT %>
+<% max_limit = Graph::NetworkMapService::MAX_NODE_LIMIT %>
 <% include_individuals_default = local_assigns.fetch(:include_individuals_default, false) %>
 <% include_individuals_default_value = include_individuals_default ? "true" : "false" %>
 <% default_must_include_entity_ids = Array(local_assigns.fetch(:default_must_include_entity_ids, [])).compact %>
@@ -71,7 +72,7 @@
     <label class="font-mono text-[10px] text-white/35"><%= t("graph_map.limit") %></label>
     <input type="number"
            min="20"
-           max="400"
+          max="<%= max_limit %>"
            value="<%= default_limit %>"
            data-network-map-graph-target="limit"
            class="w-22 bg-white/4 border border-white/10 rounded px-2 py-1.5 font-mono text-xs text-[#e8e0d4] focus:outline-none focus:border-[#c8a84e55] transition-all">

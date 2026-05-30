@@ -5,6 +5,7 @@ require "openssl"
 class GraphController < ApplicationController
   NETWORK_MAP_CACHE_VERSION = "v9"
   NETWORK_MAP_CACHE_TTL = 60.minutes
+  NETWORK_MAP_CACHE_RACE_TTL = 15.seconds
 
   def search_entities
     q = params[:q].to_s.strip
@@ -21,7 +22,7 @@ class GraphController < ApplicationController
   def entity_network
     entity = Entity.find(params[:entity_id])
 
-    payload = Rails.cache.fetch(graph_cache_key(entity), expires_in: 10.minutes) do
+    payload = Rails.cache.fetch(graph_cache_key(entity), expires_in: 10.minutes, race_condition_ttl: NETWORK_MAP_CACHE_RACE_TTL) do
       Graph::EntityNetworkService.new(
         entity: entity,
         date_from: params[:date_from],
@@ -35,17 +36,19 @@ class GraphController < ApplicationController
   end
 
   def network_map
-    cache_key = network_map_cache_key
+    requested_limit = Integer(params[:limit], exception: false)
+    resolved_limit = network_map_limit(requested_limit)
+    cache_key = network_map_cache_key(resolved_limit)
     request_started_at = monotonic_now
     cache_hit = true
     service_instrumentation = {}
 
-    payload = Rails.cache.fetch(cache_key, expires_in: NETWORK_MAP_CACHE_TTL) do
+    payload = Rails.cache.fetch(cache_key, expires_in: NETWORK_MAP_CACHE_TTL, race_condition_ttl: NETWORK_MAP_CACHE_RACE_TTL) do
       cache_hit = false
       Graph::NetworkMapService.new(
         date_from: params[:date_from],
         date_to: params[:date_to],
-        node_limit: params[:limit],
+        node_limit: resolved_limit,
         include_individuals: include_individuals_requested?,
         include_public_bodies: include_public_bodies_requested?,
         include_companies: include_companies_requested?,
@@ -60,6 +63,8 @@ class GraphController < ApplicationController
       cache_key: cache_key,
       cache_hit: cache_hit,
       request_ms: elapsed_ms(request_started_at),
+      requested_limit: requested_limit || Graph::NetworkMapService::DEFAULT_NODE_LIMIT,
+      resolved_limit: resolved_limit,
       service: service_instrumentation.presence
     )
 
@@ -108,7 +113,7 @@ class GraphController < ApplicationController
     ActiveModel::Type::Boolean.new.cast(value)
   end
 
-  def network_map_cache_key
+  def network_map_cache_key(resolved_limit)
     data_source_key = Array(params[:data_source_ids]).sort.join("-").presence || "all"
     forced_key = Array(params[:must_include_entity_ids]).sort.join("-").presence || "none"
     [
@@ -117,7 +122,7 @@ class GraphController < ApplicationController
       NETWORK_MAP_CACHE_VERSION,
       params[:date_from].presence || "none",
       params[:date_to].presence || "none",
-      params[:limit].presence || Graph::NetworkMapService::DEFAULT_NODE_LIMIT,
+      resolved_limit,
       include_public_bodies_requested? ? "public-bodies" : "no-public-bodies",
       include_companies_requested? ? "companies" : "no-companies",
       include_individuals_requested? ? "with-individuals" : "entities-only",
@@ -126,6 +131,12 @@ class GraphController < ApplicationController
       "forced-#{forced_key}",
       current_access_level
     ].join(":")
+  end
+
+  def network_map_limit(requested_limit = nil)
+    parsed = requested_limit || Integer(params[:limit], exception: false) || Graph::NetworkMapService::DEFAULT_NODE_LIMIT
+
+    [ [ parsed, Graph::NetworkMapService::MIN_NODE_LIMIT ].max, Graph::NetworkMapService::MAX_NODE_LIMIT ].min
   end
 
   def entity_search_results(query)
@@ -210,11 +221,13 @@ class GraphController < ApplicationController
     "#{initials}. [P-#{token}]"
   end
 
-  def log_network_map_telemetry(cache_key:, cache_hit:, request_ms:, service:)
+  def log_network_map_telemetry(cache_key:, cache_hit:, request_ms:, requested_limit:, resolved_limit:, service:)
     payload = {
       cache_key: cache_key,
       cache_hit: cache_hit,
       request_ms: request_ms,
+      requested_limit: requested_limit,
+      resolved_limit: resolved_limit,
       service: service,
       access_level: current_access_level
     }
