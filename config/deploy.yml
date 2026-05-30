@@ -85,6 +85,7 @@ builder:
   # Build on the production server (native amd64) — avoids QEMU cross-compilation
   # on Apple Silicon which causes multi-minute hangs or silent failures.
   remote: ssh://root@128.140.78.94
+  local: false
   arch: amd64
   context: .
 
