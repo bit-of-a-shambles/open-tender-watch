@@ -53,4 +53,34 @@ class GraphEdgeSummariesRefreshJobTest < ActiveJob::TestCase
     assert_includes cache_writes.map { |w| w[:key] }, "#{expected_prefix}:public"
     assert_includes cache_writes.map { |w| w[:key] }, "#{expected_prefix}:journalist"
   end
+
+  test "prewarm access levels include active token levels and falls back on query errors" do
+    job = GraphEdgeSummariesRefreshJob.new
+
+    assert_equal %w[auditor journalist public], job.send(:prewarm_access_levels).sort
+
+    AccessToken.stub(:active, -> { raise ActiveRecord::StatementInvalid, "boom" }) do
+      assert_equal [ "public" ], job.send(:prewarm_access_levels)
+    end
+  end
+
+  test "perform logs prewarm failures without aborting refresh" do
+    fake_refresh_service = Minitest::Mock.new
+    fake_refresh_service.expect(:call, 3)
+    logger = Minitest::Mock.new
+    logger.expect(:info, nil, [ "GraphEdgeSummariesRefreshJob refreshed 3 edge summary rows" ])
+    logger.expect(:warn, nil) { |message| message.include?("cache prewarm failed") }
+
+    Graph::EdgeDailySummaryRefreshService.stub(:new, -> { fake_refresh_service }) do
+      Graph::NetworkMapService.stub(:new, ->(**_kwargs) { raise StandardError, "prewarm boom" }) do
+        Rails.stub(:logger, logger) do
+          GraphEdgeSummariesRefreshJob.new.perform
+        end
+      end
+    end
+
+    assert true
+    fake_refresh_service.verify
+    logger.verify
+  end
 end

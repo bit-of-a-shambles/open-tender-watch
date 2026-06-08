@@ -9,6 +9,10 @@ class EnrichTaskTest < ActiveSupport::TestCase
   Rake.application.define_task(Rake::Task, :environment)
   load Rails.root.join("lib/tasks/enrich.rake")
 
+  setup do
+    ensure_enrich_tasks_loaded
+  end
+
   # ── export_nifs ──────────────────────────────────────────────────
 
   test "export_nifs writes NIFs to output file with flagged first" do
@@ -182,5 +186,14 @@ class EnrichTaskTest < ActiveSupport::TestCase
     ensure
       ENV.delete("INPUT")
     end
+  end
+
+  private
+
+  def ensure_enrich_tasks_loaded
+    return if Rake::Task.task_defined?("enrich:export_nifs")
+
+    Rake.application.define_task(Rake::Task, :environment) unless Rake::Task.task_defined?(:environment)
+    load Rails.root.join("lib/tasks/enrich.rake")
   end
 end

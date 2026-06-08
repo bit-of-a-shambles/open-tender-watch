@@ -479,7 +479,8 @@
             ["C2", t("dashboard.methodology.flags.c2_title"), t("dashboard.methodology.flags.c2_desc"), "medium"],
             ["C3", t("dashboard.methodology.flags.c3_title"), t("dashboard.methodology.flags.c3_desc"), "low"],
             ["C4", t("dashboard.methodology.flags.c4_title"), t("dashboard.methodology.flags.c4_desc"), "high"],
-            ["C5", t("dashboard.methodology.flags.c5_title"), t("dashboard.methodology.flags.c5_desc"), "low"]
+            ["C5", t("dashboard.methodology.flags.c5_title"), t("dashboard.methodology.flags.c5_desc"), "low"],
+            ["C7", t("dashboard.methodology.flags.c7_title"), t("dashboard.methodology.flags.c7_desc"), "high"]
           ].each do |code, title, desc, sev| %>
             <% sty = severity_styles(sev) %>
             <div class="flex items-center gap-3 bg-white/[0.02] border border-white/[0.06] rounded-lg p-3.5">
@@ -539,6 +540,7 @@
               ["B5", "B5_BENFORD_DEVIATION (high)",           55, "high"],
               ["C1", "C1_MISSING_CPV_CODE",                   25, "medium"],
               ["C3", "C3_SHORT_CONTRACT_DURATION",            20, "low"],
+              ["C7", "C7_POTENTIAL_CONFLICT_OF_INTEREST",      65, "high"],
             ].each do |track, flag, score, sev| %>
               <% row_sty = severity_styles(sev) %>
               <div class="flex items-center gap-2">

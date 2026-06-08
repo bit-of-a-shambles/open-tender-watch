@@ -12,6 +12,7 @@ module Investigations
       "A2_PUBLICATION_AFTER_CELEBRATION" => "late_publication",
       "A9_PRICE_ANOMALY" => "price_anomaly",
       "A9_PRICE_REDUCTION" => "price_anomaly",
+      "C7_POTENTIAL_CONFLICT_OF_INTEREST" => "potential_conflict",
       "C1_MISSING_WINNER_NIF" => "data_integrity",
       "C3_MISSING_MANDATORY_FIELDS" => "data_integrity"
     }.freeze

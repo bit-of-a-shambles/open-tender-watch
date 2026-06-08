@@ -67,6 +67,24 @@ class GraphControllerTest < ActionDispatch::IntegrationTest
     refute_includes response.body, people(:joao).tax_identifier
   end
 
+  test "search endpoint returns individual name result for authenticated users" do
+    EntityPersonRole.create!(
+      entity: entities(:one),
+      person: people(:joao),
+      role_type: "director",
+      role_label: "Director",
+      source_name: "Registo Comercial",
+      active: true
+    )
+
+    post access_token_url, params: { token: access_tokens(:one).token }
+    get graph_search_entities_url, params: { q: "João" }
+
+    assert_response :success
+    data = JSON.parse(response.body)
+    assert data.fetch("results").any? { |result| result["node_type"] == "individual" }
+  end
+
   test "entity network returns JSON graph payload" do
     get entity_network_graph_url(entity_id: entities(:one).id)
 

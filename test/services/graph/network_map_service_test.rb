@@ -499,6 +499,7 @@ class Graph::NetworkMapServiceTest < ActiveSupport::TestCase
 
   test "call reads pre-aggregated edge summaries with date, source, node-type, and isolate filters" do
     GraphEdgeDailySummary.delete_all
+    Rails.cache.delete("graph/network_map/preaggregated_edges_available")
 
     focus_source = Entity.create!(
       name: "Summary Focus Source",
@@ -640,6 +641,73 @@ class Graph::NetworkMapServiceTest < ActiveSupport::TestCase
     assert_equal 2, summary[:total_flagged_contract_count]
     assert_equal 450.0, summary[:total_flagged_value]
     assert_equal 9, summary[:total_risk_score]
+  end
+
+  test "call uses pre-aggregated fast path when no filters are present" do
+    GraphEdgeDailySummary.delete_all
+    Rails.cache.delete("graph/network_map/preaggregated_edges_available")
+
+    source = Entity.create!(
+      name: "Fast Summary Source",
+      tax_identifier: "579100301",
+      country_code: "PT",
+      is_public_body: true,
+      is_company: false
+    )
+    target = Entity.create!(
+      name: "Fast Summary Target",
+      tax_identifier: "579100302",
+      country_code: "PT",
+      is_public_body: false,
+      is_company: true
+    )
+
+    GraphEdgeDailySummary.create!(
+      source_entity: source,
+      target_entity: target,
+      publication_date: Date.new(2041, 4, 1),
+      data_source: data_sources(:portal_base),
+      contract_count: 5,
+      total_value: 1_200,
+      flagged_contract_count: 1,
+      flagged_total_value: 300,
+      risk_total_score: 7,
+      source_is_public_body: true,
+      source_is_company: false,
+      target_is_public_body: false,
+      target_is_company: true,
+      computed_at: Time.current
+    )
+
+    instrumentation = {}
+    payload = Graph::NetworkMapService.new(instrumentation: instrumentation).call
+
+    assert_equal "preaggregated_fast", instrumentation[:edge_source]
+    assert_equal true, instrumentation[:used_preaggregated_edges]
+    assert_includes payload[:nodes].map { |node| node[:label] }, source.name
+    assert_includes payload[:nodes].map { |node| node[:label] }, target.name
+    assert_equal 5, payload.dig(:meta, :summary, :total_contract_count)
+  end
+
+  test "pre-aggregated helpers handle unavailable tables, filters, dates, and isolate scopes" do
+    service = Graph::NetworkMapService.new(
+      data_source_ids: [ data_sources(:portal_base).id ],
+      must_include_entity_ids: [ entities(:one).id ],
+      isolate_network: true
+    )
+
+    GraphEdgeDailySummary.stub(:exists?, -> { raise ActiveRecord::StatementInvalid, "missing" }) do
+      Rails.cache.delete("graph/network_map/preaggregated_edges_available")
+      assert_equal false, service.send(:preaggregated_edges_available?)
+    end
+
+    assert_equal Contract.where(data_source_id: data_sources(:portal_base).id).count,
+                 service.send(:apply_data_source_filter, Contract.all).count
+    assert_equal Date.new(2041, 1, 1), service.send(:parse_sql_date, "2041-01-01")
+    assert_nil service.send(:parse_sql_date, "not-a-date")
+
+    metrics, = service.send(:entity_contract_mappings, [ entities(:one).id ])
+    assert_kind_of Hash, metrics
   end
 
   test "call handles invalid dates and empty filters" do
