@@ -153,4 +153,34 @@ class Investigations::CaseReportServiceTest < ActiveSupport::TestCase
     assert_equal 0.0, report.dig(:metrics, :winner_company_people_coverage_rate)
     assert_equal [], report[:top_suppliers]
   end
+  test "uses preaggregated spend, explicit price shares, and string evidence excerpts" do
+    authority = create_entity!(name: "Preaggregated Authority", tax_identifier: "770003001")
+    winner = create_entity!(name: "Preaggregated Winner", tax_identifier: "770003101", is_public_body: false, is_company: true)
+    contract = create_contract!(entity: authority, external_id: "case-preagg-1", value: 10_000, celebration_date: Date.new(2025, 5, 1))
+    attach_winner!(contract: contract, winner: winner, price_share: 2_500)
+    create_flag!(contract: contract, type: "A1_REPEAT_DIRECT_AWARD", score: 12)
+
+    GraphEdgeDailySummary.create!(
+      source_entity: authority,
+      target_entity: winner,
+      publication_date: Date.new(2025, 5, 1),
+      data_source: data_sources(:portal_base),
+      contract_count: 1,
+      total_value: 4_000,
+      flagged_contract_count: 1,
+      flagged_total_value: 4_000,
+      risk_total_score: 12,
+      source_is_public_body: true,
+      source_is_company: false,
+      target_is_public_body: false,
+      target_is_company: true,
+      computed_at: Time.current
+    )
+
+    service = Investigations::CaseReportService.new(entity: authority)
+    assert_equal({ winner.id => 4_000.0 }, service.send(:preaggregated_spend_by_winner_company))
+    assert_equal({ winner.id => 2_500.0 }, service.send(:raw_spend_by_winner_company))
+    assert_equal "raw evidence", service.send(:evidence_excerpt, "raw evidence")
+  end
+
 end

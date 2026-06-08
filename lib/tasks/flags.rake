@@ -70,6 +70,12 @@ namespace :flags do
     puts "B3 pricing z-score anomalies flagged: #{flagged}"
   end
 
+  desc "Run C7 potential conflict-of-interest scoring (shared individual links)"
+  task run_c7: :environment do
+    flagged = Flags::Actions::PotentialConflictOfInterestAction.new.call
+    puts "C7 potential conflict-of-interest links flagged: #{flagged}"
+  end
+
   # ---------------------------------------------------------------------------
   # Aggregation — pre-compute materialized stats so the dashboard never has to
   # run expensive joins across 2M+ flags at request time.
@@ -248,7 +254,7 @@ namespace :flags do
 
   desc "Run all scoring actions then aggregate stats"
   task run_all: :environment do
-    %i[run_first_action run_a9 run_a5 run_a1 run_b5_benford run_c1 run_c3 run_b2 run_a7 run_b3 aggregate].each do |t|
+    %i[run_first_action run_a9 run_a5 run_a1 run_b5_benford run_c1 run_c3 run_b2 run_a7 run_b3 run_c7 aggregate].each do |t|
       Rake::Task["flags:#{t}"].invoke
     end
   end

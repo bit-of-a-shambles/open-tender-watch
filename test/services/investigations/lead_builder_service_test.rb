@@ -128,6 +128,23 @@ class Investigations::LeadBuilderServiceTest < ActiveSupport::TestCase
     assert_equal "supplier_concentration", result[:leads].first[:lead_type]
   end
 
+  test "classifies potential conflict leads and low score confidence" do
+    entity = create_entity!(name: "Conflict Lead Entity", tax_identifier: "780000303")
+    create_flag_stat!(
+      entity: entity,
+      flag_type: "C7_POTENTIAL_CONFLICT_OF_INTEREST",
+      severity: "low",
+      total_exposure: 2_500,
+      contract_count: 2
+    )
+
+    result = Investigations::LeadBuilderService.new(lead_type: "potential_conflict").call
+
+    assert_equal 1, result[:leads].size
+    assert_equal "potential_conflict", result[:leads].first[:lead_type]
+    assert_equal "low", result[:leads].first[:confidence]
+  end
+
   test "normalizes invalid filters and bounds limit" do
     entity = create_entity!(name: "Normalization Entity", tax_identifier: "780000401")
     create_flag_stat!(

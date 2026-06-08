@@ -1,4 +1,5 @@
 require "test_helper"
+require "ostruct"
 
 class ApplicationHelperTest < ActionView::TestCase
   test "flag_type_severity returns known severity from map" do
@@ -12,5 +13,11 @@ class ApplicationHelperTest < ActionView::TestCase
 
   test "flag_type_severity accepts symbol" do
     assert_equal "high", flag_type_severity(:A1_REPEAT_DIRECT_AWARD)
+  end
+
+  test "active_global_nav returns false for unknown key" do
+    def request = OpenStruct.new(path: "/")
+
+    assert_equal false, global_nav_active?(:unknown)
   end
 end

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_05_29_101500) do
+ActiveRecord::Schema[8.0].define(version: 2026_06_03_120000) do
   create_table "access_token_usages", force: :cascade do |t|
     t.integer "access_token_id", null: false
     t.string "path"
@@ -256,6 +256,23 @@ ActiveRecord::Schema[8.0].define(version: 2026_05_29_101500) do
     t.index ["tax_identifier", "country_code"], name: "index_people_on_tax_identifier_and_country_code", unique: true, where: "tax_identifier IS NOT NULL"
   end
 
+  create_table "person_identity_matches", force: :cascade do |t|
+    t.integer "left_person_id", null: false
+    t.integer "right_person_id", null: false
+    t.string "match_type", null: false
+    t.string "confidence", null: false
+    t.integer "score", null: false
+    t.json "evidence", default: {}, null: false
+    t.string "review_status", default: "unreviewed", null: false
+    t.datetime "reviewed_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["confidence", "review_status"], name: "index_person_identity_matches_on_confidence_and_review_status"
+    t.index ["left_person_id", "right_person_id", "match_type"], name: "index_person_identity_matches_unique_pair_type", unique: true
+    t.index ["left_person_id"], name: "index_person_identity_matches_on_left_person_id"
+    t.index ["right_person_id"], name: "index_person_identity_matches_on_right_person_id"
+  end
+
   add_foreign_key "access_token_usages", "access_tokens"
   add_foreign_key "benford_analyses", "contracts", column: "representative_contract_id", on_delete: :nullify
   add_foreign_key "benford_analyses", "entities"
@@ -273,4 +290,6 @@ ActiveRecord::Schema[8.0].define(version: 2026_05_29_101500) do
   add_foreign_key "graph_edge_daily_summaries", "data_sources"
   add_foreign_key "graph_edge_daily_summaries", "entities", column: "source_entity_id"
   add_foreign_key "graph_edge_daily_summaries", "entities", column: "target_entity_id"
+  add_foreign_key "person_identity_matches", "people", column: "left_person_id"
+  add_foreign_key "person_identity_matches", "people", column: "right_person_id"
 end

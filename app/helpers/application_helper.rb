@@ -25,7 +25,8 @@ module ApplicationHelper
     "B3_PRICE_LOW"                     => "high",    # worst case
     "B5_BENFORD_DEVIATION"             => "medium",  # DIGIWHIST/Nigrini: supporting indicator only
     "C1_MISSING_WINNER_NIF"            => "medium",  # OLAF: traceability failure; MEDIUM
-    "C3_MISSING_MANDATORY_FIELDS"      => "low"      # OLAF: compliance failure; LOW
+    "C3_MISSING_MANDATORY_FIELDS"      => "low",     # OLAF: compliance failure; LOW
+    "C7_POTENTIAL_CONFLICT_OF_INTEREST" => "high"    # shared individual link; HIGH
   }.freeze
 
   def flag_type_severity(flag_type)

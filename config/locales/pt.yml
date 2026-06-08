@@ -268,6 +268,8 @@ pt:
         c4_desc: "NIF do fornecedor corresponde a um caso de cartel da Autoridade da Concorrência"
         c5_title: "Variação do nome da entidade"
         c5_desc: "O mesmo NIF aparece com múltiplas variantes de nome — potencial dissimulação"
+        c7_title: "Potencial conflito de interesses"
+        c7_desc: "Ligação individual de alta confiança entre titular/cargo de uma entidade pública e diretor, gerente ou sócio de fornecedor. Score: 65 · Gravidade: Alta."
 
   contracts:
     index:
