@@ -1,7 +1,7 @@
 <div class="animate-fade-up">
   <%# Header %>
-  <header class="py-8 border-b border-white/10">
-    <div class="flex items-center gap-4 mb-3">
+  <header class="py-6 sm:py-8 border-b border-white/10">
+    <div class="flex flex-wrap items-center gap-3 sm:gap-4 mb-3">
       <%= link_to companies_path, class: "font-mono text-[11px] tracking-[2px] text-white/30 hover:text-white/60 transition-colors" do %>
         ← <%= t("companies.index.title") %>
       <% end %>
@@ -12,7 +12,7 @@
         <%= @entity.country_code %>
       </span>
     </div>
-    <h1 class="font-['Space_Grotesk'] text-2xl font-bold text-[#e8e0d4] leading-snug mb-2">
+    <h1 class="font-['Space_Grotesk'] text-xl sm:text-2xl font-bold text-[#e8e0d4] leading-snug mb-2 break-words">
       <%= @entity.name %>
     </h1>
     <div class="font-mono text-[11px] text-white/25 flex flex-wrap items-center gap-x-3 gap-y-1">
@@ -22,7 +22,7 @@
         <span><%= [@entity.address, @entity.locality, @entity.postal_code].compact.reject(&:empty?).join(", ") %></span>
       <% end %>
     </div>
-    <div class="flex items-center gap-2 mt-3">
+    <div class="flex flex-wrap items-center gap-2 mt-3">
       <%= link_to t("exports.download_csv"), company_path(@entity, format: :csv),
           class: "border border-white/10 text-white/30 font-mono text-[10px] tracking-widest px-3 py-1.5 rounded hover:border-[#c8a84e44] hover:text-[#c8a84e] transition-all",
           data: { turbo: false } %>
@@ -141,7 +141,7 @@
 
           <%# Pivot pagination %>
           <% if @pivot_total_pages > 1 || @pivot_total > 0 %>
-            <div class="flex items-center justify-between mt-3 font-mono text-[10px] text-white/35">
+            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mt-3 font-mono text-[10px] text-white/35">
               <span><%= t("companies.show.pivot_pagination_info", page: @pivot_page, total_pages: @pivot_total_pages, total: number_with_delimiter(@pivot_total)) %></span>
               <div class="flex gap-2">
                 <% if @pivot_page > 1 %>
@@ -184,21 +184,21 @@
       <% end %>
 
       <%# Date filter %>
-      <%= form_with url: company_path(@entity), method: :get, class: "flex items-center gap-2 mb-3 flex-wrap" do |f| %>
+      <%= form_with url: company_path(@entity), method: :get, class: "grid grid-cols-[auto_1fr] sm:flex sm:items-center gap-2 mb-3 flex-wrap" do |f| %>
         <%= hidden_field_tag :sort, @sort_col %>
         <%= hidden_field_tag :dir, @sort_dir %>
         <%= hidden_field_tag :flag_type, @flag_filter %>
         <label class="font-mono text-[10px] text-white/35 shrink-0"><%= t("companies.show.date_from") %></label>
         <%= f.date_field :date_from, value: @date_from,
-            class: "bg-white/[0.04] border border-white/[0.1] rounded px-2 py-1.5 font-mono text-xs text-[#e8e0d4] focus:outline-none focus:border-[#c8a84e55] transition-all" %>
+            class: "w-full sm:w-auto bg-white/[0.04] border border-white/[0.1] rounded px-2 py-1.5 font-mono text-xs text-[#e8e0d4] focus:outline-none focus:border-[#c8a84e55] transition-all" %>
         <label class="font-mono text-[10px] text-white/35 shrink-0"><%= t("companies.show.date_to") %></label>
         <%= f.date_field :date_to, value: @date_to,
-            class: "bg-white/[0.04] border border-white/[0.1] rounded px-2 py-1.5 font-mono text-xs text-[#e8e0d4] focus:outline-none focus:border-[#c8a84e55] transition-all" %>
+            class: "w-full sm:w-auto bg-white/[0.04] border border-white/[0.1] rounded px-2 py-1.5 font-mono text-xs text-[#e8e0d4] focus:outline-none focus:border-[#c8a84e55] transition-all" %>
         <%= f.submit t("companies.show.filter"),
-            class: "bg-[#c8a84e1a] border border-[#c8a84e44] text-[#c8a84e] font-mono text-[10px] tracking-widest px-3 py-1.5 rounded hover:bg-[#c8a84e33] transition-all cursor-pointer" %>
+            class: "col-span-2 sm:col-span-1 bg-[#c8a84e1a] border border-[#c8a84e44] text-[#c8a84e] font-mono text-[10px] tracking-widest px-3 py-1.5 rounded hover:bg-[#c8a84e33] transition-all cursor-pointer" %>
         <% if @date_from.present? || @date_to.present? %>
           <%= link_to t("companies.show.clear"), company_path(@entity, sort: @sort_col, dir: @sort_dir, flag_type: @flag_filter),
-              class: "font-mono text-[10px] text-white/30 hover:text-white/50 transition-all" %>
+              class: "col-span-2 sm:col-span-1 font-mono text-[10px] text-white/30 hover:text-white/50 transition-all" %>
         <% end %>
       <% end %>
 
@@ -289,7 +289,7 @@
 
       <%# Pagination %>
       <% if @total_pages > 1 %>
-        <div class="flex items-center justify-end mt-4 font-mono text-xs text-white/35 gap-2">
+        <div class="flex flex-wrap items-center justify-end mt-4 font-mono text-xs text-white/35 gap-2">
           <% if @page > 1 %>
             <%= link_to t("companies.show.pagination_prev"),
                   company_path(@entity, sort: @sort_col, dir: @sort_dir, flag_type: @flag_filter, date_from: @date_from, date_to: @date_to, page: @page - 1, pivot_page: @pivot_page),

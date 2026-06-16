@@ -10,7 +10,7 @@
 <% default_isolate_network_value = default_isolate_network ? "true" : "false" %>
 <% data_sources = local_assigns.fetch(:data_sources, []) %>
 
-<section class="mt-6 bg-white/2 border border-white/6 rounded-lg p-5"
+<section class="mt-6 bg-white/2 border border-white/6 rounded-lg p-4 sm:p-5"
          data-controller="network-map-graph"
          data-network-map-graph-endpoint-value="<%= "#{network_map_graph_path}.json" %>"
          data-network-map-graph-default-limit-value="<%= default_limit %>"
@@ -60,16 +60,16 @@
     </div>
   </div>
 
-  <form class="flex items-center gap-2 mt-3 flex-wrap" data-action="submit->network-map-graph#applyFilters">
+  <form class="flex flex-col sm:flex-row sm:items-center gap-2 mt-3 flex-wrap" data-action="submit->network-map-graph#applyFilters">
     <label class="font-mono text-[10px] text-white/35"><%= t("graph.filter_from") %></label>
     <input type="date"
            data-network-map-graph-target="dateFrom"
-           class="bg-white/4 border border-white/10 rounded px-2 py-1.5 font-mono text-xs text-[#e8e0d4] focus:outline-none focus:border-[#c8a84e55] transition-all">
+           class="w-full sm:w-auto bg-white/4 border border-white/10 rounded px-2 py-1.5 font-mono text-xs text-[#e8e0d4] focus:outline-none focus:border-[#c8a84e55] transition-all">
 
     <label class="font-mono text-[10px] text-white/35"><%= t("graph.filter_to") %></label>
     <input type="date"
            data-network-map-graph-target="dateTo"
-           class="bg-white/4 border border-white/10 rounded px-2 py-1.5 font-mono text-xs text-[#e8e0d4] focus:outline-none focus:border-[#c8a84e55] transition-all">
+           class="w-full sm:w-auto bg-white/4 border border-white/10 rounded px-2 py-1.5 font-mono text-xs text-[#e8e0d4] focus:outline-none focus:border-[#c8a84e55] transition-all">
 
     <label class="font-mono text-[10px] text-white/35"><%= t("graph_map.limit") %></label>
     <input type="number"
@@ -77,9 +77,9 @@
           max="<%= max_limit %>"
            value="<%= default_limit %>"
            data-network-map-graph-target="limit"
-           class="w-22 bg-white/4 border border-white/10 rounded px-2 py-1.5 font-mono text-xs text-[#e8e0d4] focus:outline-none focus:border-[#c8a84e55] transition-all">
+           class="w-full sm:w-24 bg-white/4 border border-white/10 rounded px-2 py-1.5 font-mono text-xs text-[#e8e0d4] focus:outline-none focus:border-[#c8a84e55] transition-all">
 
-    <label class="flex items-center gap-1.5 px-2 py-1 rounded border border-white/10 bg-white/3">
+    <label class="flex w-full sm:w-auto items-center gap-1.5 px-2 py-1 rounded border border-white/10 bg-white/3">
       <input type="checkbox"
              data-network-map-graph-target="includePublicBodies"
              class="accent-[#44b7ff]"
@@ -87,7 +87,7 @@
       <span class="font-mono text-[10px] text-white/55"><%= t("graph_map.include_public_bodies") %></span>
     </label>
 
-    <label class="flex items-center gap-1.5 px-2 py-1 rounded border border-white/10 bg-white/3">
+    <label class="flex w-full sm:w-auto items-center gap-1.5 px-2 py-1 rounded border border-white/10 bg-white/3">
       <input type="checkbox"
              data-network-map-graph-target="includeCompanies"
              class="accent-[#ff9f5b]"
@@ -96,7 +96,7 @@
     </label>
 
     <% if allow_individuals %>
-      <label class="flex items-center gap-1.5 px-2 py-1 rounded border border-white/10 bg-white/3">
+      <label class="flex w-full sm:w-auto items-center gap-1.5 px-2 py-1 rounded border border-white/10 bg-white/3">
         <input type="checkbox"
                data-network-map-graph-target="includeIndividuals"
                class="accent-[#c8a84e]"
@@ -106,9 +106,9 @@
     <% end %>
 
     <% if data_sources.any? %>
-      <span class="font-mono text-[10px] text-white/25">|</span>
+      <span class="hidden sm:inline font-mono text-[10px] text-white/25">|</span>
       <% data_sources.each do |ds| %>
-        <label class="flex items-center gap-1.5 px-2 py-1 rounded border border-white/10 bg-white/3">
+        <label class="flex w-full sm:w-auto items-center gap-1.5 px-2 py-1 rounded border border-white/10 bg-white/3">
           <input type="checkbox"
                  name="data_source_ids[]"
                  value="<%= ds.id %>"
@@ -120,7 +120,7 @@
       <% end %>
     <% end %>
 
-    <label class="flex items-center gap-1.5 px-2 py-1 rounded border border-[#c8a84e33] bg-[#c8a84e08]">
+    <label class="flex w-full sm:w-auto items-center gap-1.5 px-2 py-1 rounded border border-[#c8a84e33] bg-[#c8a84e08]">
       <input type="checkbox"
              data-network-map-graph-target="isolateNetwork"
              data-action="change->network-map-graph#toggleIsolateNetwork"
@@ -130,40 +130,40 @@
     </label>
 
     <button type="submit"
-            class="bg-[#c8a84e1a] border border-[#c8a84e44] text-[#c8a84e] font-mono text-[10px] tracking-widest px-3 py-1.5 rounded hover:bg-[#c8a84e33] transition-all cursor-pointer">
+            class="w-full sm:w-auto bg-[#c8a84e1a] border border-[#c8a84e44] text-[#c8a84e] font-mono text-[10px] tracking-widest px-3 py-1.5 rounded hover:bg-[#c8a84e33] transition-all cursor-pointer">
       <%= t("graph.apply") %>
     </button>
 
     <button type="button"
             data-action="click->network-map-graph#resetFilters"
-            class="border border-white/10 text-white/30 font-mono text-[10px] tracking-widest px-3 py-1.5 rounded hover:text-white/60 hover:border-white/20 transition-all cursor-pointer">
+            class="w-full sm:w-auto border border-white/10 text-white/30 font-mono text-[10px] tracking-widest px-3 py-1.5 rounded hover:text-white/60 hover:border-white/20 transition-all cursor-pointer">
       <%= t("graph.reset") %>
     </button>
 
     <button type="button"
             data-action="click->network-map-graph#resetView"
-            class="border border-[#c8a84e44] text-[#c8a84e] font-mono text-[10px] tracking-widest px-3 py-1.5 rounded hover:bg-[#c8a84e22] transition-all cursor-pointer">
+            class="w-full sm:w-auto border border-[#c8a84e44] text-[#c8a84e] font-mono text-[10px] tracking-widest px-3 py-1.5 rounded hover:bg-[#c8a84e22] transition-all cursor-pointer">
       <%= t("graph_map.reset_view") %>
     </button>
 
     <button type="button"
             data-action="click->network-map-graph#zoomOut"
-            class="border border-white/12 text-white/55 font-mono text-[11px] px-2 py-1.5 rounded hover:text-white/80 hover:border-white/25 transition-all cursor-pointer"
+            class="w-full sm:w-auto border border-white/12 text-white/55 font-mono text-[11px] px-2 py-1.5 rounded hover:text-white/80 hover:border-white/25 transition-all cursor-pointer"
             aria-label="<%= t('graph_map.zoom_out') %>">
       −
     </button>
 
     <button type="button"
             data-action="click->network-map-graph#zoomIn"
-            class="border border-white/12 text-white/55 font-mono text-[11px] px-2 py-1.5 rounded hover:text-white/80 hover:border-white/25 transition-all cursor-pointer"
+            class="w-full sm:w-auto border border-white/12 text-white/55 font-mono text-[11px] px-2 py-1.5 rounded hover:text-white/80 hover:border-white/25 transition-all cursor-pointer"
             aria-label="<%= t('graph_map.zoom_in') %>">
       +
     </button>
   </form>
 
   <div class="mt-4 grid lg:grid-cols-[1fr_280px] gap-4">
-    <div class="relative border border-white/8 rounded-lg overflow-hidden bg-[#0d0f14] min-h-[520px]">
-      <div data-network-map-graph-target="canvas" class="h-[520px] w-full"></div>
+    <div class="relative border border-white/8 rounded-lg overflow-hidden bg-[#0d0f14] min-h-[360px] sm:min-h-[520px]">
+      <div data-network-map-graph-target="canvas" class="h-[360px] sm:h-[520px] w-full"></div>
 
       <div data-network-map-graph-target="loading"
            class="absolute inset-0 flex items-center justify-center font-mono text-xs text-white/35 bg-[#0d0f14]/70">

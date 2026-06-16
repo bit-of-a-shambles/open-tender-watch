@@ -1,25 +1,40 @@
 <header class="sticky top-0 z-50 border-b border-white/10 bg-[#0d0f14]/90 backdrop-blur-md">
   <div class="container mx-auto px-3 sm:px-6 max-w-[1100px] py-3">
     <div class="flex flex-wrap md:flex-nowrap items-center gap-3">
-      <%= link_to root_path, class: "order-1 inline-flex items-center gap-2.5 min-w-0" do %>
+      <%= link_to root_path, class: "order-1 inline-flex items-center gap-2.5 min-w-0 flex-1 md:flex-none" do %>
         <span class="w-2 h-2 shrink-0 rounded-full bg-[#ff4444] shadow-[0_0_10px_rgba(255,68,68,0.5)] animate-pulse-slow"></span>
-        <span class="font-['Space_Grotesk'] text-base sm:text-lg font-semibold tracking-tight text-[#e8e0d4] truncate">
+        <span class="font-['Space_Grotesk'] text-base sm:text-lg font-semibold tracking-tight text-[#e8e0d4] truncate max-w-[48vw] sm:max-w-none">
           <%= t("app.name") %>
         </span>
       <% end %>
 
-      <nav class="order-3 basis-full md:order-2 md:flex-1" aria-label="Primary">
-        <div class="overflow-x-auto">
-          <ul class="flex items-center gap-1 min-w-max pb-0.5">
+      <nav class="hidden md:block order-2 flex-1 min-w-0" aria-label="Primary">
+        <ul class="flex flex-wrap items-center justify-center gap-1">
+          <% global_nav_items.each do |item| %>
+            <% active = global_nav_active?(item[:key]) %>
+            <li>
+              <%= link_to item[:label], item[:path], class: global_nav_link_classes(active) %>
+            </li>
+          <% end %>
+        </ul>
+      </nav>
+
+      <details class="order-3 basis-full md:hidden group">
+        <summary class="flex items-center justify-between gap-3 cursor-pointer rounded border border-white/[0.08] bg-white/[0.02] px-3 py-2 font-mono text-[11px] tracking-[2px] uppercase text-white/55 transition-colors hover:border-white/20 hover:text-[#e8e0d4]">
+          <span><%= t("nav.menu", default: "Menu") %></span>
+          <span class="text-[#c8a84e] transition-transform group-open:rotate-180">v</span>
+        </summary>
+        <nav class="mt-2" aria-label="Primary mobile">
+          <ul class="grid grid-cols-2 gap-1.5">
             <% global_nav_items.each do |item| %>
               <% active = global_nav_active?(item[:key]) %>
               <li>
-                <%= link_to item[:label], item[:path], class: global_nav_link_classes(active) %>
+                <%= link_to item[:label], item[:path], class: "#{global_nav_link_classes(active)} block text-center" %>
               </li>
             <% end %>
           </ul>
-        </div>
-      </nav>
+        </nav>
+      </details>
 
       <div class="order-2 md:order-3 ml-auto flex items-center gap-1.5 shrink-0">
         <% if journalist_access? %>

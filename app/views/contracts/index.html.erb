@@ -15,25 +15,25 @@
   </header>
 
   <%# Filters %>
-  <%= form_with url: contracts_path, method: :get, class: "flex flex-wrap gap-2 my-6" do |f| %>
-    <div class="flex-1 min-w-[200px]">
+  <%= form_with url: contracts_path, method: :get, class: "flex flex-col sm:flex-row sm:flex-wrap sm:items-end gap-2 my-6" do |f| %>
+    <div class="w-full sm:flex-1 sm:min-w-[200px]">
       <%= f.text_field :q, value: params[:q], placeholder: t("contracts.index.search_placeholder"),
           class: "w-full bg-white/[0.04] border border-white/[0.1] rounded px-3 py-2 font-mono text-xs text-[#e8e0d4] placeholder-white/20 focus:outline-none focus:border-[#c8a84e55] focus:bg-white/[0.06] transition-all" %>
     </div>
-    <div>
+    <div class="w-full sm:w-auto">
       <%= f.select :procedure_type,
           [[t("contracts.index.all_procedures"), ""]] + @procedure_types.map { |type| [type, type] },
           { selected: params[:procedure_type] },
-          class: "bg-white/[0.04] border border-white/[0.1] rounded px-3 py-2 font-mono text-xs text-[#e8e0d4] focus:outline-none focus:border-[#c8a84e55] transition-all" %>
+          class: "w-full sm:w-auto bg-white/[0.04] border border-white/[0.1] rounded px-3 py-2 font-mono text-xs text-[#e8e0d4] focus:outline-none focus:border-[#c8a84e55] transition-all" %>
     </div>
-    <div>
+    <div class="w-full sm:w-auto">
       <%= f.select :country,
           [[t("contracts.index.all_countries"), ""]] + @countries.map { |c| [c, c] },
           { selected: params[:country] },
-          class: "bg-white/[0.04] border border-white/[0.1] rounded px-3 py-2 font-mono text-xs text-[#e8e0d4] focus:outline-none focus:border-[#c8a84e55] transition-all" %>
+          class: "w-full sm:w-auto bg-white/[0.04] border border-white/[0.1] rounded px-3 py-2 font-mono text-xs text-[#e8e0d4] focus:outline-none focus:border-[#c8a84e55] transition-all" %>
     </div>
-    <details class="relative">
-      <summary class="list-none bg-white/[0.04] border border-white/[0.1] rounded px-3 py-2 font-mono text-xs text-[#e8e0d4] cursor-pointer hover:border-[#c8a84e55] transition-all min-w-[180px]">
+    <details class="relative w-full sm:w-auto">
+      <summary class="list-none bg-white/[0.04] border border-white/[0.1] rounded px-3 py-2 font-mono text-xs text-[#e8e0d4] cursor-pointer hover:border-[#c8a84e55] transition-all w-full sm:min-w-[180px]">
         <span class="inline-flex items-center gap-2">
           <span><%= t("contracts.index.sources") %></span>
           <% if @selected_source_ids.any? %>
@@ -43,7 +43,7 @@
           <% end %>
         </span>
       </summary>
-      <div class="absolute left-0 mt-2 w-[280px] max-h-[280px] overflow-y-auto bg-[#0f131c] border border-white/[0.12] rounded p-3 z-20 shadow-[0_10px_30px_rgba(0,0,0,0.35)]">
+      <div class="absolute left-0 right-0 sm:right-auto mt-2 w-full sm:w-[280px] max-h-[280px] overflow-y-auto bg-[#0f131c] border border-white/[0.12] rounded p-3 z-20 shadow-[0_10px_30px_rgba(0,0,0,0.35)]">
         <% @source_options.each do |source_id, source_name| %>
           <label class="flex items-start gap-2 py-1.5 text-xs text-[#e8e0d4] font-mono cursor-pointer">
             <%= check_box_tag "source_ids[]", source_id, @selected_source_ids.include?(source_id), class: "mt-0.5 accent-[#c8a84e] rounded" %>
@@ -52,7 +52,7 @@
         <% end %>
       </div>
     </details>
-    <div>
+    <div class="w-full sm:w-auto">
       <%= f.select :flagged,
           [
             [t("contracts.index.all_flag_states"), ""],
@@ -60,30 +60,30 @@
             [t("contracts.index.unflagged_only"), "none"]
           ],
           { selected: params[:flagged] },
-          class: "bg-white/[0.04] border border-white/[0.1] rounded px-3 py-2 font-mono text-xs text-[#e8e0d4] focus:outline-none focus:border-[#c8a84e55] transition-all" %>
+          class: "w-full sm:w-auto bg-white/[0.04] border border-white/[0.1] rounded px-3 py-2 font-mono text-xs text-[#e8e0d4] focus:outline-none focus:border-[#c8a84e55] transition-all" %>
     </div>
-    <div>
+    <div class="w-full sm:w-auto">
       <%= f.select :flag_type,
           [[t("contracts.index.all_flags"), ""]] + @flag_types.map { |flag_type| [flag_type_label(flag_type), flag_type] },
           { selected: params[:flag_type] },
-          class: "bg-white/[0.04] border border-white/[0.1] rounded px-3 py-2 font-mono text-xs text-[#e8e0d4] focus:outline-none focus:border-[#c8a84e55] transition-all" %>
+          class: "w-full sm:w-auto bg-white/[0.04] border border-white/[0.1] rounded px-3 py-2 font-mono text-xs text-[#e8e0d4] focus:outline-none focus:border-[#c8a84e55] transition-all" %>
     </div>
-    <div class="flex items-center gap-1.5">
+    <div class="grid grid-cols-[auto_1fr] sm:flex sm:items-center gap-1.5 w-full sm:w-auto">
       <label class="font-mono text-[10px] text-white/35 shrink-0"><%= t("contracts.index.date_from") %></label>
       <%= f.date_field :date_from, value: params[:date_from],
-          class: "bg-white/[0.04] border border-white/[0.1] rounded px-2 py-2 font-mono text-xs text-[#e8e0d4] focus:outline-none focus:border-[#c8a84e55] transition-all" %>
+          class: "w-full sm:w-auto bg-white/[0.04] border border-white/[0.1] rounded px-2 py-2 font-mono text-xs text-[#e8e0d4] focus:outline-none focus:border-[#c8a84e55] transition-all" %>
       <label class="font-mono text-[10px] text-white/35 shrink-0"><%= t("contracts.index.date_to") %></label>
       <%= f.date_field :date_to, value: params[:date_to],
-          class: "bg-white/[0.04] border border-white/[0.1] rounded px-2 py-2 font-mono text-xs text-[#e8e0d4] focus:outline-none focus:border-[#c8a84e55] transition-all" %>
+          class: "w-full sm:w-auto bg-white/[0.04] border border-white/[0.1] rounded px-2 py-2 font-mono text-xs text-[#e8e0d4] focus:outline-none focus:border-[#c8a84e55] transition-all" %>
     </div>
     <%= f.submit t("contracts.index.filter"),
-        class: "bg-[#c8a84e1a] border border-[#c8a84e44] text-[#c8a84e] font-mono text-xs tracking-widest px-4 py-2 rounded hover:bg-[#c8a84e33] transition-all cursor-pointer" %>
+        class: "w-full sm:w-auto bg-[#c8a84e1a] border border-[#c8a84e44] text-[#c8a84e] font-mono text-xs tracking-widest px-4 py-2 rounded hover:bg-[#c8a84e33] transition-all cursor-pointer" %>
     <% if params[:q].present? || params[:procedure_type].present? || params[:country].present? || params[:flagged].present? || params[:flag_type].present? || @selected_source_ids.any? || params[:date_from].present? || params[:date_to].present? %>
       <%= link_to t("contracts.index.clear"), contracts_path,
-          class: "border border-white/10 text-white/30 font-mono text-xs tracking-widest px-4 py-2 rounded hover:text-white/50 transition-all" %>
+          class: "w-full sm:w-auto text-center border border-white/10 text-white/30 font-mono text-xs tracking-widest px-4 py-2 rounded hover:text-white/50 transition-all" %>
     <% end %>
     <%= link_to t("exports.download_csv"), contracts_path(request.query_parameters.merge(format: :csv)),
-        class: "border border-white/10 text-white/30 font-mono text-xs tracking-widest px-4 py-2 rounded hover:border-[#c8a84e44] hover:text-[#c8a84e] transition-all inline-flex items-center gap-1.5",
+        class: "w-full sm:w-auto justify-center border border-white/10 text-white/30 font-mono text-xs tracking-widest px-4 py-2 rounded hover:border-[#c8a84e44] hover:text-[#c8a84e] transition-all inline-flex items-center gap-1.5",
         data: { turbo: false } %>
   <% end %>
 
@@ -187,7 +187,7 @@
 
   <%# Pagination %>
     <% if @total_pages > 1 %>
-      <div class="flex items-center justify-between mt-6 font-mono text-xs text-white/35">
+      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mt-6 font-mono text-xs text-white/35">
         <span>
           <%= t("contracts.index.pagination.info", page: @page, total_pages: @total_pages, total: number_with_delimiter(@total)) %>
         </span>

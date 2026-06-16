@@ -1,7 +1,7 @@
 <div class="animate-fade-up">
   <%# Header %>
-  <header class="py-8 border-b border-white/10">
-    <div class="flex items-center gap-4 mb-3">
+  <header class="py-6 sm:py-8 border-b border-white/10">
+    <div class="flex flex-wrap items-center gap-3 sm:gap-4 mb-3">
       <%= link_to entities_path, class: "font-mono text-[11px] tracking-[2px] text-white/30 hover:text-white/60 transition-colors" do %>
         ← <%= t("entities.index.title") %>
       <% end %>
@@ -15,14 +15,14 @@
         </span>
       <% end %>
     </div>
-    <h1 class="font-['Space_Grotesk'] text-2xl font-bold text-[#e8e0d4] leading-snug mb-2">
+    <h1 class="font-['Space_Grotesk'] text-xl sm:text-2xl font-bold text-[#e8e0d4] leading-snug mb-2 break-words">
       <%= @entity.name %>
     </h1>
-    <div class="font-mono text-[11px] text-white/25">
+    <div class="font-mono text-[11px] text-white/25 break-words">
       <%= t("entities.show.nif") %> <%= @entity.tax_identifier %>
       · <%= @entity.country_code %>
     </div>
-    <div class="flex items-center gap-2 mt-3">
+    <div class="flex flex-wrap items-center gap-2 mt-3">
       <%= link_to t("exports.download_csv"), entity_path(@entity, format: :csv),
           class: "border border-white/10 text-white/30 font-mono text-[10px] tracking-widest px-3 py-1.5 rounded hover:border-[#c8a84e44] hover:text-[#c8a84e] transition-all",
           data: { turbo: false } %>
@@ -115,21 +115,21 @@
         <% end %>
 
         <%# Date filter %>
-        <%= form_with url: entity_path(@entity), method: :get, class: "flex items-center gap-2 mb-3" do |f| %>
+        <%= form_with url: entity_path(@entity), method: :get, class: "grid grid-cols-[auto_1fr] sm:flex sm:flex-wrap sm:items-center gap-2 mb-3" do |f| %>
           <%= hidden_field_tag :sort, @sort_col %>
           <%= hidden_field_tag :dir, @sort_dir %>
           <%= hidden_field_tag :flag_type, @flag_filter %>
           <label class="font-mono text-[10px] text-white/35 shrink-0"><%= t("contracts.index.date_from") %></label>
           <%= f.date_field :date_from, value: @date_from,
-              class: "bg-white/[0.04] border border-white/[0.1] rounded px-2 py-1.5 font-mono text-xs text-[#e8e0d4] focus:outline-none focus:border-[#c8a84e55] transition-all" %>
+              class: "w-full sm:w-auto bg-white/[0.04] border border-white/[0.1] rounded px-2 py-1.5 font-mono text-xs text-[#e8e0d4] focus:outline-none focus:border-[#c8a84e55] transition-all" %>
           <label class="font-mono text-[10px] text-white/35 shrink-0"><%= t("contracts.index.date_to") %></label>
           <%= f.date_field :date_to, value: @date_to,
-              class: "bg-white/[0.04] border border-white/[0.1] rounded px-2 py-1.5 font-mono text-xs text-[#e8e0d4] focus:outline-none focus:border-[#c8a84e55] transition-all" %>
+              class: "w-full sm:w-auto bg-white/[0.04] border border-white/[0.1] rounded px-2 py-1.5 font-mono text-xs text-[#e8e0d4] focus:outline-none focus:border-[#c8a84e55] transition-all" %>
           <%= f.submit t("contracts.index.filter"),
-              class: "bg-[#c8a84e1a] border border-[#c8a84e44] text-[#c8a84e] font-mono text-[10px] tracking-widest px-3 py-1.5 rounded hover:bg-[#c8a84e33] transition-all cursor-pointer" %>
+              class: "col-span-2 sm:col-span-1 bg-[#c8a84e1a] border border-[#c8a84e44] text-[#c8a84e] font-mono text-[10px] tracking-widest px-3 py-1.5 rounded hover:bg-[#c8a84e33] transition-all cursor-pointer" %>
           <% if @date_from.present? || @date_to.present? %>
             <%= link_to t("contracts.index.clear"), entity_path(@entity, sort: @sort_col, dir: @sort_dir, flag_type: @flag_filter),
-                class: "font-mono text-[10px] text-white/30 hover:text-white/50 transition-all" %>
+                class: "col-span-2 sm:col-span-1 font-mono text-[10px] text-white/30 hover:text-white/50 transition-all" %>
           <% end %>
         <% end %>
 
@@ -217,7 +217,7 @@
 
         <%# Pagination %>
         <% if @total_pages > 1 %>
-          <div class="flex items-center justify-end mt-4 font-mono text-xs text-white/35 gap-2">
+          <div class="flex flex-wrap items-center justify-end mt-4 font-mono text-xs text-white/35 gap-2">
             <% if @page > 1 %>
               <%= link_to t("contracts.index.pagination.prev"),
                     entity_path(@entity, sort: @sort_col, dir: @sort_dir, flag_type: @flag_filter, date_from: @date_from, date_to: @date_to, page: @page - 1),

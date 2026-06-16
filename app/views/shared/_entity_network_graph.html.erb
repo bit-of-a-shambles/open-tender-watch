@@ -2,7 +2,7 @@
 <% include_individuals_default = local_assigns.fetch(:include_individuals_default, false) %>
 <% include_individuals_default_value = include_individuals_default ? "true" : "false" %>
 
-<section class="mt-6 bg-white/2 border border-white/6 rounded-lg p-5"
+<section class="mt-6 bg-white/2 border border-white/6 rounded-lg p-4 sm:p-5"
          data-controller="entity-network-graph"
          data-entity-network-graph-endpoint-value="<%= "#{entity_network_graph_path(entity_id: entity.id)}.json" %>"
          data-entity-network-graph-default-limit-value="<%= default_limit %>"
@@ -29,16 +29,16 @@
     </p>
   </div>
 
-  <form class="flex items-center gap-2 mt-4 flex-wrap" data-action="submit->entity-network-graph#applyFilters">
+  <form class="flex flex-col sm:flex-row sm:items-center gap-2 mt-4 flex-wrap" data-action="submit->entity-network-graph#applyFilters">
     <label class="font-mono text-[10px] text-white/35"><%= t("graph.filter_from") %></label>
     <input type="date"
            data-entity-network-graph-target="dateFrom"
-          class="bg-white/4 border border-white/10 rounded px-2 py-1.5 font-mono text-xs text-[#e8e0d4] focus:outline-none focus:border-[#c8a84e55] transition-all">
+          class="w-full sm:w-auto bg-white/4 border border-white/10 rounded px-2 py-1.5 font-mono text-xs text-[#e8e0d4] focus:outline-none focus:border-[#c8a84e55] transition-all">
 
     <label class="font-mono text-[10px] text-white/35"><%= t("graph.filter_to") %></label>
     <input type="date"
            data-entity-network-graph-target="dateTo"
-          class="bg-white/4 border border-white/10 rounded px-2 py-1.5 font-mono text-xs text-[#e8e0d4] focus:outline-none focus:border-[#c8a84e55] transition-all">
+          class="w-full sm:w-auto bg-white/4 border border-white/10 rounded px-2 py-1.5 font-mono text-xs text-[#e8e0d4] focus:outline-none focus:border-[#c8a84e55] transition-all">
 
     <label class="font-mono text-[10px] text-white/35"><%= t("graph.limit") %></label>
     <input type="number"
@@ -46,15 +46,15 @@
            max="200"
            value="<%= default_limit %>"
            data-entity-network-graph-target="limit"
-          class="w-20 bg-white/4 border border-white/10 rounded px-2 py-1.5 font-mono text-xs text-[#e8e0d4] focus:outline-none focus:border-[#c8a84e55] transition-all">
+          class="w-full sm:w-20 bg-white/4 border border-white/10 rounded px-2 py-1.5 font-mono text-xs text-[#e8e0d4] focus:outline-none focus:border-[#c8a84e55] transition-all">
 
     <button type="submit"
-            class="bg-[#c8a84e1a] border border-[#c8a84e44] text-[#c8a84e] font-mono text-[10px] tracking-widest px-3 py-1.5 rounded hover:bg-[#c8a84e33] transition-all cursor-pointer">
+            class="w-full sm:w-auto bg-[#c8a84e1a] border border-[#c8a84e44] text-[#c8a84e] font-mono text-[10px] tracking-widest px-3 py-1.5 rounded hover:bg-[#c8a84e33] transition-all cursor-pointer">
       <%= t("graph.apply") %>
     </button>
 
     <% if journalist_access? %>
-      <label class="flex items-center gap-1.5 px-2 py-1 rounded border border-white/10 bg-white/3">
+      <label class="flex w-full sm:w-auto items-center gap-1.5 px-2 py-1 rounded border border-white/10 bg-white/3">
         <input type="checkbox"
                data-entity-network-graph-target="includeIndividuals"
                class="accent-[#c8a84e]"
@@ -65,14 +65,14 @@
 
     <button type="button"
             data-action="click->entity-network-graph#resetFilters"
-            class="border border-white/10 text-white/30 font-mono text-[10px] tracking-widest px-3 py-1.5 rounded hover:text-white/60 hover:border-white/20 transition-all cursor-pointer">
+            class="w-full sm:w-auto border border-white/10 text-white/30 font-mono text-[10px] tracking-widest px-3 py-1.5 rounded hover:text-white/60 hover:border-white/20 transition-all cursor-pointer">
       <%= t("graph.reset") %>
     </button>
   </form>
 
   <div class="mt-4 grid lg:grid-cols-[1fr_250px] gap-4">
-    <div class="relative border border-white/8 rounded-lg overflow-hidden bg-[#0d0f14] min-h-[430px]">
-      <div data-entity-network-graph-target="canvas" class="h-[430px] w-full"></div>
+    <div class="relative border border-white/8 rounded-lg overflow-hidden bg-[#0d0f14] min-h-[340px] sm:min-h-[430px]">
+      <div data-entity-network-graph-target="canvas" class="h-[340px] sm:h-[430px] w-full"></div>
 
       <div data-entity-network-graph-target="loading"
            class="absolute inset-0 flex items-center justify-center font-mono text-xs text-white/35 bg-[#0d0f14]/70">

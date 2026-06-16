@@ -16,8 +16,8 @@
 
   <%# Filters %>
   <turbo-frame id="companies-table">
-    <%= form_with url: companies_path, method: :get, class: "flex flex-wrap gap-2 my-6" do |f| %>
-      <div class="flex-1 min-w-[180px]">
+    <%= form_with url: companies_path, method: :get, class: "flex flex-col sm:flex-row sm:flex-wrap sm:items-end gap-2 my-6" do |f| %>
+      <div class="w-full sm:flex-1 sm:min-w-[180px]">
         <%= f.text_field :q, value: @query,
             placeholder: t("companies.index.search_placeholder"),
             class: "w-full bg-white/[0.04] border border-white/[0.1] rounded px-3 py-2 font-mono text-xs text-[#e8e0d4] placeholder-white/20 focus:outline-none focus:border-[#c8a84e55] transition-all" %>
@@ -26,15 +26,15 @@
       <%= hidden_field_tag :sort, @sort_col %>
       <%= hidden_field_tag :dir, @sort_dir %>
       <%= f.submit t("companies.index.filter"),
-          class: "bg-[#c8a84e1a] border border-[#c8a84e44] text-[#c8a84e] font-mono text-xs tracking-widest px-4 py-2 rounded hover:bg-[#c8a84e33] transition-all cursor-pointer" %>
+          class: "w-full sm:w-auto bg-[#c8a84e1a] border border-[#c8a84e44] text-[#c8a84e] font-mono text-xs tracking-widest px-4 py-2 rounded hover:bg-[#c8a84e33] transition-all cursor-pointer" %>
       <% if @query.present? %>
         <%= link_to t("companies.index.clear"), companies_path,
-            class: "border border-white/10 text-white/30 font-mono text-xs tracking-widest px-4 py-2 rounded hover:text-white/50 transition-all" %>
+            class: "w-full sm:w-auto text-center border border-white/10 text-white/30 font-mono text-xs tracking-widest px-4 py-2 rounded hover:text-white/50 transition-all" %>
       <% end %>
     <% end %>
 
     <%# Sort controls %>
-    <div class="flex items-center gap-3 mb-4">
+    <div class="flex flex-wrap items-center gap-2 sm:gap-3 mb-4">
       <span class="font-mono text-[10px] tracking-[2px] text-white/35 uppercase"><%= t("companies.index.sort_by") %>:</span>
       <% [
         ["won_value", t("companies.index.sort_value")],
@@ -80,7 +80,7 @@
               <div class="text-sm text-[#e8e0d4] group-hover:text-white transition-colors leading-snug">
                 <%= company.name %>
               </div>
-              <div class="font-mono text-[10px] text-white/25 mt-0.5 flex items-center gap-2">
+              <div class="font-mono text-[10px] text-white/25 mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5">
                 <span><%= t("companies.index.nif") %> <%= company.tax_identifier %></span>
                 <% if company.locality.present? %>
                   <span class="text-white/15">·</span>

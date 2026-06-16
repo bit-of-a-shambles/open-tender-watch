@@ -1,7 +1,7 @@
 <div class="animate-fade-up">
   <%# Header %>
-  <header class="py-8 border-b border-white/10">
-    <div class="flex items-center gap-4 mb-3">
+  <header class="py-6 sm:py-8 border-b border-white/10">
+    <div class="flex flex-wrap items-center gap-3 sm:gap-4 mb-3">
       <a href="#" onclick="history.length > 1 ? history.back() : (location.href='<%= contracts_path %>')" class="font-mono text-[11px] tracking-[2px] text-white/30 hover:text-white/60 transition-colors">
         <%= t("contracts.show.back") %>
       </a>
@@ -11,16 +11,16 @@
         </span>
       <% end %>
     </div>
-    <h1 class="font-['Space_Grotesk'] text-2xl font-bold text-[#e8e0d4] leading-snug mb-2">
+    <h1 class="font-['Space_Grotesk'] text-xl sm:text-2xl font-bold text-[#e8e0d4] leading-snug mb-2 break-words">
       <%= @contract.object %>
     </h1>
-    <div class="font-mono text-[11px] text-white/25">
+    <div class="font-mono text-[11px] text-white/25 break-words">
       ID <%= @contract.external_id %>
       <% if @contract.data_source %>
         · <%= @contract.data_source.name %>
       <% end %>
     </div>
-    <div class="flex items-center gap-2 mt-3">
+    <div class="flex flex-wrap items-center gap-2 mt-3">
       <%= link_to t("exports.download_json"), contract_path(@contract, format: :json),
           class: "border border-white/10 text-white/30 font-mono text-[10px] tracking-widest px-3 py-1.5 rounded hover:border-[#c8a84e44] hover:text-[#c8a84e] transition-all",
           data: { turbo: false } %>
@@ -33,12 +33,12 @@
     <div class="space-y-5">
 
       <%# Price card %>
-      <div class="bg-white/[0.02] border border-white/[0.06] rounded-lg p-5">
+      <div class="bg-white/[0.02] border border-white/[0.06] rounded-lg p-4 sm:p-5">
         <div class="font-mono text-[10px] tracking-[2px] text-white/35 mb-4 uppercase"><%= t("contracts.show.price.heading") %></div>
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <div class="font-mono text-[10px] text-white/30 mb-1"><%= t("contracts.show.price.base") %></div>
-            <div class="font-['Space_Grotesk'] text-2xl font-bold text-[#c8a84e]">
+            <div class="font-['Space_Grotesk'] text-xl sm:text-2xl font-bold text-[#c8a84e] break-words">
               <% if @contract.base_price %>
                 €<%= number_with_delimiter(@contract.base_price.to_i) %>
                 <span class="text-sm text-white/30 font-normal">.<%= "%02d" % (@contract.base_price.remainder(1).abs * 100).round %></span>
@@ -49,7 +49,7 @@
           </div>
           <div>
             <div class="font-mono text-[10px] text-white/30 mb-1"><%= t("contracts.show.price.effective") %></div>
-            <div class="font-['Space_Grotesk'] text-2xl font-bold text-[#e8e0d4]">
+            <div class="font-['Space_Grotesk'] text-xl sm:text-2xl font-bold text-[#e8e0d4] break-words">
               <% if @contract.total_effective_price %>
                 €<%= number_with_delimiter(@contract.total_effective_price.to_i) %>
                 <span class="text-sm text-white/30 font-normal">.<%= "%02d" % (@contract.total_effective_price.remainder(1).abs * 100).round %></span>
@@ -94,8 +94,8 @@
           </div>
           <div class="space-y-2">
             <% @contract.winners.each do |winner| %>
-              <div class="flex items-center justify-between py-2.5 px-3 bg-white/[0.02] border border-white/[0.05] rounded">
-                <div>
+              <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 py-2.5 px-3 bg-white/[0.02] border border-white/[0.05] rounded">
+                <div class="min-w-0">
                   <div class="text-sm text-[#e8e0d4] font-medium"><%= winner.name %></div>
                   <div class="font-mono text-[10px] text-white/30 mt-0.5"><%= t("contracts.show.winners.nif", id: winner.tax_identifier) %></div>
                 </div>
@@ -110,7 +110,7 @@
 
       <% if @contract.bidder_count.present? || @contract.contract_bidders.any? %>
         <div class="bg-white/[0.02] border border-white/[0.06] rounded-lg p-5">
-          <div class="flex items-center justify-between gap-3 mb-4">
+          <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
             <div class="font-mono text-[10px] tracking-[2px] text-white/35 uppercase">
               <%= t("contracts.show.competition.heading") %>
             </div>
@@ -123,8 +123,8 @@
           <% if @contract.contract_bidders.any? %>
             <div class="space-y-2">
               <% @contract.contract_bidders.each do |bidder| %>
-                <div class="flex items-center justify-between py-2.5 px-3 bg-white/[0.02] border border-white/[0.05] rounded gap-3">
-                  <div>
+                <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between py-2.5 px-3 bg-white/[0.02] border border-white/[0.05] rounded gap-3">
+                  <div class="min-w-0">
                     <div class="text-sm text-[#e8e0d4] font-medium"><%= bidder.entity&.name || bidder.raw_label %></div>
                     <div class="font-mono text-[10px] text-white/30 mt-0.5">
                       <% if bidder.entity&.tax_identifier.present? %>
@@ -220,7 +220,7 @@
          when 70..109 then "high"
          else             "critical"
          end %>
-      <div class="flex items-center justify-between mb-4">
+      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
         <div class="font-mono text-[10px] tracking-[2px] text-white/35 uppercase"><%= t("contracts.show.flags.heading") %></div>
         <% if risk_tier %>
           <% s = severity_styles(risk_tier) %>
@@ -236,8 +236,8 @@
                               flag.severity == "medium" ? "text-[#ff8844] bg-[#ff88440d] border-[#ff884422]" :
                               "text-[#c8a84e] bg-[#c8a84e0d] border-[#c8a84e22]" %>
           <div class="border border-white/[0.06] rounded p-3.5 space-y-2">
-            <div class="flex items-start justify-between gap-3">
-              <div>
+            <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+              <div class="min-w-0">
                 <div class="font-mono text-xs text-[#e8e0d4] font-semibold"><%= flag_type_label(flag.flag_type) %></div>
                 <div class="font-mono text-[9px] text-white/25 mt-0.5"><%= flag.flag_type %></div>
               </div>

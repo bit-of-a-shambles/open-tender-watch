@@ -1,11 +1,11 @@
 <div data-controller="dashboard" class="animate-fade-up">
   <%# Header %>
-  <header class="py-8 border-b border-white/10">
+  <header class="py-6 sm:py-8 border-b border-white/10">
     <div class="flex items-center gap-3 mb-1">
       <div class="w-2.5 h-2.5 rounded-full bg-[#ff4444] shadow-[0_0_12px_rgba(255,68,68,0.5)] animate-pulse-slow"></div>
       <span class="font-mono text-[11px] tracking-[3px] text-white/40 font-semibold uppercase"><%= t("app.live") %></span>
     </div>
-    <h1 class="font-['Space_Grotesk'] text-3xl font-bold tracking-tight bg-linear-to-r from-[#e8e0d4] to-[#c8a84e] bg-clip-text text-transparent mb-1">
+    <h1 class="font-['Space_Grotesk'] text-2xl sm:text-3xl font-bold tracking-tight bg-linear-to-r from-[#e8e0d4] to-[#c8a84e] bg-clip-text text-transparent mb-1">
       <%= t("app.name") %>
     </h1>
     <p class="text-white/35 text-sm">
@@ -50,12 +50,12 @@
   <%# Insights Pane %>
   <div data-dashboard-target="pane" data-pane="insights" class="space-y-2">
     <%# Exposure banner %>
-    <div class="bg-linear-to-br from-[#c8a84e14] to-[#ff44440f] border border-[#c8a84e26] border-l-4 border-l-[#c8a84e] rounded-lg p-7 mb-6">
+    <div class="bg-linear-to-br from-[#c8a84e14] to-[#ff44440f] border border-[#c8a84e26] border-l-4 border-l-[#c8a84e] rounded-lg p-4 sm:p-7 mb-6">
       <div class="font-mono text-[10px] tracking-[3px] text-[#c8a84e] mb-1">
         <%= t("dashboard.exposure.label") %>
       </div>
       <div class="flex flex-col sm:flex-row sm:justify-between sm:items-baseline gap-3">
-        <span class="font-['Space_Grotesk'] text-2xl sm:text-5xl font-bold text-[#e8e0d4] tracking-tight sm:tracking-tighter break-all">
+        <span class="font-['Space_Grotesk'] text-2xl sm:text-5xl font-bold text-[#e8e0d4] tracking-tight sm:tracking-tighter break-words">
           <%= number_to_currency(@flagged_total_exposure || 0, unit: "€", delimiter: ",", separator: ".", format: "%u%n", precision: 2) %>
         </span>
         <div class="font-mono text-sm sm:text-right">
@@ -67,7 +67,7 @@
     </div>
 
     <%# Severity filter %>
-    <div class="flex items-center gap-2 mb-5">
+    <div class="flex flex-wrap items-center gap-2 mb-5">
       <span class="font-mono text-[10px] tracking-[2px] text-white/35 uppercase mr-1"><%= t("dashboard.severity_filter.all") %>:</span>
       <% [nil, "high", "medium", "low"].each do |sev| %>
         <% label  = sev ? t("dashboard.severity_filter.#{sev}") : t("dashboard.severity_filter.all") %>
@@ -120,16 +120,16 @@
             <%= t("dashboard.entity_exposure.subheading") %>
           </p>
         </div>
-        <%= form_with url: dashboard_index_path, method: :get, class: "flex flex-wrap items-end gap-2.5", data: { turbo_frame: "entity-table" } do |f| %>
+        <%= form_with url: dashboard_index_path, method: :get, class: "flex flex-col sm:flex-row sm:flex-wrap sm:items-end gap-2.5 w-full sm:w-auto", data: { turbo_frame: "entity-table" } do |f| %>
           <%= f.hidden_field :severity, value: @severity_filter %>
-          <div>
+          <div class="w-full sm:w-auto">
             <label class="block font-mono text-[10px] tracking-[2px] text-white/40 mb-1"><%= t("dashboard.entity_exposure.flag") %></label>
             <%= f.select :entity_flag_type,
                 [[t("dashboard.entity_exposure.all_flags"), ""]] + @flag_types.map { |flag_type| [flag_type_label(flag_type), flag_type] },
                 { selected: @entity_flag_type },
-                class: "bg-black/30 border border-white/10 rounded px-2.5 py-2 font-mono text-xs text-white/75 focus:outline-hidden focus:border-[#c8a84e66]" %>
+                class: "w-full sm:w-auto bg-black/30 border border-white/10 rounded px-2.5 py-2 font-mono text-xs text-white/75 focus:outline-hidden focus:border-[#c8a84e66]" %>
           </div>
-          <div>
+          <div class="w-full sm:w-auto">
             <label class="block font-mono text-[10px] tracking-[2px] text-white/40 mb-1"><%= t("dashboard.entity_exposure.sort") %></label>
             <%= f.select :entity_sort,
                 [
@@ -137,9 +137,9 @@
                   [t("dashboard.entity_exposure.sort_count"), "count"]
                 ],
                 { selected: @entity_sort },
-                class: "bg-black/30 border border-white/10 rounded px-2.5 py-2 font-mono text-xs text-white/75 focus:outline-hidden focus:border-[#c8a84e66]" %>
+                class: "w-full sm:w-auto bg-black/30 border border-white/10 rounded px-2.5 py-2 font-mono text-xs text-white/75 focus:outline-hidden focus:border-[#c8a84e66]" %>
           </div>
-          <%= f.submit t("contracts.index.filter"), class: "bg-[#c8a84e22] text-[#c8a84e] border border-[#c8a84e44] px-3 py-2 rounded font-mono text-xs font-semibold tracking-[1px] hover:bg-[#c8a84e33] transition-colors cursor-pointer" %>
+          <%= f.submit t("contracts.index.filter"), class: "w-full sm:w-auto bg-[#c8a84e22] text-[#c8a84e] border border-[#c8a84e44] px-3 py-2 rounded font-mono text-xs font-semibold tracking-[1px] hover:bg-[#c8a84e33] transition-colors cursor-pointer" %>
         <% end %>
       </div>
 
@@ -171,7 +171,7 @@
 
             <%# Entity table pagination %>
             <% if @entity_total_pages > 1 %>
-              <div class="flex items-center justify-between mt-4 pt-3 border-t border-white/5 font-mono text-[10px] text-white/35">
+              <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mt-4 pt-3 border-t border-white/5 font-mono text-[10px] text-white/35">
                 <span><%= t("dashboard.entity_exposure.pagination.info", page: @entity_page, total_pages: @entity_total_pages, total: number_with_delimiter(@entity_total)) %></span>
                 <div class="flex gap-2">
                   <% if @entity_page > 1 %>
@@ -223,7 +223,7 @@
                        source[:status] == "error"  ? "bg-[#ff4444] shadow-[0_0_6px_rgba(255,68,68,0.4)]"  :
                                                      "bg-white/20" %>
         <div class="p-4 px-5 border border-white/6 rounded-lg bg-white/2">
-          <div class="flex justify-between items-center mb-1.5">
+          <div class="flex flex-wrap justify-between items-center gap-2 mb-1.5">
             <div>
               <span class="font-bold text-sm text-[#e8e0d4]"><%= source[:name] %></span>
               <span class="font-mono text-[10px] text-white/25 ml-2"><%= source[:country] %></span>

@@ -98,7 +98,7 @@ module ApplicationHelper
   end
 
   def global_nav_link_classes(active)
-    base = "font-mono text-[11px] tracking-[2px] uppercase px-3 py-2 rounded border transition-colors whitespace-nowrap"
+    base = "font-mono text-[11px] tracking-[1.5px] lg:tracking-[2px] uppercase px-2.5 lg:px-3 py-2 rounded border transition-colors whitespace-nowrap"
     return "#{base} border-[#c8a84e55] bg-[#c8a84e12] text-[#c8a84e]" if active
 
     "#{base} border-white/8 bg-white/[0.02] text-white/45 hover:text-[#e8e0d4] hover:border-white/20"

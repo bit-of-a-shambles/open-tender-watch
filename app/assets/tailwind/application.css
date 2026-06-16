@@ -1,1 +1,14 @@
 @import "tailwindcss";
+
+@layer base {
+  input,
+  select,
+  textarea,
+  button {
+    max-width: 100%;
+  }
+
+  summary::-webkit-details-marker {
+    display: none;
+  }
+}
