@@ -16,13 +16,13 @@
 
   <%# Filters %>
   <turbo-frame id="entities-table">
-    <%= form_with url: entities_path, method: :get, class: "flex flex-wrap gap-2 my-6" do |f| %>
-      <div class="flex-1 min-w-[180px]">
+    <%= form_with url: entities_path, method: :get, class: "flex flex-col sm:flex-row sm:flex-wrap sm:items-end gap-2 my-6" do |f| %>
+      <div class="w-full sm:flex-1 sm:min-w-[180px]">
         <%= f.text_field :q, value: params[:q],
             placeholder: t("entities.index.search_placeholder"),
             class: "w-full bg-white/[0.04] border border-white/[0.1] rounded px-3 py-2 font-mono text-xs text-[#e8e0d4] placeholder-white/20 focus:outline-none focus:border-[#c8a84e55] transition-all" %>
       </div>
-      <div>
+      <div class="w-full sm:w-auto">
         <%= f.select :type,
           [
             [t("entities.index.all_types"), ""],
@@ -30,13 +30,13 @@
             [t("entities.index.private_only"), "private"]
           ],
           { selected: params[:type] },
-          class: "bg-white/[0.04] border border-white/[0.1] rounded px-3 py-2 font-mono text-xs text-[#e8e0d4] focus:outline-none focus:border-[#c8a84e55] transition-all" %>
+          class: "w-full sm:w-auto bg-white/[0.04] border border-white/[0.1] rounded px-3 py-2 font-mono text-xs text-[#e8e0d4] focus:outline-none focus:border-[#c8a84e55] transition-all" %>
       </div>
       <%= f.submit t("entities.index.filter"),
-          class: "bg-[#c8a84e1a] border border-[#c8a84e44] text-[#c8a84e] font-mono text-xs tracking-widest px-4 py-2 rounded hover:bg-[#c8a84e33] transition-all cursor-pointer" %>
+          class: "w-full sm:w-auto bg-[#c8a84e1a] border border-[#c8a84e44] text-[#c8a84e] font-mono text-xs tracking-widest px-4 py-2 rounded hover:bg-[#c8a84e33] transition-all cursor-pointer" %>
       <% if params[:q].present? || params[:type].present? %>
         <%= link_to t("entities.index.clear"), entities_path,
-            class: "border border-white/10 text-white/30 font-mono text-xs tracking-widest px-4 py-2 rounded hover:text-white/50 transition-all" %>
+            class: "w-full sm:w-auto text-center border border-white/10 text-white/30 font-mono text-xs tracking-widest px-4 py-2 rounded hover:text-white/50 transition-all" %>
       <% end %>
     <% end %>
 
@@ -93,7 +93,7 @@
 
     <%# Pagination %>
     <% if @total_pages > 1 %>
-      <div class="flex items-center justify-between mt-6 font-mono text-xs text-white/35">
+      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mt-6 font-mono text-xs text-white/35">
         <span>
           <%= t("entities.index.pagination.info", page: @page, total_pages: @total_pages, total: number_with_delimiter(@total)) %>
         </span>
