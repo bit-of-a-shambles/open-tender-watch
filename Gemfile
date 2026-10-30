@@ -50,7 +50,7 @@ gem "thruster", require: false
 
 group :development, :test do
   # Pin minitest to 5.x — Minitest 6 breaks Rails 8 line_filtering (API change)
-  gem "minitest", "~> 5.25"
+  gem "minitest", "~> 6.0"
 
   # See https://guides.rubyonrails.org/debugging_rails_applications.html#debugging-with-the-debug-gem
   gem "debug", platforms: %i[ mri windows ], require: "debug/prelude"
